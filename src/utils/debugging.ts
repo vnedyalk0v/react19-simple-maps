@@ -1,6 +1,36 @@
-import React, { captureOwnerStack } from 'react';
+import React from 'react';
 
 // React 19 debugging utilities
+
+/**
+ * Safely capture owner stack - only available in React development builds.
+ * This function is NOT exported in production builds, so we access it
+ * conditionally via React namespace with proper type checking.
+ *
+ * @see https://react.dev/reference/react/captureOwnerStack
+ */
+function safeCaptureOwnerStack(): string | null {
+  // captureOwnerStack is only available in development builds of React 19
+  // It's not a stable export - must be accessed conditionally
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    typeof React === 'object' &&
+    React !== null &&
+    'captureOwnerStack' in React &&
+    typeof (React as unknown as { captureOwnerStack?: () => string })
+      .captureOwnerStack === 'function'
+  ) {
+    try {
+      return (
+        React as unknown as { captureOwnerStack: () => string }
+      ).captureOwnerStack();
+    } catch {
+      // Silently fail if captureOwnerStack throws
+      return null;
+    }
+  }
+  return null;
+}
 
 interface DebugInfo {
   componentName: string;
@@ -70,7 +100,7 @@ export class MapDebugger {
   ): void {
     if (!this.isEnabled) return;
 
-    const ownerStack = captureOwnerStack();
+    const ownerStack = safeCaptureOwnerStack();
 
     const debugInfo: DebugInfo = {
       componentName,
@@ -111,7 +141,7 @@ export class MapDebugger {
   ): void {
     if (!this.isEnabled) return;
 
-    const ownerStack = captureOwnerStack();
+    const ownerStack = safeCaptureOwnerStack();
 
     const debugInfo: DebugInfo = {
       componentName,
@@ -308,7 +338,7 @@ export const devTools = {
       typeof process !== 'undefined' &&
       process.env.NODE_ENV !== 'production'
     ) {
-      const ownerStack = captureOwnerStack();
+      const ownerStack = safeCaptureOwnerStack();
       // eslint-disable-next-line no-console
       console.log(`📊 Component Hierarchy for ${componentName}:`, ownerStack);
     }
@@ -347,7 +377,7 @@ export const devTools = {
       process.env.NODE_ENV !== 'production'
     ) {
       try {
-        const ownerStack = captureOwnerStack();
+        const ownerStack = safeCaptureOwnerStack();
         // eslint-disable-next-line no-console
         console.group(`🌍 Geography Loading: ${url}`);
         // eslint-disable-next-line no-console

@@ -17,9 +17,8 @@ describe('Basic functionality', () => {
   });
 
   it('should export main components', async () => {
-    const { ComposableMap, Geographies, Geography, Marker } = await import(
-      '../src/index'
-    );
+    const { ComposableMap, Geographies, Geography, Marker } =
+      await import('../src/index');
 
     expect(ComposableMap).toBeDefined();
     expect(Geographies).toBeDefined();
@@ -28,9 +27,8 @@ describe('Basic functionality', () => {
   });
 
   it('should export utility functions', async () => {
-    const { createGeographyFetchError } = await import(
-      '../src/utils/error-utils'
-    );
+    const { createGeographyFetchError } =
+      await import('../src/utils/error-utils');
 
     expect(createGeographyFetchError).toBeDefined();
     expect(typeof createGeographyFetchError).toBe('function');

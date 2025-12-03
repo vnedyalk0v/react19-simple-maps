@@ -52,11 +52,13 @@ export default [
       }),
       commonjs(),
       typescript({
-        tsconfig: './tsconfig.build.json',
-        outDir: undefined,
-        declaration: false,
-        declarationMap: false,
-        sourceMap: true,
+        tsconfig: './tsconfig.json',
+        compilerOptions: {
+          declaration: false,
+          declarationMap: false,
+          sourceMap: true,
+          noEmit: false,
+        },
       }),
       terser({
         compress: {
@@ -164,11 +166,13 @@ export default [
         ignoreDynamicRequires: true,
       }),
       typescript({
-        tsconfig: './tsconfig.build.json',
-        outDir: undefined,
-        declaration: false,
-        declarationMap: false,
-        sourceMap: true,
+        tsconfig: './tsconfig.json',
+        compilerOptions: {
+          declaration: false,
+          declarationMap: false,
+          sourceMap: true,
+          noEmit: false,
+        },
       }),
       ...(isProduction
         ? [

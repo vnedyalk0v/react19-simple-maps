@@ -247,18 +247,17 @@ export interface GeographyEventData {
   coordinates: Coordinates | null;
 }
 
-export interface GeographyProps
-  extends Omit<
-    SVGProps<SVGPathElement>,
-    | 'style'
-    | 'onClick'
-    | 'onMouseEnter'
-    | 'onMouseLeave'
-    | 'onMouseDown'
-    | 'onMouseUp'
-    | 'onFocus'
-    | 'onBlur'
-  > {
+export interface GeographyProps extends Omit<
+  SVGProps<SVGPathElement>,
+  | 'style'
+  | 'onClick'
+  | 'onMouseEnter'
+  | 'onMouseLeave'
+  | 'onMouseDown'
+  | 'onMouseUp'
+  | 'onFocus'
+  | 'onBlur'
+> {
   geography: Feature<Geometry>;
   // Enhanced event handlers with geographic data (backward compatible)
   onClick?: (
@@ -348,8 +347,10 @@ export interface MarkerProps extends Omit<SVGProps<SVGGElement>, 'style'> {
   children?: ReactNode;
 }
 
-export interface LineProps
-  extends Omit<SVGProps<SVGPathElement>, 'from' | 'to'> {
+export interface LineProps extends Omit<
+  SVGProps<SVGPathElement>,
+  'from' | 'to'
+> {
   from: Coordinates;
   to: Coordinates;
   coordinates?: Coordinates[];

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.1
+
+### Patch Changes
+
+- Fix build failure caused by `captureOwnerStack` not being exported in React 19 stable
+  - The `captureOwnerStack` API is only available in React's development builds, not in production. This caused build failures for users.
+  - Replaced direct import with a safe wrapper function that conditionally accesses the API only in development mode.
+  - Updated all dependencies to their latest versions (vitest 4.x, jsdom 27.x, eslint-plugin-react-hooks 7.x, etc.)
+  - Fixed rollup config compatibility with updated @rollup/plugin-typescript
+
 ## 1.2.0
 
 ### Minor Changes
