@@ -4,15 +4,17 @@
   "description": "An svg map chart component built exclusively for React 19+ - Modern TypeScript-first library with cutting-edge React patterns",
   "type": "module",
   "main": "dist/index.js",
-  "module": "dist/index.es.js",
-  "browser": "dist/index.es.js",
+  "module": "dist/index.js",
+  "browser": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "browser": "./dist/index.es.js",
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/utils.js"
     }
   },
   "sideEffects": false,
@@ -57,7 +59,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org"
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "react",
