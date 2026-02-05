@@ -102,10 +102,12 @@ export function useDeferredPosition({
         ...newPosition,
         k: Math.max(0.1, Math.min(10, newPosition.k)), // Reasonable zoom bounds
       };
-
-      setOptimisticPosition(validatedPosition);
+   
+      startTransition(() => {
+        setOptimisticPosition(validatedPosition);
+      });
     },
-    [setOptimisticPosition],
+    [setOptimisticPosition, startTransition],
   );
 
   return {
