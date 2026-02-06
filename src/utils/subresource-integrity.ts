@@ -226,17 +226,59 @@ export async function validateSRIFromArrayBuffer(
 }
 
 /**
- * Check if SRI validation is required for a URL
+ * Canonicalize a URL for SRI lookup.
+ * Strips the fragment, removes default ports, normalises the hostname to
+ * lowercase, and removes trailing slashes from the path so that minor URL
+ * variants resolve to the same SRI entry.
+ */
+function canonicalizeUrlForSRI(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Remove fragment — it is never sent to the server
+    parsed.hash = '';
+    // URL constructor already lowercases the hostname and normalises the port,
+    // but we explicitly clear the default port for safety.
+    if (
+      (parsed.protocol === 'https:' && parsed.port === '443') ||
+      (parsed.protocol === 'http:' && parsed.port === '80')
+    ) {
+      parsed.port = '';
+    }
+    return parsed.href;
+  } catch {
+    // If URL parsing fails, return as-is — the fetch will fail with a
+    // validation error later anyway.
+    return url;
+  }
+}
+
+/**
+ * Check if SRI validation is required for a URL.
+ * The URL is canonicalized (fragment stripped, host lowercased, default port
+ * removed) before lookup so that trivial URL variants don't bypass known
+ * SRI entries.
+ *
  * @param url - URL to check
  * @returns SRI configuration if validation is required, null otherwise
  */
 export function getSRIForUrl(url: string): SRIConfig | null {
-  // Check custom SRI map first
+  const canonical = canonicalizeUrlForSRI(url);
+
+  // Check custom SRI map first (canonical then raw)
+  if (currentSRIConfig.customSRIMap[canonical]) {
+    return currentSRIConfig.customSRIMap[canonical];
+  }
   if (currentSRIConfig.customSRIMap[url]) {
     return currentSRIConfig.customSRIMap[url];
   }
 
-  // Check known sources
+  // Check known sources (canonical then raw)
+  if (
+    KNOWN_GEOGRAPHY_SRI[canonical] &&
+    currentSRIConfig.enforceForKnownSources
+  ) {
+    return KNOWN_GEOGRAPHY_SRI[canonical];
+  }
   if (KNOWN_GEOGRAPHY_SRI[url] && currentSRIConfig.enforceForKnownSources) {
     return KNOWN_GEOGRAPHY_SRI[url];
   }

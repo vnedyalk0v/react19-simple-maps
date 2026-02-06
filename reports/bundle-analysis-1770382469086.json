@@ -1,0 +1,317 @@
+{
+  "timestamp": "2026-02-06T12:54:29.084Z",
+  "git": {
+    "commit": "180b091bef1ce45965c5a68643cdca2505a1b2e1",
+    "branch": "fix/security-findings-sec001-003",
+    "timestamp": "2026-02-06T12:54:29.083Z"
+  },
+  "bundles": [
+    {
+      "exists": true,
+      "path": "dist/index.js",
+      "name": "ESM Bundle (main)",
+      "description": "Modern ESM bundle for bundlers",
+      "priority": "high",
+      "sizes": {
+        "raw": 115114,
+        "gzip": 26289,
+        "brotli": 22552,
+        "rawFormatted": "112.42 KB",
+        "gzipFormatted": "25.67 KB",
+        "brotliFormatted": "22.02 KB"
+      },
+      "thresholds": {
+        "raw": 122880,
+        "gzip": 35840,
+        "brotli": 30720,
+        "rawFormatted": "120 KB",
+        "gzipFormatted": "35 KB",
+        "brotliFormatted": "30 KB"
+      },
+      "compliance": {
+        "raw": true,
+        "gzip": true,
+        "brotli": true
+      },
+      "utilization": {
+        "raw": "93.7",
+        "gzip": "73.4",
+        "brotli": "73.4"
+      },
+      "optimizations": {
+        "concurrentFeatures": {
+          "name": "React 19 Concurrent Features",
+          "expectedSavings": "5-10%",
+          "applied": false,
+          "foundIndicators": [
+            "useTransition",
+            "useDeferredValue",
+            "useOptimistic"
+          ],
+          "status": "needs-optimization"
+        },
+        "consoleStripping": {
+          "name": "Console Statement Removal",
+          "expectedSavings": "2-5%",
+          "applied": false,
+          "foundIndicators": ["console.log", "console.warn"],
+          "status": "needs-optimization"
+        },
+        "treeShaking": {
+          "name": "Enhanced Tree Shaking",
+          "expectedSavings": "10-15%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "compression": {
+          "name": "Advanced Compression",
+          "expectedSavings": "15-25%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        }
+      }
+    },
+    {
+      "exists": true,
+      "path": "dist/utils.js",
+      "name": "ESM Bundle (utils)",
+      "description": "ESM utilities bundle for direct imports",
+      "priority": "medium",
+      "sizes": {
+        "raw": 45175,
+        "gzip": 11918,
+        "brotli": 10288,
+        "rawFormatted": "44.12 KB",
+        "gzipFormatted": "11.64 KB",
+        "brotliFormatted": "10.05 KB"
+      },
+      "thresholds": {
+        "raw": 81920,
+        "gzip": 25600,
+        "brotli": 22528,
+        "rawFormatted": "80 KB",
+        "gzipFormatted": "25 KB",
+        "brotliFormatted": "22 KB"
+      },
+      "compliance": {
+        "raw": true,
+        "gzip": true,
+        "brotli": true
+      },
+      "utilization": {
+        "raw": "55.1",
+        "gzip": "46.6",
+        "brotli": "45.7"
+      },
+      "optimizations": {
+        "concurrentFeatures": {
+          "name": "React 19 Concurrent Features",
+          "expectedSavings": "5-10%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "consoleStripping": {
+          "name": "Console Statement Removal",
+          "expectedSavings": "2-5%",
+          "applied": false,
+          "foundIndicators": ["console.warn"],
+          "status": "needs-optimization"
+        },
+        "treeShaking": {
+          "name": "Enhanced Tree Shaking",
+          "expectedSavings": "10-15%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "compression": {
+          "name": "Advanced Compression",
+          "expectedSavings": "15-25%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        }
+      }
+    },
+    {
+      "exists": true,
+      "path": "dist/index.d.ts",
+      "name": "TypeScript Definitions (main)",
+      "description": "TypeScript type definitions",
+      "priority": "low",
+      "sizes": {
+        "raw": 19468,
+        "gzip": 3751,
+        "brotli": 3307,
+        "rawFormatted": "19.01 KB",
+        "gzipFormatted": "3.66 KB",
+        "brotliFormatted": "3.23 KB"
+      },
+      "thresholds": {
+        "raw": 51200,
+        "gzip": 10240,
+        "brotli": 8192,
+        "rawFormatted": "50 KB",
+        "gzipFormatted": "10 KB",
+        "brotliFormatted": "8 KB"
+      },
+      "compliance": {
+        "raw": true,
+        "gzip": true,
+        "brotli": true
+      },
+      "utilization": {
+        "raw": "38.0",
+        "gzip": "36.6",
+        "brotli": "40.4"
+      },
+      "optimizations": {
+        "concurrentFeatures": {
+          "name": "React 19 Concurrent Features",
+          "expectedSavings": "5-10%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "consoleStripping": {
+          "name": "Console Statement Removal",
+          "expectedSavings": "2-5%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "treeShaking": {
+          "name": "Enhanced Tree Shaking",
+          "expectedSavings": "10-15%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "compression": {
+          "name": "Advanced Compression",
+          "expectedSavings": "15-25%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        }
+      }
+    },
+    {
+      "exists": true,
+      "path": "dist/utils.d.ts",
+      "name": "TypeScript Definitions (utils)",
+      "description": "TypeScript type definitions for utils",
+      "priority": "low",
+      "sizes": {
+        "raw": 12646,
+        "gzip": 3539,
+        "brotli": 3000,
+        "rawFormatted": "12.35 KB",
+        "gzipFormatted": "3.46 KB",
+        "brotliFormatted": "2.93 KB"
+      },
+      "thresholds": {
+        "raw": 40960,
+        "gzip": 8192,
+        "brotli": 7168,
+        "rawFormatted": "40 KB",
+        "gzipFormatted": "8 KB",
+        "brotliFormatted": "7 KB"
+      },
+      "compliance": {
+        "raw": true,
+        "gzip": true,
+        "brotli": true
+      },
+      "utilization": {
+        "raw": "30.9",
+        "gzip": "43.2",
+        "brotli": "41.9"
+      },
+      "optimizations": {
+        "concurrentFeatures": {
+          "name": "React 19 Concurrent Features",
+          "expectedSavings": "5-10%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "consoleStripping": {
+          "name": "Console Statement Removal",
+          "expectedSavings": "2-5%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "treeShaking": {
+          "name": "Enhanced Tree Shaking",
+          "expectedSavings": "10-15%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        },
+        "compression": {
+          "name": "Advanced Compression",
+          "expectedSavings": "15-25%",
+          "applied": true,
+          "foundIndicators": null,
+          "status": "optimized"
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalBundles": 4,
+    "existingBundles": 4,
+    "compliantBundles": 4,
+    "totalSizes": {
+      "raw": 192403,
+      "gzip": 45497,
+      "brotli": 39147,
+      "rawFormatted": "187.89 KB",
+      "gzipFormatted": "44.43 KB",
+      "brotliFormatted": "38.23 KB"
+    }
+  },
+  "react19Optimizations": {
+    "concurrentFeatures": {
+      "name": "React 19 Concurrent Features",
+      "expectedSavings": "5-10%",
+      "indicators": ["useTransition", "useDeferredValue", "useOptimistic"],
+      "appliedToBundles": 3,
+      "totalBundles": 4,
+      "completionRate": "75.0",
+      "status": "partial"
+    },
+    "consoleStripping": {
+      "name": "Console Statement Removal",
+      "expectedSavings": "2-5%",
+      "indicators": ["console.log", "console.warn", "console.debug"],
+      "appliedToBundles": 2,
+      "totalBundles": 4,
+      "completionRate": "50.0",
+      "status": "partial"
+    },
+    "treeShaking": {
+      "name": "Enhanced Tree Shaking",
+      "expectedSavings": "10-15%",
+      "indicators": ["unused exports", "dead code"],
+      "appliedToBundles": 4,
+      "totalBundles": 4,
+      "completionRate": "100.0",
+      "status": "complete"
+    },
+    "compression": {
+      "name": "Advanced Compression",
+      "expectedSavings": "15-25%",
+      "indicators": ["terser optimization", "gzip", "brotli"],
+      "appliedToBundles": 4,
+      "totalBundles": 4,
+      "completionRate": "100.0",
+      "status": "complete"
+    }
+  }
+}

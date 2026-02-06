@@ -1,4 +1,5 @@
 import { preload, prefetchDNS, preconnect, preinit } from 'react-dom';
+import { validateGeographyUrl } from './geography-validation';
 
 // React 19 resource preloading utilities for geography data
 
@@ -6,8 +7,9 @@ import { preload, prefetchDNS, preconnect, preinit } from 'react-dom';
 const preloadedUrls = new Set<string>();
 
 /**
- * Preload geography resources for better performance
- * Only preloads if the resource will be used soon
+ * Preload geography resources for better performance.
+ * Runs the same URL security validation used by the fetch pipeline before
+ * issuing any network activity (DNS prefetch, preconnect, preload).
  */
 export function preloadGeography(url: string, immediate = false): void {
   if (typeof url !== 'string' || !url) {
@@ -20,6 +22,9 @@ export function preloadGeography(url: string, immediate = false): void {
   }
 
   try {
+    // Validate the URL against the security policy *before* any network activity
+    validateGeographyUrl(url);
+
     const parsedUrl = new URL(url);
 
     // Always prefetch DNS and preconnect (lightweight operations)
@@ -39,7 +44,7 @@ export function preloadGeography(url: string, immediate = false): void {
       preloadedUrls.add(url);
     }
   } catch (error) {
-    // Silently handle invalid URLs in development only
+    // Silently handle invalid/disallowed URLs in development only
     if (
       typeof process !== 'undefined' &&
       process.env.NODE_ENV !== 'production'

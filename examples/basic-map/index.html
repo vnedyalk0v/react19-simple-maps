@@ -9,9 +9,9 @@
     <!--
       Content Security Policy — DEVELOPMENT ONLY
       'unsafe-inline' and 'unsafe-eval' are required by Vite HMR during development.
-      For PRODUCTION, remove both and use nonces or hashes instead.
+      For PRODUCTION: remove both, use nonces/hashes, and deliver CSP via HTTP
+      headers (not meta tags) so that directives like frame-ancestors are enforced.
       See examples/SECURITY.md for production guidance.
-      Note: frame-ancestors is not supported in meta tags, only in HTTP headers.
     -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -29,9 +29,14 @@
     "
     />
 
-    <!-- Additional security headers -->
+    <!--
+      The headers below are DEVELOPMENT-ONLY fallbacks delivered via meta tags.
+      Browsers enforce X-Content-Type-Options and Referrer-Policy from meta tags,
+      but X-Frame-Options is only reliable as an HTTP header. For production,
+      set ALL security headers at the HTTP response layer (server / CDN / edge).
+      See examples/SECURITY.md for details.
+    -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-XSS-Protection" content="0" />
     <meta
       http-equiv="Referrer-Policy"
