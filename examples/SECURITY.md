@@ -1,106 +1,58 @@
 # Security Configuration for Examples
 
-This document explains the security measures implemented in the react19-simple-maps examples.
+This document describes the security-related headers used by the examples in this repo.
 
 ## Content Security Policy (CSP)
 
-All examples include comprehensive Content Security Policy headers to prevent XSS attacks and improve security posture.
+Both examples include CSP meta tags in `index.html`, and the Vite dev server sets CSP headers in `vite.config.ts`.
 
-### CSP Directives Explained
+- **HTML meta tags** allow `self` plus `https://unpkg.com` for geography data.
+- **Dev server headers** add `ws:`/`wss:` for Vite HMR and also set `frame-ancestors 'none'`.
+- The **interactive example** includes `frame-ancestors 'none'` in its meta tag.
+- The **basic example** does not include `frame-ancestors` in the meta tag (see the comment in `index.html`).
 
-- **`default-src 'self'`** - Only allow resources from the same origin by default
-- **`script-src 'self' 'unsafe-inline' 'unsafe-eval'`** - Allow scripts from same origin, inline scripts (for React), and eval (for Vite HMR in development)
-- **`style-src 'self' 'unsafe-inline'`** - Allow styles from same origin and inline styles
-- **`img-src 'self' data: blob:`** - Allow images from same origin, data URLs, and blob URLs
-- **`font-src 'self' data:`** - Allow fonts from same origin and data URLs
-- **`connect-src 'self' https://unpkg.com https://*.unpkg.com`** - Allow connections to same origin and unpkg.com for geography data
-- **`object-src 'none'`** - Disable plugins like Flash
-- **`base-uri 'self'`** - Restrict base tag to same origin
-- **`form-action 'self'`** - Restrict form submissions to same origin
-- **`frame-ancestors 'none'`** - Prevent embedding in frames (clickjacking protection)
-- **`upgrade-insecure-requests`** - Automatically upgrade HTTP to HTTPS
+### CSP Directives Used
 
-### Additional Security Headers
+Common directives across the examples include:
 
-- **`X-Content-Type-Options: nosniff`** - Prevent MIME type sniffing
-- **`X-Frame-Options: DENY`** - Prevent embedding in frames
-- **`X-XSS-Protection: 1; mode=block`** - Enable XSS filtering
-- **`Referrer-Policy: strict-origin-when-cross-origin`** - Control referrer information
-- **`Permissions-Policy`** - Disable unnecessary browser features
+- `default-src 'self'`
+- `script-src 'self' 'unsafe-inline' 'unsafe-eval'`
+- `style-src 'self' 'unsafe-inline'`
+- `img-src 'self' data: blob:`
+- `font-src 'self' data:`
+- `connect-src 'self' https://unpkg.com https://*.unpkg.com` (plus `ws:`/`wss:` in dev server headers)
+- `object-src 'none'`
+- `base-uri 'self'`
+- `form-action 'self'`
+- `upgrade-insecure-requests` (in HTML meta tags)
+
+## Additional Security Headers
+
+The examples also set these headers (via HTML meta tags and dev server headers):
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (disabled features list)
 
 ## Development vs Production
 
-### Development Configuration
-
-In development (Vite dev server), the CSP includes additional directives:
-
-- `ws:` and `wss:` in `connect-src` for Hot Module Replacement (HMR)
-- `'unsafe-eval'` in `script-src` for Vite's development features
-
-### Production Configuration
-
-The HTML files include production-ready CSP headers that are more restrictive and suitable for deployment.
+- **Development**: `unsafe-eval` and WebSocket connections are required for Vite HMR.
+- **Production**: Treat the HTML meta tags as a baseline. For production deployments, prefer server-level CSP headers and tighten directives (for example, remove `unsafe-eval` if possible).
 
 ## External Resources
 
-The examples use the following external resources:
-
-- **unpkg.com** - For geography data (world-atlas package)
-
-These are explicitly allowed in the CSP `connect-src` directive.
-
-## Security Best Practices
-
-1. **HTTPS Only**: The CSP includes `upgrade-insecure-requests` to force HTTPS
-2. **No Inline Scripts**: Avoid inline JavaScript when possible
-3. **Trusted Sources**: Only allow resources from trusted domains
-4. **Regular Updates**: Keep dependencies updated for security patches
-5. **Error Boundaries**: Use React error boundaries to handle failures gracefully
+The examples load geography data from `https://unpkg.com`, which is explicitly allowed in the CSP `connect-src` directive.
 
 ## Customizing Security
 
-To modify the security configuration:
+To change security settings:
 
-1. **HTML CSP**: Edit the `Content-Security-Policy` meta tag in `index.html`
-2. **Vite Dev Server**: Modify the `server.headers` in `vite.config.ts`
-3. **Production Deployment**: Configure CSP headers at the server level
-
-### Example: Adding a New External Resource
-
-If you need to load data from a new domain, add it to the CSP:
-
-```html
-<!-- In index.html -->
-<meta
-  http-equiv="Content-Security-Policy"
-  content="
-  ...
-  connect-src 'self' https://unpkg.com https://your-new-domain.com;
-  ...
-"
-/>
-```
-
-```typescript
-// In vite.config.ts
-headers: {
-  'Content-Security-Policy': [
-    // ...
-    "connect-src 'self' ws: wss: https://unpkg.com https://your-new-domain.com",
-    // ...
-  ].join('; '),
-}
-```
-
-## Security Testing
-
-To test the CSP implementation:
-
-1. Open browser developer tools
-2. Check the Console for CSP violations
-3. Verify that external resources load correctly
-4. Test that unauthorized resources are blocked
+1. **HTML CSP**: Edit the `Content-Security-Policy` meta tag in `index.html`.
+2. **Vite Dev Server**: Edit `server.headers` in `vite.config.ts`.
+3. **Production**: Configure CSP headers at the server or CDN layer.
 
 ## Reporting Security Issues
 
-If you discover a security vulnerability, please report it responsibly by emailing the maintainer directly rather than opening a public issue.
+If you discover a security issue, please report it responsibly by contacting the maintainer directly.
