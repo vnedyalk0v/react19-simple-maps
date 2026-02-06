@@ -43,7 +43,7 @@ const [position, setPosition] = useState<Position>({
   onMoveEnd={setPosition}
   minZoom={0.5}
   maxZoom={8}
-/>
+/>;
 ```
 
 ### 2. Interactive Geography Selection
@@ -63,12 +63,14 @@ const cities = [
   { name: 'London', coordinates: createCoordinates(-0.1276, 51.5074) },
 ];
 
-{cities.map((city) => (
-  <Marker key={city.name} coordinates={city.coordinates}>
-    <circle r={5} />
-    <text y={-10}>{city.name}</text>
-  </Marker>
-))}
+{
+  cities.map((city) => (
+    <Marker key={city.name} coordinates={city.coordinates}>
+      <circle r={5} />
+      <text y={-10}>{city.name}</text>
+    </Marker>
+  ));
+}
 ```
 
 ## TypeScript Benefits

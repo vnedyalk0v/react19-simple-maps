@@ -165,7 +165,10 @@ All event handlers receive `(event, GeographyEventData)` where `GeographyEventDa
 Zoom and pan with both simple and advanced APIs.
 
 ```tsx
-import { ZoomableGroup, createZoomConfig } from '@vnedyalk0v/react19-simple-maps';
+import {
+  ZoomableGroup,
+  createZoomConfig,
+} from '@vnedyalk0v/react19-simple-maps';
 
 <ZoomableGroup
   zoom={1}
