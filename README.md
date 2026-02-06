@@ -17,7 +17,7 @@ Create beautiful, interactive SVG maps in React with d3-geo and topojson using a
 - 🔒 **Zero Security Vulnerabilities** - Completely secure dependencies with built-in security features
 - 📝 **Full TypeScript Support** - Strict typing with comprehensive type definitions and branded types
 - ⚛️ **React 19+ Exclusive** - Built exclusively for React 19+ with cutting-edge features and patterns
-- 🚀 **Modern Build System** - ESM, CJS, and UMD builds with tree-shaking support
+- 🚀 **Modern Build System** - ESM-only build with tree-shaking and type definitions
 - 🧪 **Comprehensive Testing** - 100% test coverage with 159 tests using Vitest
 - 📦 **Optimized Bundle** - Smaller bundle size with better performance than alternatives
 - 🛡️ **Enterprise Security** - Built-in SRI validation, HTTPS enforcement, and content validation
@@ -25,8 +25,8 @@ Create beautiful, interactive SVG maps in React with d3-geo and topojson using a
 
 ## 📋 Quick Links
 
-- 📦 [npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps) - Install from npm registry
-- 📦 [GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages) - Alternative installation source
+- 📦 [npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps) - Primary distribution
+- 📦 [GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages) - Also available
 - 📚 [Live Examples](./examples/) - Interactive demos with source code
 - 📝 [**Changelog**](https://github.com/vnedyalk0v/react19-simple-maps/blob/main/CHANGELOG.md) - See what's new!
 - 🐛 [Issues](https://github.com/vnedyalk0v/react19-simple-maps/issues) - Report bugs or request features
@@ -64,7 +64,9 @@ yarn add @vnedyalk0v/react19-simple-maps
 pnpm add @vnedyalk0v/react19-simple-maps
 ```
 
-### From GitHub Packages
+> **ESM-only:** This package only supports `import` syntax. `require(...)` is not supported.
+
+### From GitHub Packages (Alternative)
 
 ```bash
 # Configure npm to use GitHub Packages for @vnedyalk0v scope
@@ -79,6 +81,17 @@ npm install @vnedyalk0v/react19-simple-maps
 - **React**: 19.0.0 or higher (React 19+ exclusive - no backward compatibility)
 - **TypeScript**: 5.0.0 or higher (strongly recommended for best developer experience)
 - **Node.js**: 18.0.0 or higher (for development and build tools)
+
+### Utilities Subpath
+
+You can import utility helpers directly from the `./utils` subpath:
+
+```tsx
+import {
+  validateGeographyUrl,
+  configureSRI,
+} from '@vnedyalk0v/react19-simple-maps/utils';
+```
 
 ## 🔄 Migration from react-simple-maps
 
@@ -863,7 +876,7 @@ This is a complete rewrite focused exclusively on React 19+. **No backward compa
 - **React 19+ Exclusive**: No support for React 18 or earlier
 - **Full TypeScript rewrite** with strict typing and zero `any` types
 - **React 19 features**: `use` API, enhanced error boundaries, improved Suspense
-- **Modern build system**: ESM/CJS/UMD with tree-shaking and source maps
+- **Modern build system**: ESM-only with tree-shaking and source maps
 - **Updated dependencies**: Latest D3 versions with security fixes
 - **Performance improvements**: Smaller bundle size and better rendering
 - **Enhanced security**: Built-in SRI, HTTPS enforcement, and validation
@@ -960,7 +973,7 @@ npm run build
 ### Development Scripts
 
 - `npm run dev` - Start development with watch mode
-- `npm run build` - Build all output formats (ESM, CJS, UMD)
+- `npm run build` - Build ESM output and type definitions
 - `npm run test` - Run test suite with Vitest
 - `npm run test:watch` - Run tests in watch mode
 - `npm run test:ui` - Run tests with UI interface
@@ -973,7 +986,7 @@ npm run build
 
 The package uses [Changesets](https://github.com/changesets/changesets) for version management and automated publishing:
 
-- **npm Registry**: Automatically published on main branch merges
+- **npm Registry**: Published on main branch merges
 - **GitHub Packages**: Also published to GitHub Package Registry
 - **Changelog**: Automatically generated from changesets
 
@@ -986,7 +999,7 @@ MIT licensed. Original work Copyright (c) Richard Zimerman 2017. Fork enhancemen
 ### Package Distribution
 
 - 📦 **[npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps)** - Primary distribution
-- 📦 **[GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages)** - Alternative source
+- 📦 **[GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages)** - Also available
 - 📊 **[Bundle Analysis](https://bundlephobia.com/package/@vnedyalk0v/react19-simple-maps)** - Size and dependencies
 
 ### Documentation & Examples

@@ -10,17 +10,13 @@ const projectRoot = join(__dirname, '..');
 
 // Bundle size thresholds (in KB)
 const SIZE_THRESHOLDS = {
-  'dist/index.umd.js': {
-    raw: 150, // 150KB raw
-    gzip: 45, // 45KB gzipped
-  },
-  'dist/index.esm.js': {
+  'dist/index.js': {
     raw: 120, // 120KB raw
     gzip: 35, // 35KB gzipped
   },
-  'dist/index.cjs.js': {
-    raw: 120, // 120KB raw
-    gzip: 35, // 35KB gzipped
+  'dist/utils.js': {
+    raw: 80, // 80KB raw
+    gzip: 25, // 25KB gzipped
   },
 };
 
