@@ -83,6 +83,26 @@ describe('SEC-001: IPv6 private IP address validation', () => {
     );
   });
 
+  it('should block Teredo addresses [2001:0000::]', () => {
+    expect(() =>
+      validateGeographyUrl('https://[2001:0000::1]/data.json'),
+    ).toThrow(/private IP address|not allowed/i);
+    expect(() =>
+      validateGeographyUrl('https://[2001:0:abcd::1]/data.json'),
+    ).toThrow(/private IP address|not allowed/i);
+  });
+
+  it('should NOT block legitimate public 2001: addresses outside Teredo /32', () => {
+    // 2001:4860:: is Google public DNS IPv6 — must not be blocked
+    expect(() =>
+      validateGeographyUrl('https://[2001:4860:4860::8888]/data.json'),
+    ).not.toThrow();
+    // 2001:0200:: is APNIC — must not be blocked
+    expect(() =>
+      validateGeographyUrl('https://[2001:0200::1]/data.json'),
+    ).not.toThrow();
+  });
+
   it('should allow valid public HTTPS URLs', () => {
     expect(() =>
       validateGeographyUrl(
