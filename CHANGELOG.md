@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0
+
+### Major Changes
+
+- a7aa88d: BREAKING: Package is now ESM-only. CommonJS (`require`) and UMD builds are removed.
+  Added `./utils` subpath export for direct utility imports.
+
 ## 1.2.1
 
 ### Patch Changes
