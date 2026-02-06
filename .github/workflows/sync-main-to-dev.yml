@@ -1,0 +1,70 @@
+name: Sync main -> dev
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: sync-main-to-dev
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Create sync PR when main is ahead of dev
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const base = "dev";
+            const head = "main";
+
+            const compare = await github.rest.repos.compareCommitsWithBasehead({
+              owner,
+              repo,
+              basehead: `${base}...${head}`,
+            });
+
+            if (compare.data.status === "identical" || compare.data.ahead_by === 0) {
+              core.info("No sync needed: main is not ahead of dev.");
+              return;
+            }
+
+            const existing = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              base,
+              head: `${owner}:${head}`,
+              per_page: 1,
+            });
+
+            if (existing.data.length > 0) {
+              core.info(`Sync PR already open: #${existing.data[0].number}`);
+              return;
+            }
+
+            const pr = await github.rest.pulls.create({
+              owner,
+              repo,
+              title: "chore: sync main into dev",
+              head,
+              base,
+              body: [
+                "Automated sync PR to keep `dev` up to date with `main`.",
+                "",
+                "- Trigger: push to `main`",
+                "- Source: `main`",
+                "- Target: `dev`",
+              ].join("\n"),
+            });
+
+            core.info(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
