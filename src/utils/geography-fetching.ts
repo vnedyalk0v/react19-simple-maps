@@ -6,6 +6,7 @@ import {
   validateGeographyUrl,
   validateContentType,
   validateResponseSize,
+  readResponseWithSizeLimit,
   validateGeographyData,
   GEOGRAPHY_FETCH_CONFIG,
 } from './geography-validation';
@@ -15,8 +16,12 @@ import {
   validateSRIFromArrayBuffer,
 } from './subresource-integrity';
 
+/** Maximum number of redirect hops allowed */
+const MAX_REDIRECTS = 5;
+
 /**
- * Creates fetch options with security headers and timeout
+ * Creates fetch options with security headers and timeout.
+ * Uses `redirect: 'manual'` so each redirect hop can be validated against the URL policy.
  * @param signal - AbortController signal for timeout
  * @returns Fetch options object
  */
@@ -30,7 +35,62 @@ function createSecureFetchOptions(signal: AbortSignal): RequestInit {
     // Security headers
     mode: 'cors',
     credentials: 'omit', // Don't send credentials
+    redirect: 'manual', // Handle redirects manually to validate each hop
   };
+}
+
+/**
+ * Follows redirects manually, validating each hop against the URL security policy.
+ * Prevents redirect-based SSRF bypasses.
+ * @param url - The initial URL to fetch
+ * @param options - Fetch options (must have redirect: 'manual')
+ * @returns The final non-redirect response
+ */
+async function fetchWithRedirectValidation(
+  url: string,
+  options: RequestInit,
+): Promise<Response> {
+  let currentUrl = url;
+
+  for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
+    const response = await fetch(currentUrl, options);
+
+    // Not a redirect — return directly
+    if (response.status < 300 || response.status >= 400) {
+      return response;
+    }
+
+    // Consume the redirect response body to release connection resources
+    try {
+      await response.arrayBuffer();
+    } catch {
+      // Ignore body-consumption errors — they must not mask redirect handling
+    }
+
+    // Extract and validate the redirect target
+    const location = response.headers.get('location');
+    if (!location) {
+      throw createGeographyFetchError(
+        'SECURITY_ERROR',
+        `Redirect response (HTTP ${response.status}) missing Location header`,
+        currentUrl,
+      );
+    }
+
+    // Resolve relative redirects against current URL
+    const redirectUrl = new URL(location, currentUrl).href;
+
+    // Validate the redirect target against the same URL security policy
+    validateGeographyUrl(redirectUrl);
+
+    currentUrl = redirectUrl;
+  }
+
+  throw createGeographyFetchError(
+    'SECURITY_ERROR',
+    `Too many redirects (exceeded ${MAX_REDIRECTS} hops)`,
+    url,
+  );
 }
 
 /**
@@ -102,33 +162,6 @@ function handleFetchError(error: unknown, url: string): GeographyError {
 }
 
 /**
- * Parses JSON response with proper error handling
- * @param response - The fetch response
- * @param url - The URL for error context
- * @returns Parsed geography data
- */
-async function parseGeographyResponse(
-  response: Response,
-  url: string,
-): Promise<Topology | FeatureCollection> {
-  try {
-    const data = await response.json();
-    validateGeographyData(data);
-    return data as Topology | FeatureCollection;
-  } catch (jsonError) {
-    if (jsonError instanceof SyntaxError) {
-      throw createGeographyFetchError(
-        'GEOGRAPHY_PARSE_ERROR',
-        'Invalid JSON format in geography data',
-        url,
-        jsonError,
-      );
-    }
-    throw jsonError;
-  }
-}
-
-/**
  * Parses JSON from ArrayBuffer with proper error handling
  * @param arrayBuffer - The response data as ArrayBuffer
  * @param url - The URL for error context
@@ -157,19 +190,29 @@ async function parseGeographyFromArrayBuffer(
 }
 
 /**
- * Basic fetch function for geography data without caching
+ * Fetch geography data with full security validation.
+ *
+ * @deprecated Since v2.1.0 — use {@link fetchGeographiesCache} instead for
+ * cached, secure fetching. This function now delegates to the hardened pipeline
+ * but swallows errors for backward compatibility.
+ *
  * @param url - The URL to fetch geography data from
  * @returns Promise resolving to geography data or undefined on error
  */
 export async function fetchGeographies(
   url: string,
 ): Promise<Topology | FeatureCollection | undefined> {
+  if (
+    typeof process !== 'undefined' &&
+    process?.env?.NODE_ENV !== 'production'
+  ) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      'fetchGeographies is deprecated. Use fetchGeographiesCache for secure, cached fetching.',
+    );
+  }
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(response.statusText);
-    }
-    return await response.json();
+    return await fetchGeographiesCache(url);
   } catch {
     return undefined;
   }
@@ -193,8 +236,8 @@ export const fetchGeographiesCache = cache(
     );
 
     try {
-      // Make secure fetch request
-      const response = await fetch(
+      // Make secure fetch request with redirect validation
+      const response = await fetchWithRedirectValidation(
         url,
         createSecureFetchOptions(controller.signal),
       );
@@ -209,24 +252,20 @@ export const fetchGeographiesCache = cache(
         );
       }
 
-      // Validate content type and size
+      // Validate content type and fast pre-check of Content-Length
       validateContentType(response);
       await validateResponseSize(response);
 
-      // Handle SRI validation and parsing in one step to avoid response body consumption issues
+      // Read body with hard streaming size limit (guards against falsified Content-Length)
+      const arrayBuffer = await readResponseWithSizeLimit(response);
+
+      // Handle SRI validation if required
       if (sriConfig) {
-        // Read response body once as ArrayBuffer
-        const arrayBuffer = await response.arrayBuffer();
-
-        // Validate SRI hash
         await validateSRIFromArrayBuffer(arrayBuffer, url, sriConfig);
-
-        // Parse JSON from ArrayBuffer
-        return await parseGeographyFromArrayBuffer(arrayBuffer, url);
-      } else {
-        // No SRI validation needed, parse normally
-        return await parseGeographyResponse(response, url);
       }
+
+      // Parse JSON from the already-read ArrayBuffer
+      return await parseGeographyFromArrayBuffer(arrayBuffer, url);
     } catch (error) {
       cleanup();
       throw handleFetchError(error, url);
