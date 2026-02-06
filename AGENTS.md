@@ -1,7 +1,3 @@
----
-description: Project rules for react19-simple-maps (React 19 map library)
-alwaysApply: true
----
 # react19-simple-maps Project Guidelines
 
 These rules apply when editing library code in `src/` and docs/examples in `examples/`.

@@ -6,6 +6,18 @@ type: always_apply
 
 These rules apply when editing library code in `src/` and docs/examples in `examples/`.
 
+## Git Workflow (Required)
+
+- Never push directly to `main`.
+- For every task, create a new branch from `dev`.
+- Before branching, update `dev` from remote so it is current with `origin/dev`.
+- Keep all task work on that new branch and open a PR to merge.
+
+## Release Notes (Required)
+
+- For every user-facing or package-impacting change, create a new `.changeset/*.md` file.
+- The changeset file must describe the change clearly so the changelog can be generated correctly.
+
 ## Scope and Compatibility
 
 - Target React 19+ (peer dependency `>=19.0.0`).
