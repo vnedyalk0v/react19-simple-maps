@@ -1,5 +1,5 @@
 ---
-"@vnedyalk0v/react19-simple-maps": patch
+'@vnedyalk0v/react19-simple-maps': patch
 ---
 
 Fix package configuration and tooling issues
