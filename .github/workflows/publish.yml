@@ -64,7 +64,6 @@ jobs:
 
           npm config set @vnedyalk0v:registry https://npm.pkg.github.com --userconfig "$NPM_CONFIG_USERCONFIG"
           npm config set //npm.pkg.github.com/:_authToken "${NODE_AUTH_TOKEN}" --userconfig "$NPM_CONFIG_USERCONFIG"
-          npm config set always-auth true --userconfig "$NPM_CONFIG_USERCONFIG"
 
           npm publish --registry=https://npm.pkg.github.com
 
