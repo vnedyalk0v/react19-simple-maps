@@ -100,7 +100,7 @@ function analyzeBundle(filePath) {
 
     // Analyze content for React 19 optimizations
     const contentStr = content.toString();
-    const optimizationAnalysis = analyzeOptimizations(contentStr);
+    const optimizationAnalysis = analyzeOptimizations(contentStr, filePath);
 
     return {
       exists: true,
@@ -130,10 +130,15 @@ function analyzeBundle(filePath) {
         brotli: brotliSize ? brotliSize <= config.maxBrotli : true,
       },
       utilization: {
-        raw: ((rawSize / config.maxRaw) * 100).toFixed(1),
-        gzip: ((gzipSize / config.maxGzip) * 100).toFixed(1),
+        raw: parseFloat(((rawSize / config.maxRaw) * 100).toFixed(1)),
+        gzip: parseFloat(((gzipSize / config.maxGzip) * 100).toFixed(1)),
         brotli: brotliSize
-          ? ((brotliSize / config.maxBrotli) * 100).toFixed(1)
+          ? parseFloat(((brotliSize / config.maxBrotli) * 100).toFixed(1))
+          : null,
+        rawFormatted: ((rawSize / config.maxRaw) * 100).toFixed(1) + '%',
+        gzipFormatted: ((gzipSize / config.maxGzip) * 100).toFixed(1) + '%',
+        brotliFormatted: brotliSize
+          ? ((brotliSize / config.maxBrotli) * 100).toFixed(1) + '%'
           : 'N/A',
       },
       optimizations: optimizationAnalysis,
@@ -148,21 +153,46 @@ function analyzeBundle(filePath) {
   }
 }
 
-function analyzeOptimizations(content) {
+/**
+ * Optimizations that are not applicable to TypeScript definition files.
+ * These checks look for runtime code patterns that never appear in .d.ts
+ * bundles, so marking them as "optimized" or "applied" would be misleading.
+ */
+const RUNTIME_ONLY_OPTIMIZATIONS = new Set([
+  'concurrentFeatures',
+  'consoleStripping',
+]);
+
+function analyzeOptimizations(content, filePath = '') {
   const analysis = {};
+  const isDefinitionFile = filePath.endsWith('.d.ts');
 
   Object.entries(REACT19_OPTIMIZATIONS).forEach(([key, optimization]) => {
+    // For .d.ts bundles, runtime-only optimizations are not applicable
+    if (isDefinitionFile && RUNTIME_ONLY_OPTIMIZATIONS.has(key)) {
+      analysis[key] = {
+        name: optimization.name,
+        expectedSavings: optimization.expectedSavings,
+        applied: false,
+        foundIndicators: null,
+        status: 'not_applicable',
+      };
+      return;
+    }
+
     const indicators = optimization.indicators;
     const foundIndicators = indicators.filter((indicator) =>
       content.includes(indicator),
     );
 
+    const hasIndicators = foundIndicators.length > 0;
+
     analysis[key] = {
       name: optimization.name,
       expectedSavings: optimization.expectedSavings,
-      applied: foundIndicators.length === 0, // Optimization applied if indicators not found
-      foundIndicators: foundIndicators.length > 0 ? foundIndicators : null,
-      status: foundIndicators.length === 0 ? 'optimized' : 'needs-optimization',
+      applied: !hasIndicators, // Optimization applied if indicators not found in output
+      foundIndicators: hasIndicators ? foundIndicators : null,
+      status: !hasIndicators ? 'optimized' : 'needs-optimization',
     };
   });
 
@@ -173,18 +203,24 @@ function generateEnhancedReport() {
   const bundlePaths = Object.keys(BUNDLE_TARGETS);
   const analyses = bundlePaths.map(analyzeBundle);
 
-  // Get git information for tracking
+  // Get git information for tracking.
+  // - BUNDLE_REPORT_REDACT_GIT=true  → omit the entire git object from the report
+  // - Otherwise, the branch name is always redacted to avoid leaking sensitive
+  //   branch names (e.g. "fix/security-findings-sec001-003") into CI artifacts.
+  const redactGit =
+    process.env.BUNDLE_REPORT_REDACT_GIT === 'true' ||
+    process.env.BUNDLE_REPORT_REDACT_GIT === '1';
   let gitInfo = {};
-  try {
-    gitInfo = {
-      commit: execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim(),
-      branch: execSync('git rev-parse --abbrev-ref HEAD', {
-        encoding: 'utf8',
-      }).trim(),
-      timestamp: new Date().toISOString(),
-    };
-  } catch (error) {
-    gitInfo = { error: 'Git information unavailable' };
+  if (!redactGit) {
+    try {
+      gitInfo = {
+        commit: execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim(),
+        branch: '<redacted>',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      gitInfo = { error: 'Git information unavailable' };
+    }
   }
 
   const existingBundles = analyses.filter((a) => a.exists);
@@ -200,7 +236,7 @@ function generateEnhancedReport() {
 
   return {
     timestamp: new Date().toISOString(),
-    git: gitInfo,
+    git: redactGit ? null : gitInfo,
     bundles: analyses,
     summary: {
       totalBundles: analyses.length,
@@ -228,18 +264,38 @@ function analyzeGlobalOptimizations(bundles) {
     const bundleResults = bundles
       .map((bundle) => bundle.optimizations?.[key])
       .filter(Boolean);
-    const optimizedCount = bundleResults.filter(
+    // Exclude not_applicable bundles from the totals
+    const applicableResults = bundleResults.filter(
+      (result) => result.status !== 'not_applicable',
+    );
+    const optimizedCount = applicableResults.filter(
       (result) => result.applied,
     ).length;
-    const totalCount = bundleResults.length;
+    const totalCount = applicableResults.length;
+
+    let completionRate;
+    let status;
+    if (totalCount === 0) {
+      completionRate = 0;
+      status = 'not_applicable';
+    } else {
+      completionRate = (optimizedCount / totalCount) * 100;
+      if (completionRate === 0) {
+        status = 'not_started';
+      } else if (completionRate >= 100) {
+        status = 'complete';
+      } else {
+        status = 'partial';
+      }
+    }
 
     globalAnalysis[key] = {
       ...REACT19_OPTIMIZATIONS[key],
       appliedToBundles: optimizedCount,
       totalBundles: totalCount,
-      completionRate:
-        totalCount > 0 ? ((optimizedCount / totalCount) * 100).toFixed(1) : '0',
-      status: optimizedCount === totalCount ? 'complete' : 'partial',
+      completionRate: parseFloat(completionRate.toFixed(1)),
+      completionRateFormatted: completionRate.toFixed(1) + '%',
+      status,
     };
   });
 
@@ -249,6 +305,7 @@ function analyzeGlobalOptimizations(bundles) {
 export {
   generateEnhancedReport,
   analyzeBundle,
+  analyzeGlobalOptimizations,
   BUNDLE_TARGETS,
   REACT19_OPTIMIZATIONS,
 };
@@ -261,10 +318,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   // Print summary
   console.log(`📅 Generated: ${report.timestamp}`);
-  if (report.git.commit) {
-    console.log(
-      `🔗 Git: ${report.git.branch}@${report.git.commit.substring(0, 8)}`,
-    );
+  if (report.git && report.git.commit) {
+    console.log(`🔗 Git: ${report.git.commit.substring(0, 8)}`);
   }
   console.log(
     `📦 Bundles: ${report.summary.compliantBundles}/${report.summary.existingBundles} compliant`,

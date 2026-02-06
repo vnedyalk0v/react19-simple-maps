@@ -154,11 +154,9 @@ class BundleDashboard {
       if (previousOpt) {
         progress[key] = {
           name: latestOpt.name,
-          previousRate: parseFloat(previousOpt.completionRate),
-          currentRate: parseFloat(latestOpt.completionRate),
-          improvement:
-            parseFloat(latestOpt.completionRate) -
-            parseFloat(previousOpt.completionRate),
+          previousRate: previousOpt.completionRate,
+          currentRate: latestOpt.completionRate,
+          improvement: latestOpt.completionRate - previousOpt.completionRate,
           status: latestOpt.status,
         };
       }
@@ -207,7 +205,7 @@ class BundleDashboard {
             type: 'optimization-incomplete',
             priority: 'medium',
             optimization: optimization.name,
-            message: `${optimization.name} is only ${optimization.completionRate}% complete`,
+            message: `${optimization.name} is only ${optimization.completionRateFormatted} complete`,
             suggestion: `Apply ${optimization.name} to remaining bundles for ${optimization.expectedSavings} size reduction`,
           });
         }
@@ -251,10 +249,10 @@ class BundleDashboard {
         bundle.compliance.raw && bundle.compliance.gzip ? '✅' : '⚠️';
       console.log(`${complianceIcon} ${bundle.name}`);
       console.log(
-        `   Raw: ${bundle.sizes.rawFormatted} (${bundle.utilization.raw}% of limit)`,
+        `   Raw: ${bundle.sizes.rawFormatted} (${bundle.utilization.rawFormatted} of limit)`,
       );
       console.log(
-        `   Gzip: ${bundle.sizes.gzipFormatted} (${bundle.utilization.gzip}% of limit)`,
+        `   Gzip: ${bundle.sizes.gzipFormatted} (${bundle.utilization.gzipFormatted} of limit)`,
       );
     });
 
@@ -264,7 +262,7 @@ class BundleDashboard {
       ([key, opt]) => {
         const statusIcon = opt.status === 'complete' ? '✅' : '🔄';
         console.log(
-          `${statusIcon} ${opt.name}: ${opt.completionRate}% complete (${opt.expectedSavings} potential savings)`,
+          `${statusIcon} ${opt.name}: ${opt.completionRateFormatted} complete (${opt.expectedSavings} potential savings)`,
         );
       },
     );

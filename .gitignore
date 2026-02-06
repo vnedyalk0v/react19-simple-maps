@@ -21,3 +21,6 @@ coverage/
 
 # Documentation (internal use only)
 docs/
+
+# Generated reports
+reports/*.json

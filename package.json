@@ -27,7 +27,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json && rollup -c",
+    "build": "tsc --project tsconfig.build.json && NODE_ENV=production rollup -c",
     "build:types": "tsc --project tsconfig.build.json",
     "watch": "rollup -cw",
     "prepare": "npm run build",
@@ -43,9 +43,9 @@
     "ci": "npm run build && npm run check-format && npm run test",
     "dev": "rollup -cw",
     "clean": "rm -rf dist",
-    "analyze": "npm run build && node scripts/enhanced-bundle-monitor.js",
-    "analyze:compare": "npm run build && node scripts/analyze-bundle.js --compare",
-    "analyze:dashboard": "npm run build && node scripts/bundle-dashboard.js --detailed",
+    "analyze": "npm run build && NODE_ENV=production node scripts/enhanced-bundle-monitor.js",
+    "analyze:compare": "npm run build && NODE_ENV=production node scripts/analyze-bundle.js --compare",
+    "analyze:dashboard": "npm run build && NODE_ENV=production node scripts/bundle-dashboard.js --detailed",
     "optimize": "node scripts/bundle-optimizer.js",
     "size": "npm run build && ls -lh dist/*.js dist/*.d.ts",
     "generate-sri": "node scripts/generate-sri-hashes.js",

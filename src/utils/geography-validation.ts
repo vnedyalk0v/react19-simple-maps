@@ -90,45 +90,91 @@ export function enableDevelopmentMode(
 }
 
 /**
- * Checks if a hostname is a private IP address
- * @param hostname - The hostname to check
- * @returns True if the hostname is a private IP address
+ * Strips IPv6 brackets from a hostname returned by `new URL().hostname`.
+ * `new URL("https://[::1]/")` yields hostname `[::1]`; we need bare `::1`.
+ */
+function stripIPv6Brackets(hostname: string): string {
+  if (hostname.startsWith('[') && hostname.endsWith(']')) {
+    return hostname.slice(1, -1);
+  }
+  return hostname;
+}
+
+/**
+ * Checks if a hostname is a private/reserved IP address.
+ *
+ * Handles both IPv4 and IPv6 (including IPv4-mapped IPv6 like `::ffff:127.0.0.1`).
+ * The hostname is normalised (bracket-stripped) before matching so that values
+ * produced by `new URL().hostname` are correctly classified.
+ *
+ * @param hostname - The hostname to check (may include IPv6 brackets)
+ * @returns True if the hostname is a private/reserved IP address
  */
 function isPrivateIPAddress(hostname: string): boolean {
-  // Skip non-IP hostnames
   if (!hostname || hostname === 'localhost') {
     return false;
   }
 
-  // IPv4 private ranges
+  // Normalise: strip IPv6 brackets so regexes can match
+  const normalised = stripIPv6Brackets(hostname);
+
+  // --- IPv4 private / reserved ranges ---
   const ipv4PrivateRanges = [
     /^10\./, // 10.0.0.0/8
     /^172\.(1[6-9]|2[0-9]|3[01])\./, // 172.16.0.0/12
     /^192\.168\./, // 192.168.0.0/16
     /^127\./, // 127.0.0.0/8 (loopback)
     /^169\.254\./, // 169.254.0.0/16 (link-local)
+    /^0\./, // 0.0.0.0/8 (current network)
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 (carrier-grade NAT)
+    /^192\.0\.0\./, // 192.0.0.0/24 (IETF protocol assignments)
+    /^198\.1[89]\./, // 198.18.0.0/15 (benchmark testing)
+    /^233\.252\.0\./, // 233.252.0.0/24 (documentation)
   ];
 
-  // Check IPv4 private ranges
   for (const range of ipv4PrivateRanges) {
-    if (range.test(hostname)) {
+    if (range.test(normalised)) {
       return true;
     }
   }
 
-  // IPv6 private ranges (simplified check)
+  // --- IPv6 private / reserved ranges ---
   const ipv6PrivateRanges = [
-    /^::1$/, // ::1 (loopback)
-    /^fe80:/, // fe80::/10 (link-local)
-    /^fc00:/, // fc00::/7 (unique local)
-    /^fd00:/, // fd00::/8 (unique local)
+    /^::1$/i, // ::1 (loopback)
+    /^fe[89ab][0-9a-f]:/i, // fe80::/10 (link-local) — covers fe80:–febf:
+    /^f[cd][0-9a-f]{2}:/i, // fc00::/7 (unique local) — covers fc00:–fdff:
+    /^::$/i, // :: (unspecified address)
+    /^ff[0-9a-f]{2}:/i, // ff00::/8 (multicast)
+    /^100::/i, // 100::/64 (discard prefix)
+    /^2001:db8:/i, // 2001:db8::/32 (documentation)
+    /^2001:(?::[0-9a-f]{0,4}){0,6}(?:::)?$/i, // 2001::/32 (Teredo tunnelling — compressed forms like 2001::)
+    /^2001:[0-9a-f]{1,4}:/i, // 2001::/32 (Teredo tunnelling — expanded forms like 2001:0000:...)
   ];
 
-  // Check IPv6 private ranges
   for (const range of ipv6PrivateRanges) {
-    if (range.test(hostname)) {
+    if (range.test(normalised)) {
       return true;
     }
+  }
+
+  // --- IPv4-mapped IPv6 ---
+  // Dotted-quad form: ::ffff:127.0.0.1
+  const ipv4MappedDottedMatch = normalised.match(
+    /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i,
+  );
+  if (ipv4MappedDottedMatch?.[1]) {
+    return isPrivateIPAddress(ipv4MappedDottedMatch[1]);
+  }
+
+  // Hex form: ::ffff:7f00:1 (how URL constructor normalises ::ffff:127.0.0.1)
+  const ipv4MappedHexMatch = normalised.match(
+    /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i,
+  );
+  if (ipv4MappedHexMatch?.[1] && ipv4MappedHexMatch[2]) {
+    const hi = parseInt(ipv4MappedHexMatch[1], 16);
+    const lo = parseInt(ipv4MappedHexMatch[2], 16);
+    const reconstructed = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+    return isPrivateIPAddress(reconstructed);
   }
 
   return false;
@@ -180,10 +226,12 @@ export function validateGeographyUrl(url: string): void {
           );
         }
 
-        // If HTTP localhost is allowed, validate hostname
+        // If HTTP localhost is allowed, validate hostname (including IPv6 loopback)
+        const httpHost = stripIPv6Brackets(parsedUrl.hostname);
         if (
-          parsedUrl.hostname !== 'localhost' &&
-          parsedUrl.hostname !== '127.0.0.1'
+          httpHost !== 'localhost' &&
+          httpHost !== '127.0.0.1' &&
+          httpHost !== '::1'
         ) {
           throw createGeographyFetchError(
             'SECURITY_ERROR',
@@ -209,10 +257,12 @@ export function validateGeographyUrl(url: string): void {
       }
     }
 
-    // Additional security checks for localhost access
+    // Additional security checks for localhost access (including IPv6 loopback)
+    const bareHostname = stripIPv6Brackets(parsedUrl.hostname);
     if (
-      parsedUrl.hostname === 'localhost' ||
-      parsedUrl.hostname === '127.0.0.1'
+      bareHostname === 'localhost' ||
+      bareHostname === '127.0.0.1' ||
+      bareHostname === '::1'
     ) {
       if (process.env.NODE_ENV === 'production') {
         throw createGeographyFetchError(
