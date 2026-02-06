@@ -60,6 +60,13 @@ async function fetchWithRedirectValidation(
       return response;
     }
 
+    // Consume the redirect response body to release connection resources
+    try {
+      await response.arrayBuffer();
+    } catch {
+      // Ignore body-consumption errors — they must not mask redirect handling
+    }
+
     // Extract and validate the redirect target
     const location = response.headers.get('location');
     if (!location) {
@@ -195,7 +202,7 @@ async function parseGeographyFromArrayBuffer(
 export async function fetchGeographies(
   url: string,
 ): Promise<Topology | FeatureCollection | undefined> {
-  if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  if (typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'production') {
     // eslint-disable-next-line no-console
     console.warn(
       'fetchGeographies is deprecated. Use fetchGeographiesCache for secure, cached fetching.',

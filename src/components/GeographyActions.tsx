@@ -46,8 +46,6 @@ export const loadGeographyCached = cache(loadGeographyAction);
 
 // Server Action for preloading geography data
 export async function preloadGeographyAction(url: string): Promise<void> {
-  'use server';
-
   if (!url || typeof url !== 'string') {
     return;
   }
@@ -77,8 +75,6 @@ export async function validateGeographyUrlAction(url: string): Promise<{
   valid: boolean;
   error?: string;
 }> {
-  'use server';
-
   if (!url || typeof url !== 'string') {
     return { valid: false, error: 'URL is required' };
   }

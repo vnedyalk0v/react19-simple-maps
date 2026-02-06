@@ -28,26 +28,9 @@ Common directives across the examples include:
 
 > **⚠️ WARNING (HIGH SEVERITY):** The `'unsafe-inline'` and `'unsafe-eval'` directives in `script-src` **drastically weaken CSP** and **must not be used in production**. They are included here **only** as a development exception required by Vite HMR. For production deployments, **remove both `'unsafe-inline'` and `'unsafe-eval'`** from `script-src` (and `'unsafe-inline'` from `style-src` where possible) and rely on nonces or hashes instead. See the [Development vs Production](#development-vs-production) section below for guidance on securing CSP for production.
 
-### Recommended Production CSP
+### Production CSP
 
-Deliver CSP via HTTP headers (not meta tags) for full directive support:
-
-```
-Content-Security-Policy:
-  default-src 'self';
-  script-src 'self';
-  style-src 'self';
-  img-src 'self' data: blob:;
-  font-src 'self' data:;
-  connect-src 'self' https://unpkg.com https://*.unpkg.com;
-  object-src 'none';
-  base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none';
-  upgrade-insecure-requests;
-```
-
-Use nonces (`'nonce-<random>'`) or `'strict-dynamic'` if inline scripts are required.
+The directives above are **development defaults only**. Derive your production Content Security Policy from your own deployment environment rather than copying a hardcoded example. See the [Development vs Production](#development-vs-production) section below for the key changes to consider when moving to production.
 
 ## Additional Security Headers
 

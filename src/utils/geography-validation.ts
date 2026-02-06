@@ -304,7 +304,11 @@ export async function readResponseWithSizeLimit(
 ): Promise<ArrayBuffer> {
   const reader = response.body?.getReader();
 
-  // Fallback: if ReadableStream is not available, read the whole body and check size
+  // Fallback: if ReadableStream is not available, read the whole body and check size.
+  // NOTE: response.arrayBuffer() loads the entire response into memory before the size
+  // check runs, which can cause high memory usage or OOM for very large responses.
+  // The ReadableStream path above is preferred as it streams data and enforces the
+  // size limit incrementally, failing fast without buffering the full payload.
   if (!reader) {
     const buffer = await response.arrayBuffer();
     if (buffer.byteLength > maxBytes) {
