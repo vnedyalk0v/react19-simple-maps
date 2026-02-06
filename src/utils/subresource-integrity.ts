@@ -244,6 +244,8 @@ function canonicalizeUrlForSRI(url: string): string {
     ) {
       parsed.port = '';
     }
+    // Strip trailing slashes from the path (preserve root "/" and query/hash)
+    parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
     return parsed.href;
   } catch {
     // If URL parsing fails, return as-is — the fetch will fail with a

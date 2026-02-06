@@ -8,7 +8,6 @@ import {
   getSRIForUrl,
   configureSRI,
   DEFAULT_SRI_CONFIG,
-  KNOWN_GEOGRAPHY_SRI,
 } from '../src/utils/subresource-integrity';
 
 // ---------------------------------------------------------------------------
@@ -118,12 +117,100 @@ describe('SEC-002: Preloading validates URLs before network activity', () => {
     // These should not throw — errors are caught internally
     expect(() =>
       preloadGeography('http://evil.example.com/data.json'),
-    ).not.toThrow();
-    expect(() => preloadGeography('https://[::1]/data.json')).not.toThrow();
-    expect(() => preloadGeography('')).not.toThrow();
+    ).not.toThrow(); // → warn (HTTP not allowed)
+    expect(() => preloadGeography('https://[::1]/data.json')).not.toThrow(); // → warn (private IP)
+    // Empty string is rejected by the guard clause before any network/validation
+    // activity, so it returns silently without logging a warning.
+    expect(() => preloadGeography('')).not.toThrow(); // → no warn (early return)
 
-    // Verify that validation errors were logged (not silently ignored)
+    // Only the two URLs that reach validateGeographyUrl and fail produce warnings
     expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-002b: preloadGeographyAssets validates d3Scripts / stylesheets URLs
+// ---------------------------------------------------------------------------
+describe('SEC-002b: preloadGeographyAssets validates asset URLs', () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it('validatePreloadUrl returns true for valid HTTPS URLs', async () => {
+    const { validatePreloadUrl } = await import('../src/utils/preloading');
+    expect(validatePreloadUrl('https://cdn.jsdelivr.net/npm/d3@7/+esm')).toBe(
+      true,
+    );
+    expect(
+      validatePreloadUrl('https://unpkg.com/d3@7/dist/d3.min.js'),
+    ).toBe(true);
+  });
+
+  it('validatePreloadUrl rejects HTTP URLs', async () => {
+    const { validatePreloadUrl } = await import('../src/utils/preloading');
+    expect(validatePreloadUrl('http://evil.example.com/script.js')).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Preload URL rejected'),
+    );
+  });
+
+  it('validatePreloadUrl rejects private IP addresses', async () => {
+    const { validatePreloadUrl } = await import('../src/utils/preloading');
+    expect(validatePreloadUrl('https://10.0.0.1/style.css')).toBe(false);
+    expect(validatePreloadUrl('https://192.168.1.1/script.js')).toBe(false);
+    expect(validatePreloadUrl('https://[::1]/style.css')).toBe(false);
+    expect(warnSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('validatePreloadUrl rejects empty and non-string values', async () => {
+    const { validatePreloadUrl } = await import('../src/utils/preloading');
+    expect(validatePreloadUrl('')).toBe(false);
+    expect(validatePreloadUrl('   ')).toBe(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(validatePreloadUrl(null as any)).toBe(false);
+  });
+
+  it('preloadGeographyAssets skips invalid d3Script URLs without throwing', async () => {
+    const { preloadGeographyAssets } = await import('../src/utils/preloading');
+    expect(() =>
+      preloadGeographyAssets({
+        d3Scripts: [
+          'http://evil.example.com/d3.js', // HTTP — rejected
+          'https://10.0.0.1/d3.js', // private IP — rejected
+          'https://cdn.jsdelivr.net/npm/d3@7/+esm', // valid — accepted
+        ],
+      }),
+    ).not.toThrow();
+    // Two rejections → two warnings
+    const rejectWarnings = warnSpy.mock.calls.filter(
+      (args) =>
+        typeof args[0] === 'string' && args[0].includes('Preload URL rejected'),
+    );
+    expect(rejectWarnings.length).toBe(2);
+  });
+
+  it('preloadGeographyAssets skips invalid stylesheet URLs without throwing', async () => {
+    const { preloadGeographyAssets } = await import('../src/utils/preloading');
+    expect(() =>
+      preloadGeographyAssets({
+        stylesheets: [
+          'http://evil.example.com/map.css', // HTTP — rejected
+          'https://cdn.example.com/map.css', // valid — accepted
+        ],
+      }),
+    ).not.toThrow();
+    const rejectWarnings = warnSpy.mock.calls.filter(
+      (args) =>
+        typeof args[0] === 'string' && args[0].includes('Preload URL rejected'),
+    );
+    expect(rejectWarnings.length).toBe(1);
   });
 });
 

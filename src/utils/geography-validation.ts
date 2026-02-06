@@ -141,14 +141,14 @@ function isPrivateIPAddress(hostname: string): boolean {
   // --- IPv6 private / reserved ranges ---
   const ipv6PrivateRanges = [
     /^::1$/i, // ::1 (loopback)
-    /^fe80:/i, // fe80::/10 (link-local)
-    /^fc00:/i, // fc00::/7 (unique local)
-    /^fd[0-9a-f]{2}:/i, // fd00::/8 (unique local — more precise)
+    /^fe[89ab][0-9a-f]:/i, // fe80::/10 (link-local) — covers fe80:–febf:
+    /^f[cd][0-9a-f]{2}:/i, // fc00::/7 (unique local) — covers fc00:–fdff:
     /^::$/i, // :: (unspecified address)
     /^ff[0-9a-f]{2}:/i, // ff00::/8 (multicast)
     /^100::/i, // 100::/64 (discard prefix)
     /^2001:db8:/i, // 2001:db8::/32 (documentation)
-    /^2001:0?0?0?0?:0?0?0?0?:/i, // 2001::/32 (Teredo tunnelling — often blocked)
+    /^2001:(?::[0-9a-f]{0,4}){0,6}(?:::)?$/i, // 2001::/32 (Teredo tunnelling — compressed forms like 2001::)
+    /^2001:[0-9a-f]{1,4}:/i, // 2001::/32 (Teredo tunnelling — expanded forms like 2001:0000:...)
   ];
 
   for (const range of ipv6PrivateRanges) {

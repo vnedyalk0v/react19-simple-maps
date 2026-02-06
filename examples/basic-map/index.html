@@ -32,8 +32,11 @@
     <!--
       The headers below are DEVELOPMENT-ONLY fallbacks delivered via meta tags.
       Browsers enforce X-Content-Type-Options and Referrer-Policy from meta tags,
-      but X-Frame-Options is only reliable as an HTTP header. For production,
-      set ALL security headers at the HTTP response layer (server / CDN / edge).
+      but X-Frame-Options is only reliable as an HTTP header. Likewise,
+      Permissions-Policy is not reliably enforced via a meta tag across browsers;
+      it should be delivered as an HTTP response header for full support — the
+      meta tag here is a fallback only. For production, set ALL security headers
+      at the HTTP response layer (server / CDN / edge).
       See examples/SECURITY.md for details.
     -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />

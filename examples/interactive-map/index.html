@@ -46,19 +46,13 @@
       http-equiv="Referrer-Policy"
       content="strict-origin-when-cross-origin"
     />
-    <meta
-      http-equiv="Permissions-Policy"
-      content="
-      geolocation=(),
-      microphone=(),
-      camera=(),
-      payment=(),
-      usb=(),
-      magnetometer=(),
-      gyroscope=(),
-      accelerometer=()
-    "
-    />
+    <!--
+      Permissions-Policy is intentionally NOT set via a meta tag here.
+      Browsers do not reliably enforce Permissions-Policy from
+      <meta http-equiv>; it must be delivered as an HTTP response header
+      to have any effect. Set it at the server / CDN / edge layer in
+      production. See examples/SECURITY.md for details.
+    -->
   </head>
   <body>
     <div id="root"></div>
