@@ -20,10 +20,13 @@ import {
 const MAX_REDIRECTS = 5;
 
 /**
- * Creates fetch options with security headers and timeout.
- * Uses `redirect: 'manual'` so each redirect hop can be validated against the URL policy.
- * @param signal - AbortController signal for timeout
- * @returns Fetch options object
+ * Create fetch options with security-conscious defaults.
+ *
+ * The options limit accepted content types, set caching to one hour, enforce CORS mode,
+ * omit credentials, and use `redirect: 'manual'` so callers can validate each redirect hop.
+ *
+ * @param signal - AbortSignal used to cancel the request (e.g., on timeout)
+ * @returns The configured `RequestInit` options for secure fetching
  */
 function createSecureFetchOptions(signal: AbortSignal): RequestInit {
   return {
@@ -40,11 +43,11 @@ function createSecureFetchOptions(signal: AbortSignal): RequestInit {
 }
 
 /**
- * Follows redirects manually, validating each hop against the URL security policy.
- * Prevents redirect-based SSRF bypasses.
- * @param url - The initial URL to fetch
- * @param options - Fetch options (must have redirect: 'manual')
- * @returns The final non-redirect response
+ * Follow redirects manually and validate each hop against the URL security policy.
+ *
+ * @param options - Fetch options; must include `redirect: 'manual'` so redirects are handled by this function
+ * @returns The final non-redirect `Response`
+ * @throws createGeographyFetchError with type `SECURITY_ERROR` if a redirect response is missing a `Location` header or if the maximum redirect hops (MAX_REDIRECTS) is exceeded
  */
 async function fetchWithRedirectValidation(
   url: string,
@@ -114,10 +117,17 @@ function createTimeoutController(timeoutMs: number): {
 }
 
 /**
- * Handles fetch errors and converts them to geography-specific errors
- * @param error - The original error
- * @param url - The URL that was being fetched
- * @returns A GeographyError
+ * Convert a fetch-related error into a GeographyError with a suitable type and message.
+ *
+ * Maps specific error cases to geography error types:
+ * - An `AbortError` becomes a `GEOGRAPHY_LOAD_ERROR` indicating a timeout.
+ * - A `TypeError` whose message contains `"fetch"` becomes a `GEOGRAPHY_LOAD_ERROR` indicating a network failure.
+ * - An error whose message contains `"Invalid geography data"` becomes a `GEOGRAPHY_PARSE_ERROR`.
+ * If the provided error already contains a `type` property, it is returned as-is. All other errors become `GEOGRAPHY_LOAD_ERROR` with the original message or `"Unknown error occurred"`.
+ *
+ * @param error - The original error thrown during fetch or parsing
+ * @param url - The URL that was being fetched; included in the created GeographyError context
+ * @returns A GeographyError representing the mapped error type and message
  */
 function handleFetchError(error: unknown, url: string): GeographyError {
   if (error instanceof Error) {
@@ -162,10 +172,11 @@ function handleFetchError(error: unknown, url: string): GeographyError {
 }
 
 /**
- * Parses JSON from ArrayBuffer with proper error handling
- * @param arrayBuffer - The response data as ArrayBuffer
- * @param url - The URL for error context
- * @returns Parsed geography data
+ * Decode JSON from an ArrayBuffer and validate it as geography data.
+ *
+ * @param url - The resource URL used to provide context in errors
+ * @returns A `Topology` or `FeatureCollection` parsed from the buffer
+ * @throws GEOGRAPHY_PARSE_ERROR when the buffer does not contain valid JSON
  */
 async function parseGeographyFromArrayBuffer(
   arrayBuffer: ArrayBuffer,
@@ -190,14 +201,11 @@ async function parseGeographyFromArrayBuffer(
 }
 
 /**
- * Fetch geography data with full security validation.
+ * Fetch geography data using the secure, cached pipeline but return undefined on error for backward compatibility.
  *
- * @deprecated Since v2.1.0 — use {@link fetchGeographiesCache} instead for
- * cached, secure fetching. This function now delegates to the hardened pipeline
- * but swallows errors for backward compatibility.
- *
+ * @deprecated Since v2.1.0 — use {@link fetchGeographiesCache} for cached, secure fetching; this function delegates to that pipeline and swallows errors.
  * @param url - The URL to fetch geography data from
- * @returns Promise resolving to geography data or undefined on error
+ * @returns Geography `Topology` or `FeatureCollection`, or `undefined` if an error occurred
  */
 export async function fetchGeographies(
   url: string,

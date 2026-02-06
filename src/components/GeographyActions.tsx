@@ -7,9 +7,13 @@ import { fetchGeographiesCache } from '../utils/geography-fetching';
 import { validateGeographyUrl } from '../utils/geography-validation';
 
 /**
- * Server Action for secure geography data loading.
- * Delegates all URL validation, fetch security (redirect validation, size limits,
- * content-type checks, SRI) to the shared hardened pipeline.
+ * Load geography data from a submitted URL and return the parsed Topology or FeatureCollection.
+ *
+ * Validates that the FormData contains a `url` field, attempts to fetch and parse the geography data,
+ * and returns either the parsed data or a standardized error message.
+ *
+ * @param formData - FormData containing a `url` field with the geography URL to load
+ * @returns An object with `data` set to the parsed `Topology` or `FeatureCollection` on success, and `error` set to an error message on failure; one of `data` or `error` will be `null`
  */
 export async function loadGeographyAction(
   _previousState: {
@@ -44,7 +48,14 @@ export async function loadGeographyAction(
 // Cached server action for better performance
 export const loadGeographyCached = cache(loadGeographyAction);
 
-// Server Action for preloading geography data
+/**
+ * Preloads geography data for the given URL to warm the server-side cache.
+ *
+ * @param url - The geography URL to preload into cache; ignored if falsy or not a string.
+ *
+ * Notes:
+ * - Errors during preload are swallowed; in non-production environments a warning is logged to the console.
+ */
 export async function preloadGeographyAction(url: string): Promise<void> {
   if (!url || typeof url !== 'string') {
     return;
@@ -68,8 +79,10 @@ export async function preloadGeographyAction(url: string): Promise<void> {
 }
 
 /**
- * Server Action for validating geography URLs.
- * Reuses the shared URL validator with HTTPS-only, private-IP blocking, etc.
+ * Validates a geography URL for use with the geography loader.
+ *
+ * @param url - The URL to validate
+ * @returns An object with `valid: true` when the URL passes validation; otherwise `valid: false` and `error` containing a human-readable message
  */
 export async function validateGeographyUrlAction(url: string): Promise<{
   valid: boolean;

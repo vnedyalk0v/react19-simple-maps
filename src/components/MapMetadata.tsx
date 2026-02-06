@@ -1,8 +1,11 @@
 import { ReactNode } from 'react';
 
 /**
- * Safely serialize an object for embedding in a <script type="application/ld+json"> block.
- * Escapes characters that could break out of the script context (XSS prevention).
+ * Produce a JSON string of `data` that is safe to embed inside a <script type="application/ld+json"> element.
+ *
+ * Escapes characters that can terminate or break out of script content to help prevent script-injection issues.
+ *
+ * @returns The escaped JSON string suitable for inclusion in an HTML script block
  * @see https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements
  */
 function safeJsonLdSerialize(data: object): string {
@@ -34,8 +37,14 @@ interface MapMetadataProps {
 }
 
 /**
- * MapMetadata component using React 19 native metadata tags
- * Provides SEO and social media optimization for map components
+ * Renders document metadata (title, meta tags, Open Graph, Twitter Card, JSON-LD, and map-specific tags) for map pages.
+ *
+ * Renders appropriate <title>, <meta>, <link>, <script type="application/ld+json"> (with JSON-LD safely serialized and escaped), and resource preload tags based on provided props.
+ *
+ * @param jsonLd - Structured data object to embed as JSON-LD; it will be safely serialized and escaped to prevent script-breakout XSS.
+ * @param keywords - List of keywords; when non-empty they are joined with commas into a meta `keywords` tag.
+ * @param children - Additional elements to render after the generated metadata.
+ * @returns The metadata elements to include in the document head for the current page.
  */
 export function MapMetadata({
   title,

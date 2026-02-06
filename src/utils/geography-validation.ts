@@ -245,9 +245,10 @@ export function validateGeographyUrl(url: string): void {
 }
 
 /**
- * Validates response content type
- * @param response - The fetch response to validate
- * @throws {Error} If content type is invalid
+ * Ensure the response's Content-Type header matches the configured allowed geography content types.
+ *
+ * @param response - The fetch `Response` whose `Content-Type` header will be validated
+ * @throws VALIDATION_ERROR if the `Content-Type` header is missing or not one of the configured allowed content types
  */
 export function validateContentType(response: Response): void {
   const contentType = response.headers.get('content-type');
@@ -271,11 +272,12 @@ export function validateContentType(response: Response): void {
 }
 
 /**
- * Fast pre-check of Content-Length header to reject obviously oversized responses.
- * NOTE: This is only a pre-check — the header can be omitted or falsified.
- * Use {@link readResponseWithSizeLimit} for authoritative enforcement.
- * @param response - The fetch response to validate
- * @throws {Error} If Content-Length exceeds the configured maximum
+ * Performs a fast pre-check of the response's Content-Length header and rejects responses that declare a size larger than the configured maximum.
+ *
+ * The Content-Length header may be missing or incorrect; this check does not guarantee the actual byte count of the body.
+ *
+ * @param response - The fetch Response to inspect
+ * @throws {Error} If Content-Length is present and indicates a size greater than GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE
  */
 export async function validateResponseSize(response: Response): Promise<void> {
   const contentLength = response.headers.get('content-length');
@@ -291,12 +293,11 @@ export async function validateResponseSize(response: Response): Promise<void> {
 }
 
 /**
- * Reads the response body as an ArrayBuffer while enforcing a hard byte-count limit.
- * Protects against responses that omit or falsify Content-Length.
- * @param response - The fetch response to read
- * @param maxBytes - Maximum allowed bytes (defaults to GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE)
- * @returns The response body as ArrayBuffer
- * @throws {Error} If the body exceeds the byte limit
+ * Read and return the response body as an ArrayBuffer while enforcing a maximum byte limit.
+ *
+ * @param maxBytes - Maximum allowed bytes for the response body; defaults to `GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE`
+ * @returns The response body as an `ArrayBuffer`
+ * @throws `VALIDATION_ERROR` when the response body exceeds `maxBytes`
  */
 export async function readResponseWithSizeLimit(
   response: Response,
