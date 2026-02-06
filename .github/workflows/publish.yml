@@ -26,8 +26,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@vnedyalk0v'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
@@ -53,4 +52,21 @@ jobs:
           commit: 'chore: release package'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to GitHub Package Registry
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          cp package.json package.json.backup
+          npm pkg set publishConfig.registry="https://npm.pkg.github.com"
+          npm pkg set publishConfig.access="public"
+
+          echo "@vnedyalk0v:registry=https://npm.pkg.github.com" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+
+          npm publish --registry=https://npm.pkg.github.com
+
+          mv package.json.backup package.json
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

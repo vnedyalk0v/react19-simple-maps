@@ -25,8 +25,8 @@ Create beautiful, interactive SVG maps in React with d3-geo and topojson using a
 
 ## 📋 Quick Links
 
-- 📦 [GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages) - Primary distribution
-- 📦 [npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps) - If published to npm registry
+- 📦 [npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps) - Primary distribution
+- 📦 [GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages) - Also available
 - 📚 [Live Examples](./examples/) - Interactive demos with source code
 - 📝 [**Changelog**](https://github.com/vnedyalk0v/react19-simple-maps/blob/main/CHANGELOG.md) - See what's new!
 - 🐛 [Issues](https://github.com/vnedyalk0v/react19-simple-maps/issues) - Report bugs or request features
@@ -51,17 +51,7 @@ Since the library leaves DOM work to React, it integrates seamlessly with other 
 
 ## 📦 Installation
 
-### From GitHub Packages (Recommended)
-
-```bash
-# Configure npm to use GitHub Packages for @vnedyalk0v scope
-echo "@vnedyalk0v:registry=https://npm.pkg.github.com" >> ~/.npmrc
-
-# Install from GitHub Packages
-npm install @vnedyalk0v/react19-simple-maps
-```
-
-### From npm Registry (If available)
+### From npm Registry (Recommended)
 
 ```bash
 # npm
@@ -75,6 +65,16 @@ pnpm add @vnedyalk0v/react19-simple-maps
 ```
 
 > **ESM-only:** This package only supports `import` syntax. `require(...)` is not supported.
+
+### From GitHub Packages (Alternative)
+
+```bash
+# Configure npm to use GitHub Packages for @vnedyalk0v scope
+echo "@vnedyalk0v:registry=https://npm.pkg.github.com" >> ~/.npmrc
+
+# Install from GitHub Packages
+npm install @vnedyalk0v/react19-simple-maps
+```
 
 ### Requirements
 
@@ -986,8 +986,8 @@ npm run build
 
 The package uses [Changesets](https://github.com/changesets/changesets) for version management and automated publishing:
 
-- **GitHub Packages**: Primary registry for publishing
-- **npm Registry**: Optional mirror if publishing to npmjs.org is enabled
+- **npm Registry**: Published on main branch merges
+- **GitHub Packages**: Also published to GitHub Package Registry
 - **Changelog**: Automatically generated from changesets
 
 ## 📄 License
@@ -998,8 +998,8 @@ MIT licensed. Original work Copyright (c) Richard Zimerman 2017. Fork enhancemen
 
 ### Package Distribution
 
-- 📦 **[GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages)** - Primary distribution
-- 📦 **[npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps)** - If published to npm registry
+- 📦 **[npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps)** - Primary distribution
+- 📦 **[GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages)** - Also available
 - 📊 **[Bundle Analysis](https://bundlephobia.com/package/@vnedyalk0v/react19-simple-maps)** - Size and dependencies
 
 ### Documentation & Examples
