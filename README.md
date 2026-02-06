@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19%20Ready-61dafb.svg)](https://react.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/vnedyalk0v/react19-simple-maps/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vnedyalk0v/react19-simple-maps/actions/workflows/ci.yml)
+[![CI](https://github.com/vnedyalk0v/react19-simple-maps/actions/workflows/ci.yml/badge.svg?branch=dev&event=push)](https://github.com/vnedyalk0v/react19-simple-maps/actions/workflows/ci.yml)
 
 Create interactive SVG maps in React with d3-geo and topojson using a TypeScript-first API for React 19+.
 
