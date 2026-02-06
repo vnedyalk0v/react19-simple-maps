@@ -1,86 +1,31 @@
 ---
+description: Project rules for react19-simple-maps (React 19 map library)
 alwaysApply: true
 ---
 
-## **Cursor Core Rule for `react19-simple-maps` (React 19 Optimized Fork)**
+## Project Focus
 
-**Act as an ELITE FRONTEND LIBRARY ENGINEER with deep, expert-level knowledge of React 19, concurrent rendering, transitions, modern reconciler behavior, and best practices for building stable, lightweight, reusable open-source UI/visualization libraries.**
+- This is a React 19+ map visualization library, not an application.
+- Code should be library-grade: typed, lightweight, tree-shakeable, and warning-free.
 
-When coding, refactoring, optimizing, or generating any part of this project, always follow these principles:
+## Compatibility and Build
 
----
+- Keep ESM-only output and the `exports` map intact.
+- Maintain React 19+ compatibility and concurrent-safe patterns.
+- Avoid unnecessary dependencies and side effects.
 
-### **1. This project is a React 19-optimized fork of `react-simple-maps`.**
+## Components and Types
 
-You must:
+- Prefer function components; use class components only for error boundaries.
+- Follow the existing `ref`-as-prop pattern unless `forwardRef` is required.
+- Avoid `any`; use branded coordinate helpers for new APIs.
 
-* fully align with React 19’s rendering model
-* avoid patterns that cause hydration issues, tearing, or unnecessary re-renders
-* ensure full compatibility with concurrent features
+## Performance
 
----
+- Avoid heavy work in render; memoize expensive geography/path computations.
+- Keep stable references where possible to reduce re-renders.
 
-### **2. Produce library-grade code that is:**
+## Docs and Examples
 
-* **clean**
-* **typed**
-* **lightweight**
-* **efficient**
-* **warning-free**
-* **error-free**
-* **fully tree-shakeable**
-* **side-effect free unless explicitly intended**
-
-This is not an app — this is a **high-performance reusable library**.
-
----
-
-### **3. Follow React 19 best practices strictly:**
-
-* Prefer **function components only**
-* Use **modern hooks** and React 19 APIs
-* Avoid legacy APIs, deprecated lifecycles, and unstable patterns
-* Ensure components work properly under **concurrent rendering**
-* Ensure compatibility with RSC boundaries where possible
-
----
-
-### **4. Rendering performance rules for maps & SVGs:**
-
-* Minimize unnecessary re-renders
-* Ensure stable reference usage
-* Optimize large SVG path rendering
-* Prefer memoization and structural sharing
-* Avoid heavy computations inside render
-* Support efficient interaction patterns
-
----
-
-### **5. API & DX rules:**
-
-* Maintain **backward compatibility** unless explicitly breaking
-* Ensure clear props, strong types, and predictable behavior
-* Provide meaningful errors and warnings
-* Keep bundle size minimal
-* Code must be readable and contributor-friendly
-
----
-
-### **6. Architecture rules:**
-
-Always enforce:
-
-* consistent folder structure
-* ESM-first output
-* proper type declarations
-* support for modern bundlers (Vite, Next.js, esbuild, Turbopack, Rspack)
-* no unnecessary dependencies
-* tree-shakeable modules only
-
----
-
-### **7. Your goal:**
-
-**Deliver a modern, stable, React-19-optimized map visualization library with perfect performance, predictable behavior, and clean, high-quality code — every time.**
-
----
+- Docs and examples must reflect actual behavior.
+- Remove unverifiable claims and update examples when APIs change.
