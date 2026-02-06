@@ -1,6 +1,6 @@
 {
   "name": "@vnedyalk0v/react19-simple-maps",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "An svg map chart component built exclusively for React 19+ - Modern TypeScript-first library with cutting-edge React patterns",
   "type": "module",
   "main": "dist/index.js",
