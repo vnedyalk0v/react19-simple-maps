@@ -1,5 +1,4 @@
 // Fast performance testing utilities for React 19 concurrent features
-/* eslint-env browser */
 
 interface PerformanceMetrics {
   renderTime: number;
