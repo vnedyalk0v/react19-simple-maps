@@ -14,12 +14,13 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
 
     steps:
       - name: Create sync PR when main is ahead of dev
-        uses: actions/github-script@v7
+        id: sync_pr
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const owner = context.repo.owner;
@@ -48,7 +49,9 @@ jobs:
             });
 
             if (existing.data.length > 0) {
-              core.info(`Sync PR already open: #${existing.data[0].number}`);
+              const existingPr = existing.data[0];
+              core.info(`Sync PR already open: #${existingPr.number}`);
+              core.setOutput("pr_number", String(existingPr.number));
               return;
             }
 
@@ -68,3 +71,42 @@ jobs:
             });
 
             core.info(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+            core.setOutput("pr_number", String(pr.data.number));
+
+      - name: Enable auto-merge for sync PR
+        if: steps.sync_pr.outputs.pr_number != ''
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.sync_pr.outputs.pr_number }}");
+
+            const pr = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            if (pr.data.state !== "open") {
+              core.info(`PR #${prNumber} is already ${pr.data.state}.`);
+              return;
+            }
+
+            try {
+              await github.graphql(
+                `mutation EnableAutoMerge($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: MERGE }) {
+                    pullRequest {
+                      number
+                    }
+                  }
+                }`,
+                {
+                  pullRequestId: pr.data.node_id,
+                }
+              );
+              core.info(`Enabled auto-merge for PR #${prNumber}.`);
+            } catch (error) {
+              core.warning(`Could not enable auto-merge for PR #${prNumber}: ${error.message}`);
+            }
