@@ -271,9 +271,11 @@ export function validateContentType(response: Response): void {
 }
 
 /**
- * Validates response size to prevent memory issues
+ * Fast pre-check of Content-Length header to reject obviously oversized responses.
+ * NOTE: This is only a pre-check — the header can be omitted or falsified.
+ * Use {@link readResponseWithSizeLimit} for authoritative enforcement.
  * @param response - The fetch response to validate
- * @throws {Error} If response is too large
+ * @throws {Error} If Content-Length exceeds the configured maximum
  */
 export async function validateResponseSize(response: Response): Promise<void> {
   const contentLength = response.headers.get('content-length');
@@ -286,6 +288,64 @@ export async function validateResponseSize(response: Response): Promise<void> {
       );
     }
   }
+}
+
+/**
+ * Reads the response body as an ArrayBuffer while enforcing a hard byte-count limit.
+ * Protects against responses that omit or falsify Content-Length.
+ * @param response - The fetch response to read
+ * @param maxBytes - Maximum allowed bytes (defaults to GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE)
+ * @returns The response body as ArrayBuffer
+ * @throws {Error} If the body exceeds the byte limit
+ */
+export async function readResponseWithSizeLimit(
+  response: Response,
+  maxBytes: number = GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE,
+): Promise<ArrayBuffer> {
+  const reader = response.body?.getReader();
+
+  // Fallback: if ReadableStream is not available, read the whole body and check size.
+  // NOTE: response.arrayBuffer() loads the entire response into memory before the size
+  // check runs, which can cause high memory usage or OOM for very large responses.
+  // The ReadableStream path above is preferred as it streams data and enforces the
+  // size limit incrementally, failing fast without buffering the full payload.
+  if (!reader) {
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength > maxBytes) {
+      throw createGeographyFetchError(
+        'VALIDATION_ERROR',
+        `Response too large: ${buffer.byteLength} bytes exceeds limit of ${maxBytes} bytes`,
+      );
+    }
+    return buffer;
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      reader.cancel().catch(() => {});
+      throw createGeographyFetchError(
+        'VALIDATION_ERROR',
+        `Response too large: exceeded limit of ${maxBytes} bytes`,
+      );
+    }
+    chunks.push(value);
+  }
+
+  // Concatenate chunks into a single ArrayBuffer
+  const result = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return result.buffer;
 }
 
 /**

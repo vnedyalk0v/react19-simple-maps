@@ -1,5 +1,19 @@
 import { ReactNode } from 'react';
 
+/**
+ * Safely serialize an object for embedding in a <script type="application/ld+json"> block.
+ * Escapes characters that could break out of the script context (XSS prevention).
+ * @see https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements
+ */
+function safeJsonLdSerialize(data: object): string {
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 interface MapMetadataProps {
   title?: string;
   description?: string;
@@ -72,11 +86,11 @@ export function MapMetadata({
       )}
       {twitterImage && <meta name="twitter:image" content={twitterImage} />}
 
-      {/* JSON-LD structured data */}
+      {/* JSON-LD structured data (safely escaped to prevent script-breakout XSS) */}
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLdSerialize(jsonLd) }}
         />
       )}
 

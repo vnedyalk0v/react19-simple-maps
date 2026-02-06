@@ -6,7 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Interactive Map - react19-simple-maps</title>
 
-    <!-- Content Security Policy for enhanced security -->
+    <!--
+      Content Security Policy — DEVELOPMENT ONLY
+      'unsafe-inline' and 'unsafe-eval' are required by Vite HMR during development.
+      For PRODUCTION, remove both and use nonces or hashes instead.
+      See examples/SECURITY.md for production guidance.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
       content="
@@ -27,7 +32,7 @@
     <!-- Additional security headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="DENY" />
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="X-XSS-Protection" content="0" />
     <meta
       http-equiv="Referrer-Policy"
       content="strict-origin-when-cross-origin"
