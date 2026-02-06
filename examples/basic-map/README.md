@@ -1,14 +1,13 @@
 # Basic Map Example
 
-A simple TypeScript example demonstrating the basic usage of react19-simple-maps v1.0.
+A simple TypeScript example using `@vnedyalk0v/react19-simple-maps`.
 
 ## Features
 
-- ✅ Full TypeScript support with strict typing
-- ✅ React 19 compatibility
-- ✅ Interactive world map with hover effects
-- ✅ Typed event handlers
-- ✅ Modern Vite build setup
+- React 19 + TypeScript (strict mode)
+- World map with click + hover interactions
+- City markers with labels
+- Vite dev/build tooling
 
 ## Getting Started
 
@@ -26,47 +25,32 @@ npm run build
 npm run type-check
 ```
 
-## What's Included
+## Key TypeScript Notes
 
-- **TypeScript Configuration**: Strict mode with full type checking
-- **React 19**: Latest React features and patterns
-- **Vite**: Fast development and build tooling
-- **Interactive Map**: Click handlers with proper TypeScript types
-- **Styling**: CSS with hover effects and responsive design
-
-## Key TypeScript Features
-
-### Typed Props
+Use branded helpers for coordinates when you want type safety:
 
 ```tsx
-import type { GeographyProps } from 'react-simple-maps';
+import { createCoordinates } from '@vnedyalk0v/react19-simple-maps';
 
-const handleGeographyClick = (geography: GeographyProps['geography']) => {
-  console.log('Country:', geography.properties?.NAME);
-};
+const center = createCoordinates(0, 0);
 ```
 
-### Typed Components
+Geography event handlers receive `(event, data)` where `data` includes geography info:
 
 ```tsx
-const App: React.FC = () => {
-  return (
-    <ComposableMap
-      projection="geoEqualEarth"
-      projectionConfig={{
-        scale: 147,
-        center: [0, 0],
-      }}
-    >
-      {/* Fully typed components */}
-    </ComposableMap>
-  );
+import type { GeographyEventData } from '@vnedyalk0v/react19-simple-maps';
+
+const handleGeographyClick = (
+  _event: React.MouseEvent<SVGPathElement>,
+  data?: GeographyEventData,
+) => {
+  console.log(data?.geography.properties?.name);
 };
 ```
 
 ## Learn More
 
-- [react-simple-maps Documentation](https://www.react-simple-maps.io/)
+- [Project README](../../README.md)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [React 19 Documentation](https://react.dev/)
+- [React Documentation](https://react.dev/)
 - [Vite Documentation](https://vitejs.dev/)
