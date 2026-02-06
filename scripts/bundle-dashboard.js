@@ -156,8 +156,7 @@ class BundleDashboard {
           name: latestOpt.name,
           previousRate: previousOpt.completionRate,
           currentRate: latestOpt.completionRate,
-          improvement:
-            latestOpt.completionRate - previousOpt.completionRate,
+          improvement: latestOpt.completionRate - previousOpt.completionRate,
           status: latestOpt.status,
         };
       }

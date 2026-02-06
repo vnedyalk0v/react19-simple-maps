@@ -319,9 +319,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Print summary
   console.log(`📅 Generated: ${report.timestamp}`);
   if (report.git && report.git.commit) {
-    console.log(
-      `🔗 Git: ${report.git.commit.substring(0, 8)}`,
-    );
+    console.log(`🔗 Git: ${report.git.commit.substring(0, 8)}`);
   }
   console.log(
     `📦 Bundles: ${report.summary.compliantBundles}/${report.summary.existingBundles} compliant`,

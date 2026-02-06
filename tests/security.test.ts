@@ -148,9 +148,9 @@ describe('SEC-002b: preloadGeographyAssets validates asset URLs', () => {
     expect(validatePreloadUrl('https://cdn.jsdelivr.net/npm/d3@7/+esm')).toBe(
       true,
     );
-    expect(
-      validatePreloadUrl('https://unpkg.com/d3@7/dist/d3.min.js'),
-    ).toBe(true);
+    expect(validatePreloadUrl('https://unpkg.com/d3@7/dist/d3.min.js')).toBe(
+      true,
+    );
   });
 
   it('validatePreloadUrl rejects HTTP URLs', async () => {
