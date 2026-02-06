@@ -71,3 +71,4 @@ jobs:
           mv package.json.backup package.json
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npmrc-github
