@@ -147,8 +147,7 @@ function isPrivateIPAddress(hostname: string): boolean {
     /^ff[0-9a-f]{2}:/i, // ff00::/8 (multicast)
     /^100::/i, // 100::/64 (discard prefix)
     /^2001:db8:/i, // 2001:db8::/32 (documentation)
-    /^2001:(?::[0-9a-f]{0,4}){0,6}(?:::)?$/i, // 2001::/32 (Teredo tunnelling — compressed forms like 2001::)
-    /^2001:[0-9a-f]{1,4}:/i, // 2001::/32 (Teredo tunnelling — expanded forms like 2001:0000:...)
+    /^2001:(?:0{1,4}:|:)/i, // 2001:0000::/32 (Teredo tunnelling) — matches 2001:0: through 2001:0000: and 2001:: (URL-normalised forms)
   ];
 
   for (const range of ipv6PrivateRanges) {

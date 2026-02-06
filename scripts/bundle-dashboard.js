@@ -200,7 +200,10 @@ class BundleDashboard {
     // Check React 19 optimization status
     Object.entries(this.currentReport.react19Optimizations).forEach(
       ([key, optimization]) => {
-        if (optimization.status !== 'complete') {
+        if (
+          optimization.status !== 'complete' &&
+          optimization.status !== 'not_applicable'
+        ) {
           recommendations.push({
             type: 'optimization-incomplete',
             priority: 'medium',
@@ -260,7 +263,12 @@ class BundleDashboard {
     console.log('\n🚀 React 19 Optimizations');
     Object.entries(this.currentReport.react19Optimizations).forEach(
       ([key, opt]) => {
-        const statusIcon = opt.status === 'complete' ? '✅' : '🔄';
+        const statusIcon =
+          opt.status === 'complete'
+            ? '✅'
+            : opt.status === 'not_applicable'
+              ? '➖'
+              : '🔄';
         console.log(
           `${statusIcon} ${opt.name}: ${opt.completionRateFormatted} complete (${opt.expectedSavings} potential savings)`,
         );
