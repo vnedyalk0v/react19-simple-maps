@@ -1,5 +1,5 @@
 ---
-'@vnedyalk0v/react19-simple-maps': minor
+'@vnedyalk0v/react19-simple-maps': major
 ---
 
-Fix export paths and esm only
+Drop CJS/UMD builds (ESM-only), add ./utils subpath export, and adjust publish target.

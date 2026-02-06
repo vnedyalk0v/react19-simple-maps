@@ -11,37 +11,37 @@ const projectRoot = join(__dirname, '..');
 
 // Enhanced bundle monitoring with React 19 optimizations tracking
 const BUNDLE_TARGETS = {
-  'dist/index.umd.js': {
-    name: 'UMD Bundle',
-    maxRaw: 150 * 1024, // 150KB
-    maxGzip: 45 * 1024, // 45KB
-    maxBrotli: 40 * 1024, // 40KB
-    priority: 'high',
-    description: 'Browser-compatible UMD bundle',
-  },
-  'dist/index.es.js': {
-    name: 'ESM Bundle',
+  'dist/index.js': {
+    name: 'ESM Bundle (main)',
     maxRaw: 120 * 1024, // 120KB
     maxGzip: 35 * 1024, // 35KB
     maxBrotli: 30 * 1024, // 30KB
     priority: 'high',
     description: 'Modern ESM bundle for bundlers',
   },
-  'dist/index.js': {
-    name: 'CJS Bundle',
-    maxRaw: 120 * 1024, // 120KB
-    maxGzip: 35 * 1024, // 35KB
-    maxBrotli: 30 * 1024, // 30KB
+  'dist/utils.js': {
+    name: 'ESM Bundle (utils)',
+    maxRaw: 80 * 1024, // 80KB
+    maxGzip: 25 * 1024, // 25KB
+    maxBrotli: 22 * 1024, // 22KB
     priority: 'medium',
-    description: 'CommonJS bundle for Node.js',
+    description: 'ESM utilities bundle for direct imports',
   },
   'dist/index.d.ts': {
-    name: 'TypeScript Definitions',
+    name: 'TypeScript Definitions (main)',
     maxRaw: 50 * 1024, // 50KB
     maxGzip: 10 * 1024, // 10KB
     maxBrotli: 8 * 1024, // 8KB
     priority: 'low',
     description: 'TypeScript type definitions',
+  },
+  'dist/utils.d.ts': {
+    name: 'TypeScript Definitions (utils)',
+    maxRaw: 40 * 1024, // 40KB
+    maxGzip: 8 * 1024, // 8KB
+    maxBrotli: 7 * 1024, // 7KB
+    priority: 'low',
+    description: 'TypeScript type definitions for utils',
   },
 };
 

@@ -2,19 +2,8 @@
 export default {
   // Bundle size thresholds and targets
   targets: {
-    'dist/index.umd.js': {
-      name: 'UMD Bundle',
-      description: 'Browser-compatible UMD bundle for CDN usage',
-      priority: 'high',
-      thresholds: {
-        raw: { max: 150 * 1024, warning: 130 * 1024 }, // 150KB max, 130KB warning
-        gzip: { max: 45 * 1024, warning: 40 * 1024 }, // 45KB max, 40KB warning
-        brotli: { max: 40 * 1024, warning: 35 * 1024 }, // 40KB max, 35KB warning
-      },
-      optimizations: ['tree-shaking', 'minification', 'compression'],
-    },
-    'dist/index.es.js': {
-      name: 'ESM Bundle',
+    'dist/index.js': {
+      name: 'ESM Bundle (main)',
       description: 'Modern ESM bundle for bundlers and modern environments',
       priority: 'high',
       thresholds: {
@@ -29,25 +18,36 @@ export default {
         'modern-syntax',
       ],
     },
-    'dist/index.js': {
-      name: 'CJS Bundle',
-      description: 'CommonJS bundle for Node.js environments',
+    'dist/utils.js': {
+      name: 'ESM Bundle (utils)',
+      description: 'ESM utilities bundle for direct imports',
       priority: 'medium',
       thresholds: {
-        raw: { max: 120 * 1024, warning: 100 * 1024 },
-        gzip: { max: 35 * 1024, warning: 30 * 1024 },
-        brotli: { max: 30 * 1024, warning: 25 * 1024 },
+        raw: { max: 80 * 1024, warning: 65 * 1024 },
+        gzip: { max: 25 * 1024, warning: 20 * 1024 },
+        brotli: { max: 22 * 1024, warning: 18 * 1024 },
       },
       optimizations: ['tree-shaking', 'minification', 'compression'],
     },
     'dist/index.d.ts': {
-      name: 'TypeScript Definitions',
+      name: 'TypeScript Definitions (main)',
       description: 'TypeScript type definitions',
       priority: 'low',
       thresholds: {
         raw: { max: 50 * 1024, warning: 40 * 1024 },
         gzip: { max: 10 * 1024, warning: 8 * 1024 },
         brotli: { max: 8 * 1024, warning: 6 * 1024 },
+      },
+      optimizations: ['type-optimization'],
+    },
+    'dist/utils.d.ts': {
+      name: 'TypeScript Definitions (utils)',
+      description: 'TypeScript type definitions for utils',
+      priority: 'low',
+      thresholds: {
+        raw: { max: 40 * 1024, warning: 32 * 1024 },
+        gzip: { max: 8 * 1024, warning: 6 * 1024 },
+        brotli: { max: 7 * 1024, warning: 5 * 1024 },
       },
       optimizations: ['type-optimization'],
     },

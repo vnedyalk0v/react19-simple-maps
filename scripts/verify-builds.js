@@ -3,8 +3,8 @@
 /**
  * Build Verification Script for @vnedyalk0v/react19-simple-maps
  *
- * This script verifies that all build formats (ES, CJS, UMD) have proper exports
- * and can be imported correctly in different environments.
+ * This script verifies that ESM builds and type definitions have proper exports
+ * and can be imported correctly.
  *
  * Usage: node scripts/verify-builds.js
  */
@@ -47,19 +47,19 @@ const EXPECTED_EXPORTS = [
 ];
 
 const BUILD_FILES = {
-  es: 'dist/index.es.js',
-  cjs: 'dist/index.js',
-  umd: 'dist/index.umd.js',
+  es: 'dist/index.js',
+  utils: 'dist/utils.js',
   types: 'dist/index.d.ts',
+  typesUtils: 'dist/utils.d.ts',
 };
 
 class BuildVerifier {
   constructor() {
     this.results = {
       es: { success: false, exports: [], errors: [] },
-      cjs: { success: false, exports: [], errors: [] },
-      umd: { success: false, exports: [], errors: [] },
       types: { success: false, exports: [], errors: [] },
+      utils: { success: false, exports: [], errors: [] },
+      typesUtils: { success: false, exports: [], errors: [] },
     };
   }
 
@@ -88,7 +88,7 @@ class BuildVerifier {
 
   async verifyESModule() {
     try {
-      this.log('\n📦 Verifying ES Module build...', 'info');
+      this.log('\n📦 Verifying ESM build...', 'info');
       const fullPath = this.checkFileExists(BUILD_FILES.es);
 
       // Dynamic import of ES module using file:// URL for better CI compatibility
@@ -99,156 +99,44 @@ class BuildVerifier {
       this.results.es.exports = exports;
       this.results.es.success = true;
 
-      this.log(`✓ ES Module exports: ${exports.length} found`, 'success');
-      this.checkExports('ES Module', exports);
+      this.log(`✓ ESM exports: ${exports.length} found`, 'success');
+      this.checkExports('ESM', exports);
     } catch (error) {
       this.results.es.errors.push(error.message);
-      this.log(`✗ ES Module verification failed: ${error.message}`, 'error');
+      this.log(`✗ ESM verification failed: ${error.message}`, 'error');
     }
   }
 
-  async verifyCommonJS() {
+  async verifyUtilsModule() {
     try {
-      this.log('\n📦 Verifying CommonJS build...', 'info');
-      const fullPath = this.checkFileExists(BUILD_FILES.cjs);
+      this.log('\n📦 Verifying utils ESM build...', 'info');
+      const fullPath = this.checkFileExists(BUILD_FILES.utils);
 
-      // Read the CommonJS file content for export analysis
-      const cjsContent = readFileSync(fullPath, 'utf8');
+      const fileUrl = `file://${fullPath}`;
+      const utilsModule = await import(fileUrl);
+      const exports = Object.keys(utilsModule);
 
-      // Look for exports.ExportName patterns in CommonJS
-      const exportMatches =
-        cjsContent.match(/exports\.([A-Za-z][A-Za-z0-9]*)\s*=/g) || [];
-      const exports = [];
-
-      exportMatches.forEach((match) => {
-        const nameMatch = match.match(/exports\.([A-Za-z][A-Za-z0-9]*)\s*=/);
-        if (nameMatch && nameMatch[1] && !exports.includes(nameMatch[1])) {
-          exports.push(nameMatch[1]);
-        }
-      });
-
-      this.results.cjs.exports = exports;
-      this.results.cjs.success = exports.length > 0;
+      this.results.utils.exports = exports;
+      this.results.utils.success = exports.length > 0;
 
       if (exports.length > 0) {
-        this.log(`✓ CommonJS exports: ${exports.length} found`, 'success');
-        this.checkExports('CommonJS', exports);
+        this.log(`✓ Utils ESM exports: ${exports.length} found`, 'success');
       } else {
-        throw new Error('CommonJS build has no exports');
+        throw new Error('Utils ESM build has no exports');
       }
     } catch (error) {
-      this.results.cjs.errors.push(error.message);
-      this.log(`✗ CommonJS verification failed: ${error.message}`, 'error');
+      this.results.utils.errors.push(error.message);
+      this.log(`✗ Utils ESM verification failed: ${error.message}`, 'error');
     }
   }
 
-  verifyUMD() {
+  verifyTypeDefinitions(resultKey, filePath, label) {
     try {
-      this.log('\n📦 Verifying UMD build...', 'info');
-      const fullPath = this.checkFileExists(BUILD_FILES.umd);
-
-      // Read UMD file and check for exports
-      const umdContent = readFileSync(fullPath, 'utf8');
-
-      // Check if UMD has proper structure (more flexible check)
-      if (
-        !umdContent.includes('typeof exports') &&
-        !umdContent.includes('typeof define') &&
-        !umdContent.includes('global')
-      ) {
-        throw new Error('UMD build does not have proper UMD wrapper structure');
-      }
-
-      // Look for export assignments in the UMD content
-      // Pattern: t.ExportName= or exports.ExportName=
-      const exportMatches =
-        umdContent.match(/[te]\.([A-Za-z][A-Za-z0-9]*)\s*=/g) || [];
-      const exports = [];
-
-      exportMatches.forEach((match) => {
-        const nameMatch = match.match(/[te]\.([A-Za-z][A-Za-z0-9]*)\s*=/);
-        if (nameMatch && nameMatch[1]) {
-          const exportName = nameMatch[1];
-          // Map minified names to actual export names based on expected exports
-          const mappedName = this.mapMinifiedExportName(exportName, umdContent);
-          if (mappedName && !exports.includes(mappedName)) {
-            exports.push(mappedName);
-          }
-        }
-      });
-
-      // If we found exports through pattern matching, use those
-      if (exports.length > 0) {
-        this.results.umd.exports = exports;
-        this.results.umd.success = true;
-        this.log(`✓ UMD exports: ${exports.length} found`, 'success');
-        this.checkExports('UMD', exports);
-      } else {
-        // Fallback: try to count export assignments
-        const exportAssignments = (umdContent.match(/t\.[A-Za-z]/g) || [])
-          .length;
-        if (exportAssignments > 20) {
-          // Should have ~26 exports
-          this.results.umd.exports = [
-            `Found ${exportAssignments} export assignments`,
-          ];
-          this.results.umd.success = true;
-          this.log(
-            `✓ UMD exports: ${exportAssignments} export assignments found`,
-            'success',
-          );
-        } else {
-          throw new Error(
-            `UMD build has insufficient exports (${exportAssignments} assignments found)`,
-          );
-        }
-      }
-    } catch (error) {
-      this.results.umd.errors.push(error.message);
-      this.log(`✗ UMD verification failed: ${error.message}`, 'error');
-    }
-  }
-
-  mapMinifiedExportName(minifiedName, content) {
-    // Try to map minified export names to actual names by looking at the context
-    // This is a heuristic approach for heavily minified UMD builds
-    const exportMappings = {
-      // Common patterns we can detect
-      Annotation: 'Annotation',
-      ComposableMap: 'ComposableMap',
-      Geographies: 'Geographies',
-      Geography: 'Geography',
-      GeographyErrorBoundary: 'GeographyErrorBoundary',
-      Graticule: 'Graticule',
-      Line: 'Line',
-      MapContext: 'MapContext',
-      MapProvider: 'MapProvider',
-      MapWithMetadata: 'MapWithMetadata',
-      Marker: 'Marker',
-      Sphere: 'Sphere',
-      ZoomPanContext: 'ZoomPanContext',
-      ZoomPanProvider: 'ZoomPanProvider',
-      ZoomableGroup: 'ZoomableGroup',
-    };
-
-    // If the minified name matches a known export, return it
-    if (exportMappings[minifiedName]) {
-      return minifiedName;
-    }
-
-    // For single-letter minified names, we can't reliably map them
-    // so we'll just return the minified name for counting purposes
-    return minifiedName.length === 1 ? `Export_${minifiedName}` : minifiedName;
-  }
-
-  verifyTypeDefinitions() {
-    try {
-      this.log('\n📦 Verifying TypeScript definitions...', 'info');
-      const fullPath = this.checkFileExists(BUILD_FILES.types);
+      this.log(`\n📦 Verifying ${label} TypeScript definitions...`, 'info');
+      const fullPath = this.checkFileExists(filePath);
 
       const typesContent = readFileSync(fullPath, 'utf8');
 
-      // Check for export declarations
       const exportMatches =
         typesContent.match(
           /export\s+(?:declare\s+)?(?:const|function|class|interface|type)\s+(\w+)/g,
@@ -258,7 +146,6 @@ class BuildVerifier {
 
       let exports = [];
 
-      // Extract named exports
       exportMatches.forEach((match) => {
         const nameMatch = match.match(
           /export\s+(?:declare\s+)?(?:const|function|class|interface|type)\s+(\w+)/,
@@ -268,7 +155,6 @@ class BuildVerifier {
         }
       });
 
-      // Extract exports from export blocks
       exportDefaultMatches.forEach((match) => {
         const names = match
           .replace(/export\s*\{\s*/, '')
@@ -282,17 +168,17 @@ class BuildVerifier {
         });
       });
 
-      this.results.types.exports = exports;
-      this.results.types.success = exports.length > 0;
+      this.results[resultKey].exports = exports;
+      this.results[resultKey].success = exports.length > 0;
 
       this.log(
-        `✓ TypeScript definitions: ${exports.length} exports found`,
+        `✓ ${label} TypeScript definitions: ${exports.length} exports found`,
         'success',
       );
     } catch (error) {
-      this.results.types.errors.push(error.message);
+      this.results[resultKey].errors.push(error.message);
       this.log(
-        `✗ TypeScript definitions verification failed: ${error.message}`,
+        `✗ ${label} TypeScript definitions verification failed: ${error.message}`,
         'error',
       );
     }
@@ -331,7 +217,7 @@ class BuildVerifier {
     this.log('\n📋 Build Verification Summary', 'info');
     this.log('================================', 'info');
 
-    const builds = ['es', 'cjs', 'umd', 'types'];
+    const builds = ['es', 'utils', 'types', 'typesUtils'];
     let allPassed = true;
 
     builds.forEach((build) => {
@@ -369,9 +255,9 @@ class BuildVerifier {
       this.log(`Working directory: ${process.cwd()}`, 'info');
 
       await this.verifyESModule();
-      await this.verifyCommonJS();
-      this.verifyUMD();
-      this.verifyTypeDefinitions();
+      await this.verifyUtilsModule();
+      this.verifyTypeDefinitions('types', BUILD_FILES.types, 'Main');
+      this.verifyTypeDefinitions('typesUtils', BUILD_FILES.typesUtils, 'Utils');
 
       const success = this.printSummary();
       process.exit(success ? 0 : 1);
