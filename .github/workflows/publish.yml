@@ -62,11 +62,13 @@ jobs:
           npm pkg set publishConfig.registry="https://npm.pkg.github.com"
           npm pkg set publishConfig.access="public"
 
-          echo "@vnedyalk0v:registry=https://npm.pkg.github.com" > ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          npm config set @vnedyalk0v:registry https://npm.pkg.github.com --userconfig "$NPM_CONFIG_USERCONFIG"
+          npm config set //npm.pkg.github.com/:_authToken "${NODE_AUTH_TOKEN}" --userconfig "$NPM_CONFIG_USERCONFIG"
+          npm config set always-auth true --userconfig "$NPM_CONFIG_USERCONFIG"
 
           npm publish --registry=https://npm.pkg.github.com
 
           mv package.json.backup package.json
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npmrc-github
