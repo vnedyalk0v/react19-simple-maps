@@ -8,7 +8,8 @@ export default defineConfig({
     port: 3000,
     open: true,
     headers: {
-      // Content Security Policy for development
+      // Content Security Policy — DEVELOPMENT ONLY
+      // 'unsafe-inline' and 'unsafe-eval' are required by Vite HMR; remove for production.
       'Content-Security-Policy': [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Vite HMR
@@ -24,7 +25,7 @@ export default defineConfig({
       // Additional security headers
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
+      'X-XSS-Protection': '0',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
     },
   },

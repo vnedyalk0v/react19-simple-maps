@@ -11,7 +11,7 @@ Both examples include CSP meta tags in `index.html`, and the Vite dev server set
 - The **interactive example** includes `frame-ancestors 'none'` in its meta tag.
 - The **basic example** does not include `frame-ancestors` in the meta tag (see the comment in `index.html`).
 
-### CSP Directives Used
+### CSP Directives Used (Development)
 
 Common directives across the examples include:
 
@@ -28,13 +28,34 @@ Common directives across the examples include:
 
 > **⚠️ WARNING (HIGH SEVERITY):** The `'unsafe-inline'` and `'unsafe-eval'` directives in `script-src` **drastically weaken CSP** and **must not be used in production**. They are included here **only** as a development exception required by Vite HMR. For production deployments, **remove both `'unsafe-inline'` and `'unsafe-eval'`** from `script-src` (and `'unsafe-inline'` from `style-src` where possible) and rely on nonces or hashes instead. See the [Development vs Production](#development-vs-production) section below for guidance on securing CSP for production.
 
+### Recommended Production CSP
+
+Deliver CSP via HTTP headers (not meta tags) for full directive support:
+
+```
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self';
+  style-src 'self';
+  img-src 'self' data: blob:;
+  font-src 'self' data:;
+  connect-src 'self' https://unpkg.com https://*.unpkg.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+  frame-ancestors 'none';
+  upgrade-insecure-requests;
+```
+
+Use nonces (`'nonce-<random>'`) or `'strict-dynamic'` if inline scripts are required.
+
 ## Additional Security Headers
 
 The examples also set these headers (via HTML meta tags and dev server headers):
 
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
-- `X-XSS-Protection: 0` — The legacy `X-XSS-Protection: 1; mode=block` value is deprecated and can introduce cross-site leak vulnerabilities in older browsers. Either omit this header entirely or set it to `0` to disable the XSS auditor. Rely on a strong Content Security Policy instead.
+- `X-XSS-Protection: 0` — Disables the legacy XSS auditor. The deprecated `1; mode=block` value can introduce cross-site leak vulnerabilities in older browsers. Rely on a strong Content Security Policy instead.
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy` (disabled features list)
 

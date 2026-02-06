@@ -17,6 +17,7 @@ export {
   validateGeographyUrl,
   validateContentType,
   validateResponseSize,
+  readResponseWithSizeLimit,
   validateGeographyData,
   configureGeographySecurity,
   enableDevelopmentMode,
