@@ -1,8 +1,8 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { FeatureCollection } from 'geojson';
 import { Topology } from 'topojson-specification';
 import { useMapContext } from './MapProvider';
-import { UseGeographiesProps, GeographyData } from '../types';
+import { UseGeographiesProps, GeographyData, GeographyError } from '../types';
 import {
   fetchGeographiesCache,
   getFeatures,
@@ -38,32 +38,49 @@ export default function useGeographies({
     Topology | FeatureCollection | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<GeographyError | Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Handle string URLs with traditional async loading
+  const refetch = useCallback(() => {
+    setRetryCount((c) => c + 1);
+  }, []);
+
   useEffect(() => {
+    let ignore = false;
+
     if (isString(geography)) {
       setIsLoading(true);
+      setError(null);
 
       devTools.debugGeographyLoading(geography, 'start');
 
-      // Preload immediately before fetching to minimize the gap
       preloadGeography(geography);
 
       fetchGeographiesCache(geography)
         .then((data) => {
-          devTools.debugGeographyLoading(geography, 'success', data);
-          setLoadedData(data);
-          setIsLoading(false);
+          if (!ignore) {
+            devTools.debugGeographyLoading(geography, 'success', data);
+            setLoadedData(data);
+            setIsLoading(false);
+          }
         })
-        .catch((error) => {
-          devTools.debugGeographyLoading(geography, 'error', error);
-          setIsLoading(false);
+        .catch((err) => {
+          if (!ignore) {
+            devTools.debugGeographyLoading(geography, 'error', err);
+            setError(err instanceof Error ? err : new Error(String(err)));
+            setIsLoading(false);
+          }
         });
     } else {
       setLoadedData(geography);
       setIsLoading(false);
+      setError(null);
     }
-  }, [geography]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [geography, retryCount]);
 
   // Granular memoization for expensive operations
 
@@ -185,12 +202,14 @@ export default function useGeographies({
     return result;
   }, [rawMesh, path, loadedData]);
 
-  // Final memoized result
   return useMemo(() => {
     return {
       geographies: preparedGeographies,
       outline: preparedMeshData.outline,
       borders: preparedMeshData.borders,
+      isLoading,
+      error,
+      refetch,
     };
-  }, [preparedGeographies, preparedMeshData]);
+  }, [preparedGeographies, preparedMeshData, isLoading, error, refetch]);
 }

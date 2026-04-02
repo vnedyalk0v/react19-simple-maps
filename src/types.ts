@@ -404,7 +404,11 @@ export interface GeographyData {
   geographies: PreparedFeature[];
   outline: string;
   borders: string;
-  center?: Coordinates; // Use branded type for center coordinates
+  isLoading: boolean;
+  error: GeographyError | Error | null;
+  center?: Coordinates;
+  /** Re-runs the fetch for string `geography` URLs (no-op for object geographies). */
+  refetch?: () => void;
 }
 
 export interface ZoomPanState {

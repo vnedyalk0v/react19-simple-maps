@@ -305,7 +305,11 @@ export function getSRIForUrl(url: string): SRIConfig | null {
  * @param sri - SRI configuration
  */
 export function addCustomSRI(url: string, sri: SRIConfig): void {
-  currentSRIConfig.customSRIMap[url] = sri;
+  const canonical = canonicalizeUrlForSRI(url);
+  currentSRIConfig.customSRIMap[canonical] = sri;
+  if (canonical !== url) {
+    currentSRIConfig.customSRIMap[url] = sri;
+  }
 }
 
 /**

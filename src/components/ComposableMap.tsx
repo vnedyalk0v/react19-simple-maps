@@ -1,4 +1,4 @@
-import { Ref, memo } from 'react';
+import { Ref, memo, useEffect } from 'react';
 import { ComposableMapProps } from '../types';
 import { MapProvider } from './MapProvider';
 import { useMapDebugger } from '../utils/debugging';
@@ -16,8 +16,9 @@ function ComposableMap({
 }: Omit<ComposableMapProps, 'metadata'> & { ref?: Ref<SVGSVGElement> }) {
   const { logRender } = useMapDebugger('ComposableMap', debug);
 
-  // Log render with debugging information (only if debug is enabled)
-  logRender({ width, height, projection, projectionConfig, className });
+  useEffect(() => {
+    logRender({ width, height, projection, projectionConfig, className });
+  }, [logRender, width, height, projection, projectionConfig, className]);
 
   return (
     <MapProvider

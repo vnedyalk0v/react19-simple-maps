@@ -208,7 +208,30 @@ describe('Bundle monitor: git metadata redaction', () => {
     // Must not contain typical branch name patterns that could leak info
     // (allow "<redacted>" and null, but not "fix/...", "feat/...", etc.)
     expect(serialized).not.toMatch(
-      /"branch"\s*:\s*"(fix|feat|chore|release|hotfix)\//,
+      /"branch"\s*:\s*"(fix|feat|chore|release|hotfix|bugfix|feature)\//i,
     );
+  });
+
+  it('should surface git error object when git metadata fails', async () => {
+    delete process.env.BUNDLE_REPORT_REDACT_GIT;
+
+    const savedPath = process.env.PATH;
+    process.env.PATH = '';
+    vi.resetModules();
+
+    try {
+      const { generateEnhancedReport } = await import(monitorPath);
+      const report = generateEnhancedReport();
+
+      expect(report.git).not.toBeNull();
+      expect(report.git).toBeDefined();
+      if (report.git && 'error' in report.git) {
+        expect(typeof report.git.error).toBe('string');
+      } else {
+        expect.fail('expected report.git to contain error string');
+      }
+    } finally {
+      process.env.PATH = savedPath;
+    }
   });
 });

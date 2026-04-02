@@ -6,6 +6,46 @@ import {
   getBestGeographyCoordinates,
 } from '../utils/geography-utils';
 
+const GEOGRAPHY_KNOWN_PROP_KEYS = new Set([
+  'geography',
+  'onClick',
+  'onMouseEnter',
+  'onMouseLeave',
+  'onMouseDown',
+  'onMouseUp',
+  'onFocus',
+  'onBlur',
+  'style',
+  'className',
+  'ref',
+]);
+
+function areGeographyPropsEqual(
+  prev: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
+  next: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
+): boolean {
+  if (prev.geography !== next.geography) return false;
+  if (prev.style !== next.style) return false;
+  if (prev.className !== next.className) return false;
+  if (prev.onClick !== next.onClick) return false;
+  if (prev.onMouseEnter !== next.onMouseEnter) return false;
+  if (prev.onMouseLeave !== next.onMouseLeave) return false;
+  if (prev.onMouseDown !== next.onMouseDown) return false;
+  if (prev.onMouseUp !== next.onMouseUp) return false;
+  if (prev.onFocus !== next.onFocus) return false;
+  if (prev.onBlur !== next.onBlur) return false;
+  if (prev.ref !== next.ref) return false;
+
+  const prevRec = prev as Record<string, unknown>;
+  const nextRec = next as Record<string, unknown>;
+  const restKeys = new Set([...Object.keys(prevRec), ...Object.keys(nextRec)]);
+  for (const key of restKeys) {
+    if (GEOGRAPHY_KNOWN_PROP_KEYS.has(key)) continue;
+    if (prevRec[key] !== nextRec[key]) return false;
+  }
+  return true;
+}
+
 function Geography({
   geography,
   onClick,
@@ -21,7 +61,8 @@ function Geography({
   ...restProps
 }: GeographyProps & { ref?: Ref<SVGPathElement> }) {
   const [isPressed, setPressed] = useState(false);
-  const [isFocused, setFocus] = useState(false);
+  const [isHovered, setHovered] = useState(false);
+  const [isFocused, setFocused] = useState(false);
 
   // Memoize geographic data calculation for performance
   const geographyEventData = useMemo((): GeographyEventData => {
@@ -43,7 +84,7 @@ function Geography({
 
   const handleMouseEnter = useCallback(
     (evt: React.MouseEvent<SVGPathElement>) => {
-      setFocus(true);
+      setHovered(true);
       if (onMouseEnter) onMouseEnter(evt, geographyEventData);
     },
     [onMouseEnter, geographyEventData],
@@ -51,7 +92,7 @@ function Geography({
 
   const handleMouseLeave = useCallback(
     (evt: React.MouseEvent<SVGPathElement>) => {
-      setFocus(false);
+      setHovered(false);
       if (isPressed) setPressed(false);
       if (onMouseLeave) onMouseLeave(evt, geographyEventData);
     },
@@ -60,7 +101,7 @@ function Geography({
 
   const handleFocus = useCallback(
     (evt: React.FocusEvent<SVGPathElement>) => {
-      setFocus(true);
+      setFocused(true);
       if (onFocus) onFocus(evt, geographyEventData);
     },
     [onFocus, geographyEventData],
@@ -68,7 +109,7 @@ function Geography({
 
   const handleBlur = useCallback(
     (evt: React.FocusEvent<SVGPathElement>) => {
-      setFocus(false);
+      setFocused(false);
       if (isPressed) setPressed(false);
       if (onBlur) onBlur(evt, geographyEventData);
     },
@@ -91,14 +132,12 @@ function Geography({
     [onMouseUp, geographyEventData],
   );
 
-  // Memoize current state calculation
   const currentState = useMemo(() => {
-    return isPressed || isFocused
-      ? isPressed
-        ? 'pressed'
-        : 'hover'
-      : 'default';
-  }, [isPressed, isFocused]);
+    if (isPressed) return 'pressed' as const;
+    if (isFocused) return 'focused' as const;
+    if (isHovered) return 'hover' as const;
+    return 'default' as const;
+  }, [isPressed, isFocused, isHovered]);
 
   // Memoize the SVG path to prevent unnecessary recalculations
   const svgPath = useMemo(() => {
@@ -131,83 +170,4 @@ function Geography({
 
 Geography.displayName = 'Geography';
 
-// Custom comparison function for memo to prevent unnecessary re-renders
-const arePropsEqual = (
-  prevProps: GeographyProps & { ref?: Ref<SVGPathElement> },
-  nextProps: GeographyProps & { ref?: Ref<SVGPathElement> },
-): boolean => {
-  // Check if geography data has changed (most important check)
-  if (prevProps.geography !== nextProps.geography) {
-    return false;
-  }
-
-  // Check if the SVG path has changed (expensive to recalculate)
-  const prevPath = (prevProps.geography as PreparedFeature).svgPath;
-  const nextPath = (nextProps.geography as PreparedFeature).svgPath;
-  if (prevPath !== nextPath) {
-    return false;
-  }
-
-  // Check if event handlers have changed (shallow comparison)
-  const eventHandlers = [
-    'onMouseEnter',
-    'onMouseLeave',
-    'onMouseDown',
-    'onMouseUp',
-    'onFocus',
-    'onBlur',
-    'onClick',
-  ] as const;
-
-  for (const handler of eventHandlers) {
-    if (prevProps[handler] !== nextProps[handler]) {
-      return false;
-    }
-  }
-
-  // Check if style object has changed (deep comparison for style states)
-  if (prevProps.style !== nextProps.style) {
-    if (!prevProps.style || !nextProps.style) {
-      return false;
-    }
-
-    const styleStates = ['default', 'hover', 'pressed', 'focused'] as const;
-    for (const state of styleStates) {
-      const prevStyle = prevProps.style[state];
-      const nextStyle = nextProps.style[state];
-
-      if (prevStyle !== nextStyle) {
-        // Shallow comparison of style objects
-        if (!prevStyle || !nextStyle) {
-          return false;
-        }
-
-        const prevKeys = Object.keys(prevStyle);
-        const nextKeys = Object.keys(nextStyle);
-
-        if (prevKeys.length !== nextKeys.length) {
-          return false;
-        }
-
-        for (const key of prevKeys) {
-          if (
-            prevStyle[key as keyof typeof prevStyle] !==
-            nextStyle[key as keyof typeof nextStyle]
-          ) {
-            return false;
-          }
-        }
-      }
-    }
-  }
-
-  // Check className
-  if (prevProps.className !== nextProps.className) {
-    return false;
-  }
-
-  // All other props are considered equal if we reach here
-  return true;
-};
-
-export default memo(Geography, arePropsEqual);
+export default memo(Geography, areGeographyPropsEqual);

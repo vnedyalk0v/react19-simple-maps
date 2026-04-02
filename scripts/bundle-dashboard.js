@@ -139,6 +139,14 @@ class BundleDashboard {
     return changes;
   }
 
+  /**
+   * Compares React 19 optimization completion between the two most recent reports.
+   *
+   * Data contract (from `generateEnhancedReport()` / `react19Optimizations`):
+   * each optimization entry must have numeric `completionRate`, `name`, and
+   * `status`. `previousOpt` may be undefined if a key is missing from the older
+   * report. Requires `historicalReports[0]` and `[1]` (newest vs previous).
+   */
   analyzeOptimizationProgress() {
     if (this.historicalReports.length < 2) return null;
 

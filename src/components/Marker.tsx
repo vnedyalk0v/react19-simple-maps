@@ -18,12 +18,12 @@ function Marker({
 }: MarkerProps & { ref?: Ref<SVGGElement> }) {
   const { projection } = useMapContext();
   const [isPressed, setPressed] = useState(false);
-  const [isFocused, setFocus] = useState(false);
+  const [isHovered, setHovered] = useState(false);
+  const [isFocused, setFocused] = useState(false);
 
-  // Memoize event handlers to prevent unnecessary re-renders
   const handleMouseEnter = useCallback(
     (evt: React.MouseEvent<SVGGElement>) => {
-      setFocus(true);
+      setHovered(true);
       if (onMouseEnter) onMouseEnter(evt);
     },
     [onMouseEnter],
@@ -31,7 +31,7 @@ function Marker({
 
   const handleMouseLeave = useCallback(
     (evt: React.MouseEvent<SVGGElement>) => {
-      setFocus(false);
+      setHovered(false);
       if (isPressed) setPressed(false);
       if (onMouseLeave) onMouseLeave(evt);
     },
@@ -40,7 +40,7 @@ function Marker({
 
   const handleFocus = useCallback(
     (evt: React.FocusEvent<SVGGElement>) => {
-      setFocus(true);
+      setFocused(true);
       if (onFocus) onFocus(evt);
     },
     [onFocus],
@@ -48,7 +48,7 @@ function Marker({
 
   const handleBlur = useCallback(
     (evt: React.FocusEvent<SVGGElement>) => {
-      setFocus(false);
+      setFocused(false);
       if (isPressed) setPressed(false);
       if (onBlur) onBlur(evt);
     },
@@ -76,14 +76,12 @@ function Marker({
     return projection(coordinates);
   }, [projection, coordinates]);
 
-  // Memoize current state calculation
   const currentState = useMemo(() => {
-    return isPressed || isFocused
-      ? isPressed
-        ? 'pressed'
-        : 'hover'
-      : 'default';
-  }, [isPressed, isFocused]);
+    if (isPressed) return 'pressed' as const;
+    if (isFocused) return 'focused' as const;
+    if (isHovered) return 'hover' as const;
+    return 'default' as const;
+  }, [isPressed, isFocused, isHovered]);
 
   // Memoize current style to prevent unnecessary style recalculations
   const currentStyle = useMemo(() => {
