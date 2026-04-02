@@ -11,22 +11,19 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-function DefaultErrorFallback(error: Error, retry: () => void) {
+function DefaultErrorFallback(error: Error, _retry: () => void) {
   return (
-    <div className="rsm-error-boundary" role="alert">
-      <div className="rsm-error-content">
-        <h3 className="rsm-error-title">Failed to load geography data</h3>
-        <p className="rsm-error-message">{error.message}</p>
-        <button
-          onClick={retry}
-          className="rsm-retry-button"
-          type="button"
-          aria-label="Retry loading geography data"
-        >
-          Retry Loading
-        </button>
-      </div>
-    </div>
+    <g className="rsm-error-boundary" role="alert">
+      <text
+        className="rsm-error-text"
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        fill="currentColor"
+      >
+        {`Failed to load geography data: ${error.message}`}
+      </text>
+    </g>
   );
 }
 

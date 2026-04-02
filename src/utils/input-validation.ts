@@ -52,7 +52,6 @@ export function sanitizeString(
   if (typeof input !== 'string') {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       `Expected string, got ${typeof input}`,
     );
   }
@@ -60,7 +59,6 @@ export function sanitizeString(
   // Check length limits
   if (input.length > currentValidationConfig.maxStringLength) {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       `String too long: ${input.length} characters (max: ${currentValidationConfig.maxStringLength})`,
     );
@@ -104,7 +102,6 @@ export function validateURL(input: unknown): string {
       )
     ) {
       throw createGeographyFetchError(
-        'VALIDATION_ERROR',
         'SECURITY_ERROR',
         `Dangerous protocol detected: ${url.protocol}`,
       );
@@ -113,7 +110,6 @@ export function validateURL(input: unknown): string {
     // Validate hostname
     if (url.hostname.includes('..') || url.hostname.includes('%')) {
       throw createGeographyFetchError(
-        'VALIDATION_ERROR',
         'SECURITY_ERROR',
         `Invalid hostname: ${url.hostname}`,
       );
@@ -123,7 +119,6 @@ export function validateURL(input: unknown): string {
   } catch (error) {
     if (error instanceof TypeError) {
       throw createGeographyFetchError(
-        'VALIDATION_ERROR',
         'VALIDATION_ERROR',
         `Invalid URL format: ${sanitized}`,
       );
@@ -147,7 +142,6 @@ export function validateNumber(
   if (typeof input !== 'number') {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       `Expected number, got ${typeof input}`,
     );
   }
@@ -155,14 +149,12 @@ export function validateNumber(
   if (!Number.isFinite(input)) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       'Number must be finite',
     );
   }
 
   if (input < min || input > max) {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       `Number ${input} is outside allowed range [${min}, ${max}]`,
     );
@@ -179,7 +171,6 @@ export function validateNumber(
 export function validateCoordinates(input: unknown): Coordinates {
   if (!Array.isArray(input) || input.length !== 2) {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       'Coordinates must be an array of exactly 2 numbers',
     );
@@ -206,14 +197,12 @@ export function validateArray<T>(
   if (!Array.isArray(input)) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       `Expected array, got ${typeof input}`,
     );
   }
 
   if (input.length > currentValidationConfig.maxArrayLength) {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       `Array too long: ${input.length} items (max: ${currentValidationConfig.maxArrayLength})`,
     );
@@ -225,7 +214,6 @@ export function validateArray<T>(
         return itemValidator(item, index);
       } catch (error) {
         throw createGeographyFetchError(
-          'VALIDATION_ERROR',
           'VALIDATION_ERROR',
           `Invalid array item at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
@@ -249,14 +237,12 @@ export function validateObject(
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       `Expected object, got ${typeof input}`,
     );
   }
 
   if (depth > currentValidationConfig.maxObjectDepth) {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       `Object nesting too deep: ${depth} levels (max: ${currentValidationConfig.maxObjectDepth})`,
     );
@@ -420,7 +406,6 @@ export function validateSecurityConfig(
       if (!['https:', 'http:'].includes(protocol)) {
         throw createGeographyFetchError(
           'VALIDATION_ERROR',
-          'VALIDATION_ERROR',
           `Invalid protocol: ${protocol}`,
         );
       }
@@ -432,7 +417,6 @@ export function validateSecurityConfig(
     if (typeof obj.ALLOW_HTTP_LOCALHOST !== 'boolean') {
       throw createGeographyFetchError(
         'VALIDATION_ERROR',
-        'VALIDATION_ERROR',
         'ALLOW_HTTP_LOCALHOST must be a boolean',
       );
     }
@@ -442,7 +426,6 @@ export function validateSecurityConfig(
   if ('STRICT_HTTPS_ONLY' in obj && obj.STRICT_HTTPS_ONLY !== undefined) {
     if (typeof obj.STRICT_HTTPS_ONLY !== 'boolean') {
       throw createGeographyFetchError(
-        'VALIDATION_ERROR',
         'VALIDATION_ERROR',
         'STRICT_HTTPS_ONLY must be a boolean',
       );
@@ -468,7 +451,6 @@ export function validateSRIConfig(input: unknown): SRIConfig {
   ) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       'SRI config must have algorithm, hash, and enforceIntegrity properties',
     );
   }
@@ -476,7 +458,6 @@ export function validateSRIConfig(input: unknown): SRIConfig {
   const algorithm = sanitizeString(obj.algorithm);
   if (!['sha256', 'sha384', 'sha512'].includes(algorithm)) {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       `Invalid SRI algorithm: ${algorithm}`,
     );
@@ -486,14 +467,12 @@ export function validateSRIConfig(input: unknown): SRIConfig {
   if (!hash.startsWith(`${algorithm}-`)) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       `SRI hash must start with ${algorithm}-`,
     );
   }
 
   if (typeof obj.enforceIntegrity !== 'boolean') {
     throw createGeographyFetchError(
-      'VALIDATION_ERROR',
       'VALIDATION_ERROR',
       'enforceIntegrity must be a boolean',
     );
@@ -610,7 +589,6 @@ export function validateEventHandler(input: unknown): Function | undefined {
   if (typeof input !== 'function') {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      'VALIDATION_ERROR',
       `Event handler must be a function, got ${typeof input}`,
     );
   }
@@ -631,7 +609,6 @@ export function validateEventHandler(input: unknown): Function | undefined {
   for (const pattern of dangerousPatterns) {
     if (funcString.includes(pattern)) {
       throw createGeographyFetchError(
-        'VALIDATION_ERROR',
         'SECURITY_ERROR',
         `Event handler contains potentially dangerous code: ${pattern}`,
       );

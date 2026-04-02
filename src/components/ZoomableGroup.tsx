@@ -44,7 +44,6 @@ function ZoomableGroup(
     enableZoom,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     enablePan,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     scaleExtent,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     translateExtent,
@@ -82,13 +81,16 @@ function ZoomableGroup(
     finalTranslateExtent = complexProps.translateExtent;
   }
 
+  const finalScaleExtent =
+    scaleExtent ?? createScaleExtent(finalMinZoom, finalMaxZoom);
+
   const { mapRef, transformString, position, isPending } = useZoomPan({
     center,
     ...(filterZoomEvent && { filterZoomEvent }),
     ...(onMoveStart && { onMoveStart }),
     ...(onMove && { onMove }),
     ...(onMoveEnd && { onMoveEnd }),
-    scaleExtent: createScaleExtent(finalMinZoom, finalMaxZoom),
+    scaleExtent: finalScaleExtent,
     ...(finalTranslateExtent && { translateExtent: finalTranslateExtent }),
     zoom,
   });

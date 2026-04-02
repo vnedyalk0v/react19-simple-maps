@@ -124,6 +124,8 @@ function GeographyProcessor({
       geographies: preparedGeographies,
       outline: preparedMeshData.outline,
       borders: preparedMeshData.borders,
+      isLoading: false,
+      error: null,
     }),
     [preparedGeographies, preparedMeshData],
   );

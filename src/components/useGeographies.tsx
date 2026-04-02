@@ -38,15 +38,15 @@ export default function useGeographies({
     Topology | FeatureCollection | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Handle string URLs with traditional async loading
   useEffect(() => {
     if (isString(geography)) {
       setIsLoading(true);
+      setError(null);
 
       devTools.debugGeographyLoading(geography, 'start');
 
-      // Preload immediately before fetching to minimize the gap
       preloadGeography(geography);
 
       fetchGeographiesCache(geography)
@@ -55,13 +55,15 @@ export default function useGeographies({
           setLoadedData(data);
           setIsLoading(false);
         })
-        .catch((error) => {
-          devTools.debugGeographyLoading(geography, 'error', error);
+        .catch((err) => {
+          devTools.debugGeographyLoading(geography, 'error', err);
+          setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         });
     } else {
       setLoadedData(geography);
       setIsLoading(false);
+      setError(null);
     }
   }, [geography]);
 
@@ -185,12 +187,13 @@ export default function useGeographies({
     return result;
   }, [rawMesh, path, loadedData]);
 
-  // Final memoized result
   return useMemo(() => {
     return {
       geographies: preparedGeographies,
       outline: preparedMeshData.outline,
       borders: preparedMeshData.borders,
+      isLoading,
+      error,
     };
-  }, [preparedGeographies, preparedMeshData]);
+  }, [preparedGeographies, preparedMeshData, isLoading, error]);
 }

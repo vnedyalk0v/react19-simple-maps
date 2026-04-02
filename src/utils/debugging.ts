@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 
 // React 19 debugging utilities
 
@@ -276,21 +276,31 @@ export class MapDebugger {
 export function useMapDebugger(componentName: string, debug?: boolean) {
   const mapDebugger = MapDebugger.getInstance();
 
-  // If debug prop is provided, temporarily set debug mode
-  if (debug !== undefined) {
-    mapDebugger.setDebugMode(debug);
-  }
+  useEffect(() => {
+    if (debug !== undefined) {
+      mapDebugger.setDebugMode(debug);
+    }
+  }, [debug, mapDebugger]);
 
-  return {
-    logRender: (
-      props?: Record<string, unknown>,
-      state?: Record<string, unknown>,
-    ) => mapDebugger.logRender(componentName, props, state),
-    logError: (error: Error, props?: Record<string, unknown>) =>
+  const logRender = useCallback(
+    (props?: Record<string, unknown>, state?: Record<string, unknown>) =>
+      mapDebugger.logRender(componentName, props, state),
+    [componentName, mapDebugger],
+  );
+
+  const logError = useCallback(
+    (error: Error, props?: Record<string, unknown>) =>
       mapDebugger.logError(componentName, error, props),
-    trackPerformance: (renderTime: number) =>
+    [componentName, mapDebugger],
+  );
+
+  const trackPerformance = useCallback(
+    (renderTime: number) =>
       mapDebugger.trackPerformance(componentName, renderTime),
-  };
+    [componentName, mapDebugger],
+  );
+
+  return { logRender, logError, trackPerformance };
 }
 
 /**
