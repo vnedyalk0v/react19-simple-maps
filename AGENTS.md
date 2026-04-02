@@ -13,6 +13,7 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 
 - For every user-facing or package-impacting change, create a new `.changeset/*.md` file.
 - The changeset file must describe the change clearly so the changelog can be generated correctly.
+- Never reference internal tooling, review bots, or IDE names (e.g., CodeRabbit, Cursor, Copilot) in changesets, commit messages, code comments, or any user-facing text. Describe *what* changed and *why*, not which tool suggested it.
 
 ## Scope and Compatibility
 

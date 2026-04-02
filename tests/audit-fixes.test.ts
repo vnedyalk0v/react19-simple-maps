@@ -99,7 +99,7 @@ describe('createGeographyFetchError', () => {
     expect(error.type).toBe('VALIDATION_ERROR');
   });
 
-  it('sets url as the third argument', () => {
+  it('sets geography from the third argument', () => {
     const error = createGeographyFetchError(
       'GEOGRAPHY_LOAD_ERROR',
       'Failed to load',
@@ -121,28 +121,11 @@ describe('createScaleExtent', () => {
 
 // --- Fix 1: GeographyData type includes isLoading and error ---
 describe('GeographyData type shape', () => {
-  it('useGeographies returns isLoading and error fields', async () => {
+  it('useGeographies is exported as a function', async () => {
     const { default: useGeographies } =
       await import('../src/components/useGeographies');
     expect(useGeographies).toBeDefined();
     expect(typeof useGeographies).toBe('function');
-  });
-});
-
-// --- Fix 3: StyleVariant type includes focused ---
-describe('StyleVariant type', () => {
-  it('exports the ConditionalStyle type with focused variant', async () => {
-    const types = await import('../src/types');
-    expect(types).toBeDefined();
-    // The type itself can't be tested at runtime, but we can verify
-    // the style object shape supports 'focused'
-    const style: Record<string, unknown> = {
-      default: { fill: '#ccc' },
-      hover: { fill: '#f00' },
-      pressed: { fill: '#a00' },
-      focused: { fill: '#00f' },
-    };
-    expect(style.focused).toEqual({ fill: '#00f' });
   });
 });
 

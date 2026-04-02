@@ -75,6 +75,10 @@ export function preloadGeography(url: string, immediate = false): void {
     prefetchDNS(parsedUrl.origin);
     preconnect(parsedUrl.origin);
 
+    // Record URL after hints so dev-mode calls without preload() do not
+    // re-issue prefetchDNS/preconnect on every render.
+    preloadedUrls.add(url);
+
     // Only preload the actual resource if immediate or in production
     const shouldPreloadResource =
       immediate ||
@@ -85,7 +89,6 @@ export function preloadGeography(url: string, immediate = false): void {
         as: 'fetch',
         crossOrigin: 'anonymous', // Most geography APIs support CORS
       });
-      preloadedUrls.add(url);
     }
   } catch (error: unknown) {
     // Silently handle invalid/disallowed URLs in development only

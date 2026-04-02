@@ -405,8 +405,10 @@ export interface GeographyData {
   outline: string;
   borders: string;
   isLoading: boolean;
-  error: Error | null;
+  error: GeographyError | Error | null;
   center?: Coordinates;
+  /** Re-runs the fetch for string `geography` URLs (no-op for object geographies). */
+  refetch?: () => void;
 }
 
 export interface ZoomPanState {

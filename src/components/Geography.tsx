@@ -6,6 +6,46 @@ import {
   getBestGeographyCoordinates,
 } from '../utils/geography-utils';
 
+const GEOGRAPHY_KNOWN_PROP_KEYS = new Set([
+  'geography',
+  'onClick',
+  'onMouseEnter',
+  'onMouseLeave',
+  'onMouseDown',
+  'onMouseUp',
+  'onFocus',
+  'onBlur',
+  'style',
+  'className',
+  'ref',
+]);
+
+function areGeographyPropsEqual(
+  prev: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
+  next: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
+): boolean {
+  if (prev.geography !== next.geography) return false;
+  if (prev.style !== next.style) return false;
+  if (prev.className !== next.className) return false;
+  if (prev.onClick !== next.onClick) return false;
+  if (prev.onMouseEnter !== next.onMouseEnter) return false;
+  if (prev.onMouseLeave !== next.onMouseLeave) return false;
+  if (prev.onMouseDown !== next.onMouseDown) return false;
+  if (prev.onMouseUp !== next.onMouseUp) return false;
+  if (prev.onFocus !== next.onFocus) return false;
+  if (prev.onBlur !== next.onBlur) return false;
+  if (prev.ref !== next.ref) return false;
+
+  const prevRec = prev as Record<string, unknown>;
+  const nextRec = next as Record<string, unknown>;
+  const restKeys = new Set([...Object.keys(prevRec), ...Object.keys(nextRec)]);
+  for (const key of restKeys) {
+    if (GEOGRAPHY_KNOWN_PROP_KEYS.has(key)) continue;
+    if (prevRec[key] !== nextRec[key]) return false;
+  }
+  return true;
+}
+
 function Geography({
   geography,
   onClick,
@@ -130,4 +170,4 @@ function Geography({
 
 Geography.displayName = 'Geography';
 
-export default memo(Geography);
+export default memo(Geography, areGeographyPropsEqual);

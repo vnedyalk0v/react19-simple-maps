@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  vi,
+} from 'vitest';
 import {
   validateGeographyUrl,
   configureGeographySecurity,
@@ -120,6 +128,12 @@ describe('SEC-001: IPv6 private IP address validation', () => {
 // ---------------------------------------------------------------------------
 describe('SEC-002: Preloading validates URLs before network activity', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
+  let preloadGeography: (url: string, immediate?: boolean) => void;
+
+  beforeAll(async () => {
+    const mod = await import('../src/utils/preloading');
+    preloadGeography = mod.preloadGeography;
+  });
 
   beforeEach(() => {
     configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
@@ -131,9 +145,7 @@ describe('SEC-002: Preloading validates URLs before network activity', () => {
     warnSpy.mockRestore();
   });
 
-  it('preloadGeography should not throw for invalid URLs (silently skips)', async () => {
-    const { preloadGeography } = await import('../src/utils/preloading');
-
+  it('preloadGeography should not throw for invalid URLs (silently skips)', () => {
     // These should not throw — errors are caught internally
     expect(() =>
       preloadGeography('http://evil.example.com/data.json'),
@@ -153,6 +165,17 @@ describe('SEC-002: Preloading validates URLs before network activity', () => {
 // ---------------------------------------------------------------------------
 describe('SEC-002b: preloadGeographyAssets validates asset URLs', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
+  let validatePreloadUrl: (url: string) => boolean;
+  let preloadGeographyAssets: (options?: {
+    d3Scripts?: string[];
+    stylesheets?: string[];
+  }) => void;
+
+  beforeAll(async () => {
+    const mod = await import('../src/utils/preloading');
+    validatePreloadUrl = mod.validatePreloadUrl;
+    preloadGeographyAssets = mod.preloadGeographyAssets;
+  });
 
   beforeEach(() => {
     configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
@@ -163,8 +186,7 @@ describe('SEC-002b: preloadGeographyAssets validates asset URLs', () => {
     warnSpy.mockRestore();
   });
 
-  it('validatePreloadUrl returns true for valid HTTPS URLs', async () => {
-    const { validatePreloadUrl } = await import('../src/utils/preloading');
+  it('validatePreloadUrl returns true for valid HTTPS URLs', () => {
     expect(validatePreloadUrl('https://cdn.jsdelivr.net/npm/d3@7/+esm')).toBe(
       true,
     );
@@ -173,32 +195,28 @@ describe('SEC-002b: preloadGeographyAssets validates asset URLs', () => {
     );
   });
 
-  it('validatePreloadUrl rejects HTTP URLs', async () => {
-    const { validatePreloadUrl } = await import('../src/utils/preloading');
+  it('validatePreloadUrl rejects HTTP URLs', () => {
     expect(validatePreloadUrl('http://evil.example.com/script.js')).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Preload URL rejected'),
     );
   });
 
-  it('validatePreloadUrl rejects private IP addresses', async () => {
-    const { validatePreloadUrl } = await import('../src/utils/preloading');
+  it('validatePreloadUrl rejects private IP addresses', () => {
     expect(validatePreloadUrl('https://10.0.0.1/style.css')).toBe(false);
     expect(validatePreloadUrl('https://192.168.1.1/script.js')).toBe(false);
     expect(validatePreloadUrl('https://[::1]/style.css')).toBe(false);
     expect(warnSpy).toHaveBeenCalledTimes(3);
   });
 
-  it('validatePreloadUrl rejects empty and non-string values', async () => {
-    const { validatePreloadUrl } = await import('../src/utils/preloading');
+  it('validatePreloadUrl rejects empty and non-string values', () => {
     expect(validatePreloadUrl('')).toBe(false);
     expect(validatePreloadUrl('   ')).toBe(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(validatePreloadUrl(null as any)).toBe(false);
   });
 
-  it('preloadGeographyAssets skips invalid d3Script URLs without throwing', async () => {
-    const { preloadGeographyAssets } = await import('../src/utils/preloading');
+  it('preloadGeographyAssets skips invalid d3Script URLs without throwing', () => {
     expect(() =>
       preloadGeographyAssets({
         d3Scripts: [
@@ -216,8 +234,7 @@ describe('SEC-002b: preloadGeographyAssets validates asset URLs', () => {
     expect(rejectWarnings.length).toBe(2);
   });
 
-  it('preloadGeographyAssets skips invalid stylesheet URLs without throwing', async () => {
-    const { preloadGeographyAssets } = await import('../src/utils/preloading');
+  it('preloadGeographyAssets skips invalid stylesheet URLs without throwing', () => {
     expect(() =>
       preloadGeographyAssets({
         stylesheets: [

@@ -128,6 +128,9 @@ function isPrivateIPAddress(hostname: string): boolean {
     /^0\./, // 0.0.0.0/8 (current network)
     /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 (carrier-grade NAT)
     /^192\.0\.0\./, // 192.0.0.0/24 (IETF protocol assignments)
+    /^192\.0\.2\./, // 192.0.2.0/24 (TEST-NET-1, RFC 5737)
+    /^198\.51\.100\./, // 198.51.100.0/24 (TEST-NET-2, RFC 5737)
+    /^203\.0\.113\./, // 203.0.113.0/24 (TEST-NET-3, RFC 5737)
     /^198\.1[89]\./, // 198.18.0.0/15 (benchmark testing)
     /^233\.252\.0\./, // 233.252.0.0/24 (documentation)
   ];
@@ -147,7 +150,9 @@ function isPrivateIPAddress(hostname: string): boolean {
     /^ff[0-9a-f]{2}:/i, // ff00::/8 (multicast)
     /^100::/i, // 100::/64 (discard prefix)
     /^2001:db8:/i, // 2001:db8::/32 (documentation)
-    /^2001:(?:0{1,4}:|:)/i, // 2001:0000::/32 (Teredo tunnelling) — matches 2001:0: through 2001:0000: and 2001:: (URL-normalised forms)
+    // 2001:0000::/32 (Teredo): matches "2001:" then either "::" or 1–4 zero hextets
+    // before the next colon (e.g. "2001:0:", "2001:00:", "2001:0000:", "2001::").
+    /^2001:(?:0{1,4}:|:)/i,
   ];
 
   for (const range of ipv6PrivateRanges) {

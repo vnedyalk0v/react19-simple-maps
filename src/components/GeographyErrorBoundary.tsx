@@ -1,4 +1,11 @@
-import { ReactNode, useCallback, useState, Component, ErrorInfo } from 'react';
+import {
+  ReactNode,
+  useCallback,
+  useState,
+  Component,
+  ErrorInfo,
+  KeyboardEvent,
+} from 'react';
 
 interface GeographyErrorBoundaryProps {
   children: ReactNode;
@@ -11,17 +18,38 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-function DefaultErrorFallback(error: Error, _retry: () => void) {
+function DefaultErrorFallback(error: Error, retry: () => void) {
   return (
     <g className="rsm-error-boundary" role="alert">
       <text
         className="rsm-error-text"
         x="50%"
-        y="50%"
+        y="42%"
         textAnchor="middle"
+        dominantBaseline="middle"
         fill="currentColor"
       >
         {`Failed to load geography data: ${error.message}`}
+      </text>
+      <text
+        className="rsm-error-retry"
+        x="50%"
+        y="58%"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill="currentColor"
+        role="button"
+        tabIndex={0}
+        style={{ cursor: 'pointer' }}
+        onClick={retry}
+        onKeyDown={(e: KeyboardEvent<SVGTextElement>) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            retry();
+          }
+        }}
+      >
+        Retry
       </text>
     </g>
   );
