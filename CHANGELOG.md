@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.0.3
+
+### Patch Changes
+
+- 863c579: Fix all confirmed findings from the React 19 package audit:
+  - **(4.1, 4.2) Geography loading model:** Remove broken Suspense wrapper from `Geographies` that never triggered. Expose `isLoading` and `error` from `useGeographies` and render SVG-safe loading/error fallbacks instead of invalid HTML `<div>` elements inside `<g>`.
+  - **(5.1) Custom memo comparators:** Remove custom `memo` comparators from `Geographies` and `Geography` that silently blocked updates to forwarded DOM props (`aria-*`, `data-*`, `opacity`, `role`, etc.). Default `memo` shallow comparison is now used.
+  - **(5.2) Focused style variant:** Separate hover and keyboard focus into independent state variables in `Geography` and `Marker`. The `focused` style variant is now applied on keyboard focus (`onFocus`/`onBlur`), while `hover` applies on mouse enter/leave.
+  - **(5.3) scaleExtent prop:** `ZoomableGroup` now honors the `scaleExtent` prop when provided directly, instead of always deriving zoom bounds from `minZoom`/`maxZoom`.
+  - **(6.1) Validation error messages:** Fix ~20 calls to `createGeographyFetchError` in `input-validation.ts` where the descriptive error message was passed in the wrong argument position (URL slot), resulting in generic error text. Security-related validation errors now correctly use the `SECURITY_ERROR` type.
+  - **(6.2) Lockfile sync:** Regenerate `package-lock.json` to match `package.json` version `2.0.2`.
+  - **(7.1) Debug render purity:** Move `setDebugMode` and `logRender` calls out of the render phase into `useEffect` to prevent global state mutation and console I/O during rendering, which is problematic under StrictMode and concurrent rendering.
+  - **Error boundary SVG safety:** Change `DefaultErrorFallback` in `GeographyErrorBoundary` to render SVG-safe `<text>`/`<g>` elements instead of HTML `<div>`/`<button>`.
+
+- dad7925: Fix security vulnerabilities identified in security best-practices review:
+  - **SEC-001 (High):** Fix IPv6 private-address bypass in URL validation. Strip IPv6 brackets from `new URL().hostname` before matching, add IPv4-mapped IPv6 detection (both dotted-quad and hex forms), and expand reserved range coverage.
+  - **SEC-002 (Medium):** Run `validateGeographyUrl()` in the preloading pipeline before any DNS prefetch, preconnect, or preload network activity.
+  - **SEC-003 (Medium):** Canonicalize URLs (strip fragment, normalize port/host) before SRI hash lookup to prevent bypass via trivial URL variants.
+  - **SEC-004 (Low):** Remove `frame-ancestors` and `X-Frame-Options` from HTML meta tags in examples (not enforced by browsers via meta); strengthen dev-only comments.
+  - **SEC-005 (Low):** Redact `git.branch` in persisted bundle reports to prevent sensitive branch names leaking into CI artifacts. Add `BUNDLE_REPORT_REDACT_GIT` env var to omit all git metadata from reports.
+  - **Build:** Set `NODE_ENV=production` in the `build` script so the Rollup Terser plugin is applied, enabling `drop_console` and `pure_funcs` to strip `console.log`/`console.warn`/`console.debug` from production bundles.
+
+  Bundle Monitor Improvements:
+  - Fix optimization status mapping — 0% completion now correctly reports `"not_started"` instead of `"partial"`. Status derives from numeric completionRate consistently (0% → not_started, 1–99% → partial, 100% → complete).
+  - **Breaking (report schema):** `utilization.raw`, `utilization.gzip`, and `utilization.brotli` are now numbers (e.g. `93.7`) instead of strings (`"93.7"`). Brotli emits `null` instead of `"N/A"` when unavailable. Parallel formatted fields (`utilization.rawFormatted`, `utilization.gzipFormatted`, `utilization.brotliFormatted`) provide display-ready strings (e.g. `"93.7%"`).
+  - **Breaking (report schema):** `react19Optimizations.*.completionRate` is now a number (e.g. `50`) instead of a string (`"50.0"`). A parallel `completionRateFormatted` field (e.g. `"50.0%"`) is provided for display.
+
+- 44afd4a: Address follow-up review findings:
+  - **useGeographies:** Abort stale async updates with an effect cleanup flag; expose `refetch()` to retry string URL loads.
+  - **Types:** `GeographyData.error` is now `GeographyError | Error | null`; optional `refetch` on the hook result.
+  - **Geographies / Geography:** Restore targeted `memo` comparators; stable loading fallback element; wire fallback retry to `refetch`.
+  - **GeographyErrorBoundary:** Default fallback shows an accessible Retry control and vertically centers error text in SVG.
+  - **Security:** Canonicalize URLs in `addCustomSRI`; extend IPv4 documentation (TEST-NET) ranges; clarify example HTML comments on meta vs HTTP headers.
+  - **Preloading:** Mark URLs in the dedupe set after DNS/preconnect hints to avoid redundant hint calls in development.
+
 ## 2.0.2
 
 ### Patch Changes
