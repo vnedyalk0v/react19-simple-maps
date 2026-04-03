@@ -13,6 +13,9 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 
 - For every user-facing or package-impacting change, create a new `.changeset/*.md` file.
 - The changeset file must describe the change clearly so the changelog can be generated correctly.
+- For every user-facing or package-impacting change, update `CHANGELOG.md` in the standardized format described in `CHANGELOG_GUIDELINES.md`.
+- Read `CHANGELOG_GUIDELINES.md` only when the task requires a changelog update.
+- Do not update `CHANGELOG.md` for tooling-only, CI-only, lockfile-only, or other internal-only maintenance.
 - Never reference internal tooling, review bots, or IDE names (e.g., CodeRabbit, Cursor, Copilot) in changesets, commit messages, code comments, or any user-facing text. Describe _what_ changed and _why_, not which tool suggested it.
 
 ## Scope and Compatibility

@@ -1,387 +1,196 @@
 # Changelog
 
-## 2.0.3
-
-### Patch Changes
+All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
 
-- 863c579: Fix all confirmed findings from the React 19 package audit:
-  - **(4.1, 4.2) Geography loading model:** Remove broken Suspense wrapper from `Geographies` that never triggered. Expose `isLoading` and `error` from `useGeographies` and render SVG-safe loading/error fallbacks instead of invalid HTML `<div>` elements inside `<g>`.
-  - **(5.1) Custom memo comparators:** Remove custom `memo` comparators from `Geographies` and `Geography` that silently blocked updates to forwarded DOM props (`aria-*`, `data-*`, `opacity`, `role`, etc.). Default `memo` shallow comparison is now used.
-  - **(5.2) Focused style variant:** Separate hover and keyboard focus into independent state variables in `Geography` and `Marker`. The `focused` style variant is now applied on keyboard focus (`onFocus`/`onBlur`), while `hover` applies on mouse enter/leave.
-  - **(5.3) scaleExtent prop:** `ZoomableGroup` now honors the `scaleExtent` prop when provided directly, instead of always deriving zoom bounds from `minZoom`/`maxZoom`.
-  - **(6.1) Validation error messages:** Fix ~20 calls to `createGeographyFetchError` in `input-validation.ts` where the descriptive error message was passed in the wrong argument position (URL slot), resulting in generic error text. Security-related validation errors now correctly use the `SECURITY_ERROR` type.
-  - **(6.2) Lockfile sync:** Regenerate `package-lock.json` to match `package.json` version `2.0.2`.
-  - **(7.1) Debug render purity:** Move `setDebugMode` and `logRender` calls out of the render phase into `useEffect` to prevent global state mutation and console I/O during rendering, which is problematic under StrictMode and concurrent rendering.
-  - **Error boundary SVG safety:** Change `DefaultErrorFallback` in `GeographyErrorBoundary` to render SVG-safe `<text>`/`<g>` elements instead of HTML `<div>`/`<button>`.
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
+the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- dad7925: Fix security vulnerabilities identified in security best-practices review:
-  - **SEC-001 (High):** Fix IPv6 private-address bypass in URL validation. Strip IPv6 brackets from `new URL().hostname` before matching, add IPv4-mapped IPv6 detection (both dotted-quad and hex forms), and expand reserved range coverage.
-  - **SEC-002 (Medium):** Run `validateGeographyUrl()` in the preloading pipeline before any DNS prefetch, preconnect, or preload network activity.
-  - **SEC-003 (Medium):** Canonicalize URLs (strip fragment, normalize port/host) before SRI hash lookup to prevent bypass via trivial URL variants.
-  - **SEC-004 (Low):** Remove `frame-ancestors` and `X-Frame-Options` from HTML meta tags in examples (not enforced by browsers via meta); strengthen dev-only comments.
-  - **SEC-005 (Low):** Redact `git.branch` in persisted bundle reports to prevent sensitive branch names leaking into CI artifacts. Add `BUNDLE_REPORT_REDACT_GIT` env var to omit all git metadata from reports.
-  - **Build:** Set `NODE_ENV=production` in the `build` script so the Rollup Terser plugin is applied, enabling `drop_console` and `pure_funcs` to strip `console.log`/`console.warn`/`console.debug` from production bundles.
+## [Unreleased]
 
-  Bundle Monitor Improvements:
-  - Fix optimization status mapping — 0% completion now correctly reports `"not_started"` instead of `"partial"`. Status derives from numeric completionRate consistently (0% → not_started, 1–99% → partial, 100% → complete).
-  - **Breaking (report schema):** `utilization.raw`, `utilization.gzip`, and `utilization.brotli` are now numbers (e.g. `93.7`) instead of strings (`"93.7"`). Brotli emits `null` instead of `"N/A"` when unavailable. Parallel formatted fields (`utilization.rawFormatted`, `utilization.gzipFormatted`, `utilization.brotliFormatted`) provide display-ready strings (e.g. `"93.7%"`).
-  - **Breaking (report schema):** `react19Optimizations.*.completionRate` is now a number (e.g. `50`) instead of a string (`"50.0"`). A parallel `completionRateFormatted` field (e.g. `"50.0%"`) is provided for display.
+No unreleased user-facing or package-impacting changes.
 
-- 44afd4a: Address follow-up review findings:
-  - **useGeographies:** Abort stale async updates with an effect cleanup flag; expose `refetch()` to retry string URL loads.
-  - **Types:** `GeographyData.error` is now `GeographyError | Error | null`; optional `refetch` on the hook result.
-  - **Geographies / Geography:** Restore targeted `memo` comparators; stable loading fallback element; wire fallback retry to `refetch`.
-  - **GeographyErrorBoundary:** Default fallback shows an accessible Retry control and vertically centers error text in SVG.
-  - **Security:** Canonicalize URLs in `addCustomSRI`; extend IPv4 documentation (TEST-NET) ranges; clarify example HTML comments on meta vs HTTP headers.
-  - **Preloading:** Mark URLs in the dedupe set after DNS/preconnect hints to avoid redundant hint calls in development.
+## [2.0.3] - 2026-04-02
 
-## 2.0.2
+### Fixed
 
-### Patch Changes
+- Resolved the confirmed React 19 audit findings across geography loading, memoization, focus handling, zoom bounds, validation messages, debug render purity, and SVG-safe error fallbacks.
+- Fixed stale async updates in `useGeographies` and added retry support for string URL geography loads.
+- Restored targeted memoization where safe without blocking updates to forwarded DOM props.
+- Regenerated `package-lock.json` so it matches package version `2.0.2`.
 
-- 05f1bfc: Security hardening (7 fixes):
-  - **[H-001]** Fix JSON-LD script-breakout XSS by escaping `<`, `>`, `&`, and Unicode line separators in `MapMetadata`.
-  - **[H-002]** Prevent redirect-based SSRF bypass by using `redirect: 'manual'` and validating each redirect hop against the URL security policy.
-  - **[M-001]** Enforce streaming response-size limits independent of the `Content-Length` header to prevent memory exhaustion.
-  - **[M-002]** Deprecate `fetchGeographies` — it now delegates to the hardened `fetchGeographiesCache` pipeline.
-  - **[M-003]** Align server actions in `GeographyActions` with the shared secure URL validator and fetch pipeline.
-  - **[L-001]** Add prominent dev-only labeling and production CSP guidance in example HTML and SECURITY.md.
-  - **[L-002]** Set `X-XSS-Protection: 0` consistently across all examples and documentation.
+### Changed
 
-## 2.0.1
+- Production builds now set `NODE_ENV=production` so Rollup applies Terser optimizations consistently.
+- Bundle monitor optimization status now reports `0%` completion as `not_started`.
+- Bundle report schema now uses numeric utilization and completion-rate values, with parallel formatted string fields for display output.
 
-### Patch Changes
+### Security
 
-- c27cfb1: Fix package configuration and tooling issues
-  - Remove deprecated `/* eslint-env browser */` comment that will error in ESLint v10
-  - Reduce npm package size by excluding intermediate `dist/types/` build artifacts from published files
-  - Quote lint script glob patterns for cross-platform shell compatibility
-  - Update `moduleResolution` from `node` to `bundler` for proper ESM `exports` map support
-  - Update vitest esbuild target from `node18` to `node22` to match Node.js LTS requirement
+- Fixed an IPv6 private-address bypass in URL validation, including IPv4-mapped IPv6 handling and broader reserved-range coverage.
+- Validated geography URLs before DNS prefetch, preconnect, or preload work begins.
+- Canonicalized URLs before SRI lookup and custom SRI registration to prevent bypasses through trivial URL variants.
+- Redacted `git.branch` in persisted bundle reports by default and added `BUNDLE_REPORT_REDACT_GIT` to omit git metadata entirely when needed.
 
-## 2.0.0
+## [2.0.2] - 2026-02-06
 
-### Major Changes
+### Deprecated
 
-- a7aa88d: BREAKING: Package is now ESM-only. CommonJS (`require`) and UMD builds are removed.
-  Added `./utils` subpath export for direct utility imports.
+- Deprecated `fetchGeographies`; it now delegates to the hardened `fetchGeographiesCache` pipeline.
 
-## 1.2.1
+### Fixed
 
-### Patch Changes
+- Escaped script-breaking characters in JSON-LD metadata rendering to prevent script-breakout XSS in `MapMetadata`.
+- Enforced streaming response-size limits even when `Content-Length` is missing or inaccurate.
+- Aligned `GeographyActions` with the shared secure URL validation and fetch pipeline.
 
-- Fix build failure caused by `captureOwnerStack` not being exported in React 19 stable
-  - The `captureOwnerStack` API is only available in React's development builds, not in production. This caused build failures for users.
-  - Replaced direct import with a safe wrapper function that conditionally accesses the API only in development mode.
-  - Updated all dependencies to their latest versions (vitest 4.x, jsdom 27.x, eslint-plugin-react-hooks 7.x, etc.)
-  - Fixed rollup config compatibility with updated @rollup/plugin-typescript
+### Security
 
-## 1.2.0
+- Switched redirect handling to `redirect: 'manual'` and validated every redirect hop against the URL security policy.
+- Added clear dev-only labeling and production CSP guidance across examples and `SECURITY.md`.
+- Standardized `X-XSS-Protection: 0` guidance across examples and documentation.
 
-### Minor Changes
+## [2.0.1] - 2026-02-06
 
-- 4e1cb62: Add opt-in debug mode for cleaner development experience
+### Fixed
 
-  Implements quiet-by-default debugging with opt-in activation via environment variable or component prop. This follows industry standards for library behavior and provides a more professional development experience.
+- Removed a deprecated `/* eslint-env browser */` comment that would fail under ESLint v10.
+- Excluded intermediate `dist/types/` artifacts from the published package to reduce package size.
+- Quoted lint script glob patterns for better cross-platform shell compatibility.
+- Updated TypeScript `moduleResolution` from `node` to `bundler` to match the ESM `exports` map.
+- Raised the Vitest esbuild target from `node18` to `node22` to match the supported Node.js baseline.
 
-  **New Features:**
-  - `debug` prop on ComposableMap component for per-map debugging
-  - `REACT_SIMPLE_MAPS_DEBUG` environment variable for global debugging
-  - Quiet by default - no console output unless explicitly enabled
+## [2.0.0] - 2026-02-06
 
-  **Breaking Change:**
-  - Debug logging is now **disabled by default** (was previously enabled in development)
-  - To restore previous behavior, set `REACT_SIMPLE_MAPS_DEBUG=true` or use `debug={true}` prop
+### Added
 
-  **Benefits:**
-  - ✅ Cleaner development console by default
-  - ✅ Professional library behavior following React/Next.js conventions
-  - ✅ Granular control over debug output
-  - ✅ Still provides rich debugging when needed
+- Added a `./utils` subpath export for direct utility imports.
 
-  **Migration:**
-  - No action needed for most users (cleaner experience)
-  - To enable debugging: add `debug={true}` prop or set environment variable
+### Changed
 
-## 1.1.1
+- Switched the published package to an ESM-only distribution.
 
-### Patch Changes
+### Removed
 
-- 2d3ce74: Fix React DOM warnings in ZoomableGroup component
+- Removed CommonJS (`require`) and UMD builds.
 
-  Resolves console warnings about unrecognized DOM props by properly filtering internal ZoomableGroup props before forwarding to DOM elements. This eliminates development warnings while maintaining full functionality and backward compatibility.
+## [1.2.1] - 2025-12-03
 
-  **Fixed warnings:**
-  - `minZoom` prop on DOM element
-  - `maxZoom` prop on DOM element
-  - `scaleExtent` prop on DOM element
-  - `enableZoom` prop on DOM element
-  - `translateExtent` prop on DOM element
-  - `enablePan` prop on DOM element
+### Fixed
 
-  **Changes:**
-  - Modified ZoomableGroup prop destructuring to extract internal props
-  - Added proper ESLint handling for intentionally unused variables
-  - Maintained full React 19 compliance and functionality
+- Prevented build failures caused by importing `captureOwnerStack` from React 19 stable builds by gating access to the API behind a development-only wrapper.
+- Updated development dependencies and adjusted Rollup TypeScript plugin compatibility to match the refreshed toolchain.
 
-  **Impact:**
-  - ✅ Clean development experience with zero console warnings
-  - ✅ No breaking changes or functional impact
-  - ✅ Improved React 19 compliance
+## [1.2.0] - 2025-09-03
 
-## 1.1.0
+### Added
 
-### Minor Changes
+- Added an opt-in `debug` prop on `ComposableMap` for per-map debugging control.
+- Added the `REACT_SIMPLE_MAPS_DEBUG` environment variable for global debug activation.
 
-- d9a3d00: 🚀 **MAJOR: Resolve react-simple-maps compatibility issues with enhanced APIs** - Complete solution for migration challenges with new simplified APIs and comprehensive geographic utilities
+### Changed
 
-  ## 🎯 Compatibility Issues Resolved
-  - **⚙️ Simplified ZoomableGroup API** - Added intuitive helper functions and dual API support for easier configuration
-  - **🗺️ Enhanced Geography event handlers** - Rich geographic data access in all event handlers with backward compatibility
-  - **📖 Complete migration guide** - Comprehensive documentation for seamless migration from react-simple-maps
+- Debug logging is now disabled by default and only enabled explicitly through the prop or environment variable.
 
-  ## 🔧 New Features & APIs
+## [1.1.1] - 2025-09-03
 
-  ### **🎛️ ZoomableGroup Enhancements**
-  - **📦 Helper functions** - `createZoomConfig()`, `createPanConfig()`, `createZoomPanConfig()` for simplified configuration
-  - **🔄 Dual API support** - Both complex conditional types and simple props interfaces supported
-  - **⚡ Backward compatibility** - All existing usage patterns continue to work without changes
+### Fixed
 
-  ### **🗺️ Geography Utilities**
-  - **📍 Coordinate extraction** - `getGeographyCentroid()`, `getGeographyBounds()`, `getBestGeographyCoordinates()`
-  - **🎯 Enhanced event handlers** - All Geography events now provide rich geographic data as second parameter
-  - **🛡️ Type safety** - All utilities use branded coordinate types with proper validation
+- Stopped forwarding internal `ZoomableGroup` props to DOM elements, eliminating React DOM warnings for `minZoom`, `maxZoom`, `scaleExtent`, `enableZoom`, `translateExtent`, and `enablePan`.
 
-  ### **📚 Documentation & Migration**
-  - **📖 Migration guide** - Complete step-by-step instructions in `docs/MIGRATION.md`
-  - **🔄 API comparison** - Side-by-side examples of old vs new patterns
-  - **🎯 Enhanced examples** - Updated to demonstrate new capabilities
+## [1.1.0] - 2025-09-03
 
-  ## 🛠️ Technical Improvements
-  - **🚀 React 19 compliance** - Strict adherence to React 19.1.1+ development guidelines
-  - **🧹 Clean codebase** - Zero warnings, errors, or console statements in production
-  - **🎯 Error handling** - Proper validation-based error handling without try-catch blocks
-  - **📦 Enhanced exports** - 5+ new utility functions and helper APIs
+### Added
 
-  ## 🐛 Issues Fixed
-  - **Complex ZoomableGroup configuration** - Simplified API eliminates conditional type complexity
-  - **Limited Geography interaction** - Rich geographic data now available in all event handlers
-  - **Missing migration documentation** - Comprehensive guide with troubleshooting and examples
-  - **Type safety concerns** - Enhanced TypeScript support with branded types
+- Added helper functions for zoom and pan configuration: `createZoomConfig()`, `createPanConfig()`, and `createZoomPanConfig()`.
+- Added richer geographic utility helpers, including centroid, bounds, and coordinate extraction helpers.
+- Added migration guidance and updated examples to support migration from `react-simple-maps`.
 
-  ## 📚 Migration Notes
+### Changed
 
-  This release resolves all documented compatibility issues from `package_issues.md` while maintaining full backward compatibility. Users migrating from `react-simple-maps` now have:
-  - **🎯 Simple APIs** for common use cases alongside advanced options
-  - **🗺️ Rich geographic data** access in event handlers
-  - **📖 Step-by-step migration guide** with examples and troubleshooting
-  - **🔄 Backward compatibility** - no breaking changes to existing code
+- Simplified `ZoomableGroup` configuration while preserving backward compatibility with existing usage patterns.
+- Enhanced `Geography` event handlers so they can provide richer geographic data to consumers.
 
-  **Breaking Changes:** None - this is a minor release that adds new features while preserving all existing functionality.
+## [1.0.6] - 2025-09-03
 
-## 1.0.6
+### Fixed
 
-### Patch Changes
+- Fixed broken UMD exports that caused module resolution failures in Turbopack and other modern bundlers.
+- Corrected Terser settings that were breaking UMD export behavior.
 
-- 1f71b02: 🚨 **CRITICAL: Fixed UMD build export issues** - Resolved broken UMD build that had no exports, causing failures in Turbopack (Next.js 15.5+) and other modern bundlers
+### Changed
 
-  ## 🔧 Build System Fixes
-  - **⚙️ Improved Rollup UMD configuration** - Fixed aggressive terser minification settings that were breaking export mechanisms
-  - **📦 Updated package.json exports** - Temporarily point browser field to working ES modules as fallback until UMD is fully stable
-  - **🧪 Added build verification script** - Comprehensive testing for all build formats (ES, CJS, UMD, TypeScript) to prevent future regressions
-  - **🔍 Enhanced CI/CD pipeline** - Added automated build verification to prepublish process
+- Pointed the `browser` field at the working ES module build as a fallback while UMD stability was restored.
+- Added build verification scripts and stronger release-time build checks to catch export regressions earlier.
 
-  ## 🛠️ Technical Improvements
-  - **📋 Better error reporting** - Improved build verification with detailed export analysis
-  - **🎯 React 19 compliance maintained** - All fixes follow strict React 19.1.1+ development guidelines
-  - **⚡ Optimized build process** - Reduced terser passes and improved UMD compatibility
+## [1.0.5] - 2025-09-03
 
-  ## 🐛 Bug Fixes
-  - Fixed module resolution failures in Turbopack and modern bundlers
-  - Resolved "The module has no exports at all" errors
-  - Fixed browser field pointing to broken UMD build
-  - Corrected terser configuration for UMD format compatibility
+### Changed
 
-  ## 📚 Migration Notes
+- Simplified the `basic-map` example and improved example-specific ESLint and publishing configuration.
+- Updated package publishing defaults for public npm releases and more consistent registry metadata.
 
-  This release fixes critical compatibility issues reported in production environments. Users experiencing module resolution failures with Turbopack, Webpack, or other bundlers should upgrade immediately.
+### Fixed
 
-  **Breaking Changes:** None - this is a patch release that maintains full backward compatibility.
+- Improved root element checks in the examples.
+- Removed unused marker hover behavior and related event handling from examples.
+- Cleaned up Content Security Policy meta tags and example package linkage.
 
-All notable changes to `@vnedyalk0v/react19-simple-maps` will be documented in this file.
+### Security
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+- Added Subresource Integrity support and strengthened example security validation.
 
-> 📦 **Latest Version**: Check [npm](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps) or [GitHub Releases](https://github.com/vnedyalk0v/react19-simple-maps/releases) for the most recent version.
+## [1.0.4] - 2025-09-03
 
-## 1.0.5
+### Added
 
-### 🔧 Examples & Publishing Improvements
+- Added branded coordinate types, runtime type guards, and initial test infrastructure for the React 19 rewrite.
 
-**Published:** September 3, 2025
+### Changed
 
-#### **📚 Example Enhancements**
+- Refined conditional types, modularized validation utilities, and simplified the dependency and script surface in `package.json`.
+- Improved build configuration for cleaner output and faster builds.
 
-- **🎯 Simplified basic-map example** - Removed advanced React 19 features for better accessibility and learning
-- **🎨 Improved visual appearance** - Removed focus outlines from map elements for cleaner UI
-- **🔧 Enhanced ESLint configuration** - Better linting rules specifically for example files
-- **🛠️ Fixed root element checks** - Improved error handling in example applications
+### Fixed
 
-#### **📦 Publishing & Configuration**
+- Eliminated TypeScript and ESLint errors across the codebase.
+- Removed non-null assertions by replacing them with explicit null handling.
+- Fixed React Hook ordering issues and control-character regex warnings.
 
-- **🌐 Configured npm publishing** - Proper authentication and public registry setup
-- **🔒 Enhanced security features** - Added SRI hashes and improved security validation
-- **📋 Updated dependencies** - Latest compatible versions for better stability
-- **🏗️ Improved build process** - Better error handling and validation
+### Security
 
-#### **🐛 Bug Fixes**
+- Strengthened input validation, protocol validation, CSS sanitization, and Subresource Integrity support.
 
-- **✅ Fixed root element existence check** in examples
-- **🎯 Removed unused hover states** and event handlers from markers
-- **🧹 Cleaned up Content Security Policy** meta tags
-- **📝 Updated package linkage** for consistent versioning
+## [1.0.3] - 2025-09-02
 
-## 1.0.4
+### Fixed
 
-### 🚀 Major Code Quality & Performance Improvements
+- Included `README.md`, `LICENSE`, and `CHANGELOG.md` in the published npm package so package metadata and documentation render correctly on npm.
 
-**Published:** September 3, 2025
+## [1.0.2] - 2025-09-02
 
-#### **🔧 TypeScript & Code Quality**
+### Added
 
-- **✅ Fixed all 41 TypeScript errors** - Achieved zero TypeScript errors across the entire codebase
-- **🛡️ Replaced all 'any' types** with proper type definitions (unknown, branded types, etc.)
-- **🏷️ Implemented branded coordinate types** for compile-time safety and better developer experience
-- **🔍 Added comprehensive type guards** for runtime validation
-- **⚡ Enhanced conditional types** for improved component APIs
+- Added a richer interactive example with zoom, pan, click interactions, markers, and reset controls.
 
-#### **🧹 Linting & Code Standards**
+### Changed
 
-- **✅ Fixed all ESLint errors** - Zero linting errors remaining
-- **🚫 Removed all non-null assertions** with proper null checks
-- **🪝 Fixed React Hook ordering** issues for React 19 compliance
-- **🧽 Resolved unused variable** warnings
-- **📝 Fixed control character regex** warnings
+- Updated examples to use inline geography data so they work without CORS issues.
+- Refined example styling and interaction feedback for a clearer demo experience.
 
-#### **🏗️ Build System & Dependencies**
+## [1.0.1] - 2025-09-02
 
-- **🔄 Resolved circular dependency** between geography-validation and input-validation modules
-- **📦 Created error-utils module** to break circular dependencies and improve modularity
-- **🧹 Cleaned up package.json** - Removed 7 unnecessary dependencies and 11 redundant scripts
-- **⚡ Optimized build configuration** - Faster builds with cleaner output
+### Fixed
 
-#### **🛡️ Security & Performance**
+- Moved the React `use()` call to the top level of `useGeographies` so the hook follows the Rules of Hooks.
+- Updated example geography loading to use a working TopoJSON source.
+- Fixed branded coordinate typing issues and dependency alignment in the example apps.
 
-- **🔒 Enhanced input validation** and sanitization for all user data
-- **🛡️ Improved SRI (Subresource Integrity)** support for external resources
-- **🌐 Strengthened protocol validation** for better security
-- **🧼 Added CSS sanitization** to prevent XSS attacks
-- **⚡ Aggressive caching optimizations** with WeakMap and LRU strategies
+## [1.0.0] - 2025-09-02
 
-#### **🧪 Testing & CI**
+### Added
 
-- **✅ Implemented basic test suite** with 3 passing tests
-- **🔧 Added test setup infrastructure** for future test expansion
-- **🚀 CI pipeline improvements** - All checks now passing consistently
-
-#### **📚 Documentation**
-
-- **📖 Streamlined documentation files** for better maintainability
-- **🎯 Focused API documentation** on essential features
-- **📋 Updated migration guides** with latest best practices
-
-## 1.0.3
-
-### 🐛 Bug Fixes
-
-**Published:** September 2, 2025
-
-- **📦 Package Files** - Fixed npm package to include README.md, LICENSE, and CHANGELOG.md files
-- **📚 Documentation** - Resolved issue where npmjs.com was showing outdated README due to missing files in package
-
-## 1.0.2
-
-### 🔧 Improvements
-
-**Published:** September 2, 2025
-
-- **🎯 Enhanced Examples** - Added comprehensive interactive map example with zoom, pan, and click interactions
-- **🗺️ CORS-Free Geography Data** - Updated examples to use inline geography data, eliminating CORS issues
-- **🎨 Improved UI** - Beautiful gradient backgrounds and professional styling in examples
-- **📍 Interactive Markers** - Added city markers with hover effects and real-time position display
-- **🔄 Reset Functionality** - Added reset view button for better user experience
-
-## 1.0.1
-
-### 🐛 Bug Fixes
-
-**Published:** September 2, 2025
-
-- **⚛️ React Hooks Compliance** - Fixed `use()` hook being called inside `useMemo()` which violated Rules of Hooks
-- **🔧 Hook Architecture** - Moved `use()` call to top level of `useGeographies` hook for proper React 19 compliance
-- **🌐 CORS Resolution** - Updated examples to use working TopoJSON URL from jsdelivr CDN
-- **📝 TypeScript Fixes** - Resolved TypeScript issues with branded coordinate types in examples
-- **📦 Example Updates** - Fixed both basic-map and interactive-map examples with proper dependencies
-
-## 1.0.0
-
-### 🎉 Initial Release
-
-**Published:** September 2, 2025
-
-This is the initial release of `@vnedyalk0v/react19-simple-maps` - a modern, TypeScript-first React mapping library built exclusively for React 19+ with cutting-edge React patterns.
-
-### ✨ Features
-
-- **⚛️ React 19 Exclusive** - Built specifically for React 19.1.1+ with modern patterns
-- **📝 100% TypeScript** - Strict TypeScript with comprehensive type definitions
-- **🔒 Zero Security Vulnerabilities** - All dependencies updated and secure
-- **📦 Modern Build System** - ESM/CJS/UMD builds with tree-shaking support
-- **🧪 Comprehensive Testing** - 159 tests with full coverage using Vitest
-- **🎯 Multiple Output Formats** - CommonJS, ES Modules, and UMD builds
-- **🗺️ Source Maps** - Full debugging support with source maps
-- **📚 Complete TypeScript Definitions** - Detailed type definitions for excellent DX
-
-### � Technical Stack
-
-- **React 19.1.1+** - Latest React with concurrent features
-- **TypeScript 5.9+** - Strict mode with comprehensive typing
-- **D3 Geo** - Powerful geographic projections and utilities
-- **Rollup** - Optimized bundling with multiple output formats
-- **Vitest** - Modern testing framework
-- **ESLint 9** - Latest linting with strict rules
-- **Prettier** - Consistent code formatting
-
-### 📦 Installation
-
-```bash
-npm install @vnedyalk0v/react19-simple-maps
-```
-
-### 🎯 Key Components
-
-- `ComposableMap` - Main map container with projection support
-- `Geographies` - Geography data loading and rendering
-- `Geography` - Individual geography feature rendering
-- `Marker` - Point markers on maps
-- `Annotation` - Text annotations
-- `Graticule` - Coordinate grid lines
-- `Sphere` - Map sphere/globe outline
-- `ZoomableGroup` - Zoom and pan functionality
-
-### � Modern React 19 Features
-
-- **Actions API** - For async operations with automatic pending states
-- **Optimistic Updates** - Immediate UI feedback with automatic rollback
-- **Suspense Integration** - Proper loading states and error boundaries
-- **Resource Preloading** - Automatic geography data preloading
-- **Concurrent Features** - Built for React's concurrent rendering
-
-### 🙏 Acknowledgments
-
-Built upon the excellent foundation of `react-simple-maps` by Richard Zimerman and contributors. This package modernizes the library for React 19 while maintaining API compatibility.
-
-### 📄 License
-
-MIT License - see LICENSE file for details.
+- Initial release of `@vnedyalk0v/react19-simple-maps`, a React 19-focused fork of `react-simple-maps`.
+- Core map primitives including `ComposableMap`, `Geographies`, `Geography`, `Marker`, `Annotation`, `Graticule`, `Sphere`, and `ZoomableGroup`.
+- TypeScript-first package output with bundled type definitions and source maps.
+- Modern test and build tooling based on Rollup, Vitest, ESLint, and Prettier.
+- React 19-oriented behaviors such as Suspense-aware geography loading, preloading support, and concurrent rendering compatibility work.
