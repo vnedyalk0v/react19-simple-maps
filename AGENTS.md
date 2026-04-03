@@ -1,6 +1,26 @@
 # react19-simple-maps Project Guidelines
 
+This repository publishes a React 19+ npm package, not an application.
+
+When making changes, optimize for:
+
+- a stable public API
+- small runtime and bundle size
+- tree-shakeable ESM output
+- SSR-safe and Strict Mode-safe behavior
+- clear documentation and predictable release notes
+
+Prefer KISS and DRY. Do not add bloatware, app-like abstractions, or speculative architecture.
+
 These rules apply when editing library code in `src/` and docs/examples in `examples/`.
+
+## Project Mindset (Required)
+
+- Treat this repo as a reusable library consumed by many apps with different stacks.
+- Do not bake in app-specific assumptions about routing, state management, styling frameworks, analytics, or data frameworks.
+- Prefer extending existing APIs and utilities over introducing new abstraction layers.
+- Reuse existing helpers before adding new ones. Avoid ad hoc local duplicates of existing coordinate, validation, fetch, or security utilities.
+- Only add new dependencies when the value is clear and the same result cannot be achieved with the current stack or a small local utility.
 
 ## Git Workflow (Required)
 
@@ -16,26 +36,47 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 - For every user-facing or package-impacting change, update `CHANGELOG.md` in the standardized format described in `RELEASE_NOTES_GUIDELINES.md`.
 - Read `RELEASE_NOTES_GUIDELINES.md` only when the task requires a changeset or changelog update.
 - Do not update `CHANGELOG.md` for tooling-only, CI-only, lockfile-only, or other internal-only maintenance.
-- Never reference internal tooling, review bots, or IDE names (e.g., CodeRabbit, Cursor, Copilot) in changesets, commit messages, code comments, or any user-facing text. Describe _what_ changed and _why_, not which tool suggested it.
+- Never reference internal tooling, review bots, or IDE names (e.g., CodeRabbit, Cursor, Copilot) in changesets, changelog entries, commit messages, code comments, or any user-facing text. Describe _what_ changed and _why_, not which tool suggested it.
 
-## Scope and Compatibility
+## Package Constraints (Required)
 
-- Target React 19+ (peer dependency `>=19.0.0`).
+- Target React 19+ only (`peerDependencies` stay `>=19.0.0` unless explicitly changed).
 - Keep the package ESM-only and preserve the `exports` map in `package.json`.
-- Avoid unnecessary side effects; keep exports tree-shakeable.
+- Keep `sideEffects: false` valid. Avoid top-level work that produces observable side effects.
+- Preserve tree-shakeability. Export only what belongs in the public API.
+- Keep browser-only APIs guarded. Do not assume `window`, `document`, `navigator`, or DOM availability during server rendering.
+- If you change the public API, also update types, README, examples, tests, and release notes in the same task.
+- Prefer additive changes. Do not break existing consumers unless a breaking change is explicitly requested.
 
-## Components and Hooks
+## React 19 Rules (Required)
 
-- Prefer function components.
-- Use class components only where React requires them (error boundaries).
-- Follow the existing `ref`-as-prop pattern; use `forwardRef` only when required.
-- Keep components focused and memoize expensive work (e.g., geography path calculations).
+- Components and Hooks must stay pure and idempotent during render.
+- Never run side effects during render. Side effects belong in event handlers or Effects.
+- If there is no external system to synchronize with, do not add an Effect.
+- Do not mirror props or derived values into state unless there is a real state boundary. Derive values during render whenever possible.
+- Use `useMemo` only for measurably expensive calculations or to stabilize values that materially affect memoization or Effect behavior.
+- Use `memo` only as a performance optimization. Do not rely on it for correctness.
+- Prefer default shallow prop comparison for `memo`. Add custom comparators only when profiling shows a need and tests prove they do not hide legitimate updates.
+- Follow the existing `ref`-as-prop pattern. In React 19, prefer passing `ref` as a prop; use `forwardRef` only when unavoidable for compatibility or typing constraints.
+- If you need to subscribe to data that lives outside React, prefer `useSyncExternalStore` over ad hoc subscription Effects. Keep it SSR-safe when server rendering matters.
+- Code must behave correctly under Strict Mode and concurrent rendering. Effect cleanup must fully mirror setup.
 
-## TypeScript and API Design
+## Components, Hooks, and Utilities
 
-- Avoid `any`; use `unknown` plus type guards or proper generics.
-- Use branded coordinate helpers for new APIs (`createCoordinates`, `createScaleExtent`, `createTranslateExtent`).
-- Maintain backward compatibility unless a breaking change is explicitly requested.
+- Prefer function components. Use class components only where React still requires them, such as error boundaries.
+- Keep components focused. Extract pure helper functions for reusable data shaping, geometry work, validation, or formatting logic.
+- Create custom hooks only when they encapsulate real reusable stateful or Effectful behavior. Do not create hooks as indirection for one-off logic.
+- Memoize expensive geography path, projection, or coordinate calculations where it materially reduces render cost.
+- Never render HTML elements inside SVG subtrees where SVG elements are required. Loading and error fallbacks inside `<svg>` / `<g>` trees must remain SVG-safe.
+- Keep debug behavior opt-in and safe. Do not add noisy logs, render-phase debug mutations, or production-only surprises.
+
+## TypeScript and Public API Design
+
+- Avoid `any`; use `unknown`, proper generics, or explicit types plus type guards.
+- Use branded coordinate helpers for new APIs (`createCoordinates`, `createScaleExtent`, `createTranslateExtent`) and keep those helpers consistent across the codebase.
+- Keep exported types intentional and stable. Do not leak internal-only implementation details through the public API without a clear reason.
+- Favor small, composable props and utilities over large configuration objects when that keeps the API clearer.
+- Validate untrusted inputs at package boundaries and surface precise, actionable errors.
 
 Example (branded coordinates):
 
@@ -45,19 +86,33 @@ import { createCoordinates } from '@vnedyalk0v/react19-simple-maps';
 const center = createCoordinates(0, 0);
 ```
 
-## Geography Fetching and Security
+## Security and Geography Fetching
 
-- For URL-based geography data, use existing utilities (`fetchGeographiesCache`, validation helpers).
-- Preserve HTTPS-only defaults and private IP blocking.
+- For URL-based geography data, use existing secure utilities (`fetchGeographiesCache`, validation helpers, SRI helpers).
+- Preserve HTTPS-only defaults, private IP blocking, redirect validation, response-size limits, and content validation.
+- Do not weaken security defaults without an explicit user request and matching tests/docs.
 - Update known SRI hashes only when adding verified URLs.
+- Keep any preloading, DNS hinting, or caching logic aligned with the same validation rules as the main fetch path.
+
+## Performance, KISS, and DRY
+
+- Prefer the simplest solution that preserves package quality.
+- Avoid overengineering: no unnecessary managers, registries, service layers, wrapper hooks, or configuration systems.
+- Keep duplication low, but do not extract abstractions too early. Extract only when reuse or clarity is real.
+- Optimize hot paths and exported components, not hypothetical bottlenecks.
+- Minimize prop churn, object recreation, and unnecessary Effect-driven re-renders in performance-sensitive components.
+- Be conservative with new features that add maintenance cost, API surface, or bundle weight.
 
 ## Docs and Examples
 
 - Documentation must match the current implementation.
 - Remove unverifiable claims; prefer concrete statements tied to the repo.
+- Examples should demonstrate idiomatic package usage, not app-specific workarounds.
 - If you change public APIs, update examples and README accordingly.
 
-## Tests
+## Tests and Validation
 
 - Add or update tests for behavior changes.
-- Keep tests focused and deterministic.
+- For bug fixes, add a focused regression test when practical.
+- Keep tests focused, deterministic, and free of unnecessary network or timing fragility.
+- When touching exported behavior, security-sensitive code, or build/package configuration, run the most relevant validation commands before finishing.
