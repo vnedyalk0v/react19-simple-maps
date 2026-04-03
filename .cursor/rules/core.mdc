@@ -4,61 +4,21 @@ alwaysApply: true
 ---
 # react19-simple-maps Project Guidelines
 
+This file is a thin compatibility mirror for tools that read Cursor rules directly.
+`AGENTS.md` is the source of truth. If these files ever drift, follow `AGENTS.md` and sync this file back to it.
+
 These rules apply when editing library code in `src/` and docs/examples in `examples/`.
 
-## Git Workflow (Required)
+## Core Rules
 
-- Never push directly to `main`.
-- For every task, create a new branch from `dev`.
-- Before branching, update `dev` from remote so it is current with `origin/dev`.
-- Keep all task work on that new branch and open a PR to merge.
-
-## Release Notes (Required)
-
-- For every user-facing or package-impacting change, create a new `.changeset/*.md` file.
-- The changeset file must describe the change clearly so the changelog can be generated correctly.
-- Never reference internal tooling, review bots, or IDE names (e.g., CodeRabbit, Cursor, Copilot) in changesets, commit messages, code comments, or any user-facing text. Describe *what* changed and *why*, not which tool suggested it.
-
-## Scope and Compatibility
-
-- Target React 19+ (peer dependency `>=19.0.0`).
-- Keep the package ESM-only and preserve the `exports` map in `package.json`.
-- Avoid unnecessary side effects; keep exports tree-shakeable.
-
-## Components and Hooks
-
-- Prefer function components.
-- Use class components only where React requires them (error boundaries).
-- Follow the existing `ref`-as-prop pattern; use `forwardRef` only when required.
-- Keep components focused and memoize expensive work (e.g., geography path calculations).
-
-## TypeScript and API Design
-
-- Avoid `any`; use `unknown` plus type guards or proper generics.
-- Use branded coordinate helpers for new APIs (`createCoordinates`, `createScaleExtent`, `createTranslateExtent`).
+- Follow the git workflow from `AGENTS.md`: branch from `dev`, update from `origin/dev` first, never push directly to `main`, and open a PR.
+- For every user-facing or package-impacting change, create a new `.changeset/*.md` file and update `CHANGELOG.md` using `RELEASE_NOTES_GUIDELINES.md`.
+- Read `RELEASE_NOTES_GUIDELINES.md` only when the task requires a changeset or changelog update.
+- Do not update release notes for tooling-only, CI-only, lockfile-only, or other internal-only maintenance.
+- Never reference internal tooling, review bots, or IDE names in changesets, changelog entries, commit messages, code comments, or other user-facing text.
+- Target React 19+, keep the package ESM-only, preserve the `exports` map, and avoid unnecessary side effects.
+- Prefer function components, use class components only for error boundaries, follow the existing `ref`-as-prop pattern, and memoize expensive geography work.
+- Avoid `any`; use `unknown`, type guards, or proper generics, and prefer branded coordinate helpers for new APIs.
 - Maintain backward compatibility unless a breaking change is explicitly requested.
-
-Example (branded coordinates):
-
-```tsx
-import { createCoordinates } from '@vnedyalk0v/react19-simple-maps';
-
-const center = createCoordinates(0, 0);
-```
-
-## Geography Fetching and Security
-
-- For URL-based geography data, use existing utilities (`fetchGeographiesCache`, validation helpers).
-- Preserve HTTPS-only defaults and private IP blocking.
-- Update known SRI hashes only when adding verified URLs.
-
-## Docs and Examples
-
-- Documentation must match the current implementation.
-- Remove unverifiable claims; prefer concrete statements tied to the repo.
-- If you change public APIs, update examples and README accordingly.
-
-## Tests
-
-- Add or update tests for behavior changes.
-- Keep tests focused and deterministic.
+- For URL-based geography data, use the existing fetch and validation utilities, preserve HTTPS-only defaults and private IP blocking, and update SRI hashes only for verified URLs.
+- Keep documentation and examples aligned with the implementation, and add focused deterministic tests for behavior changes.
