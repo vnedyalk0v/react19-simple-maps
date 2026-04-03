@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+tone_instructions: >
+  Be concise, factual, and professional. Prioritize correctness, security,
+  public API stability, React 19 behavior, bundle impact, and maintainability
+  over style-only commentary.
+
+reviews:
+  profile: assertive
+  high_level_summary: true
+  review_status: true
+  review_details: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "src/**/*.{ts,tsx}"
+      instructions: |
+        This repository publishes a reusable React 19+ ESM npm package, not an application.
+        Review for:
+        - public API compatibility and minimal API surface growth
+        - tree-shakeable exports and preservation of sideEffects assumptions
+        - SSR-safe and Strict Mode-safe behavior
+        - render purity: no side effects during render; Effects only for external-system synchronization
+        - useMemo and memo used only as performance optimizations, not for correctness
+        - ref-as-prop preferred over forwardRef unless forwardRef is clearly unavoidable
+        - KISS and DRY: reuse existing helpers and avoid app-like abstractions, speculative architecture, or unnecessary dependencies
+        - SVG correctness inside svg and g subtrees
+        - bundle-size and runtime impact for exported components and hooks
+    - path: "src/utils/**/*.{ts,tsx}"
+      instructions: |
+        These files include security-sensitive geography fetching, validation, caching, preloading, and SRI logic.
+        Review for:
+        - HTTPS-only behavior, private-IP blocking, redirect validation, and response/content limits
+        - consistent validation across fetch, preload, cache, and SRI code paths
+        - no weakening of secure defaults without explicit opt-in, tests, and docs
+        - actionable errors and no duplicated security logic
+    - path: "tests/**/*.ts"
+      instructions: |
+        Treat tests as contract coverage for a published library.
+        Review for deterministic assertions, focused regression coverage, security-sensitive coverage where relevant, and avoidance of brittle timing or unnecessary network dependence.
+    - path: "examples/**"
+      instructions: |
+        Treat examples as package documentation, not product UI.
+        Review for idiomatic package usage, alignment with the current public API, and avoidance of app-specific patterns or unverifiable claims.
+    - path: "{package.json,rollup.config.js,tsconfig*.json,vitest.config.ts,eslint.config.js,.github/workflows/**}"
+      instructions: |
+        Treat these files as package, build, and release infrastructure.
+        Review for:
+        - preserving ESM-only packaging, the exports map, and sideEffects guarantees
+        - correctness of CI and release behavior for publishing a reusable npm package
+        - changes that accidentally bloat the package or alter runtime semantics
+    - path: "{CHANGELOG.md,RELEASE_NOTES_GUIDELINES.md,.changeset/**,AGENTS.md,.cursor/rules/**,.augment/rules/**}"
+      instructions: |
+        Keep release-note and guideline files consistent.
+        For changesets and changelog text, enforce plain English, no emojis, no commit hashes in bullets, no internal tool names, and alignment with the repository release-note rules.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - ".cursor/rules/**"
+      - ".augment/rules/**/*.md"
+      - "RELEASE_NOTES_GUIDELINES.md"
+  web_search:
+    enabled: true

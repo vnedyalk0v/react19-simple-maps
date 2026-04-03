@@ -6,7 +6,7 @@ function formatSummary(summary) {
   const lines = summary
     .replace(/\r\n/g, "\n")
     .split("\n")
-    .map((line) => line.trimRight())
+    .map((line) => line.trimEnd())
     .filter((line, index, allLines) => {
       if (line.trim() !== "") return true;
       const previous = allLines[index - 1];
