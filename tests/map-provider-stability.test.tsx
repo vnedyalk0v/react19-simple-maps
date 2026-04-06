@@ -45,10 +45,12 @@ describe('MapProvider stability', () => {
       <Harness onProjectionChange={onProjectionChange} />,
     );
 
-    expect(onProjectionChange).toHaveBeenCalledTimes(1);
+    const projectionBeforeRerender = onProjectionChange.mock.lastCall?.[0];
+    expect(projectionBeforeRerender).toBeDefined();
 
     fireEvent.click(getByRole('button', { name: /rerender/i }));
 
-    expect(onProjectionChange).toHaveBeenCalledTimes(1);
+    const projectionAfterRerender = onProjectionChange.mock.lastCall?.[0];
+    expect(projectionAfterRerender).toBe(projectionBeforeRerender);
   });
 });

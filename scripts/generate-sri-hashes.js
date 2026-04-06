@@ -12,11 +12,15 @@ import { join } from 'path';
 // Common geography data sources
 const GEOGRAPHY_SOURCES = [
   'https://unpkg.com/world-atlas@2/countries-110m.json',
+  'https://unpkg.com/world-atlas@2.0.2/countries-110m.json',
   'https://unpkg.com/world-atlas@2/countries-50m.json',
+  'https://unpkg.com/world-atlas@2.0.2/countries-50m.json',
   'https://unpkg.com/world-atlas@2/world-110m.json',
   'https://unpkg.com/world-atlas@2/world-50m.json',
   'https://unpkg.com/world-atlas@2/land-110m.json',
+  'https://unpkg.com/world-atlas@2.0.2/land-110m.json',
   'https://unpkg.com/world-atlas@2/land-50m.json',
+  'https://unpkg.com/world-atlas@2.0.2/land-50m.json',
 ];
 
 /**
