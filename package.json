@@ -40,7 +40,7 @@
     "lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
     "format": "prettier --write .",
     "check-format": "prettier --check .",
-    "ci": "npm run build && npm run check-format && npm run test",
+    "ci": "npm run build && npm run type-check && npm run lint && npm run check-format && npm run test && npm run verify-builds",
     "dev": "rollup -cw",
     "clean": "rm -rf dist",
     "analyze": "npm run build && NODE_ENV=production node scripts/enhanced-bundle-monitor.js",
