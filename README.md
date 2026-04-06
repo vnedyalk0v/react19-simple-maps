@@ -64,6 +64,17 @@ import {
 } from '@vnedyalk0v/react19-simple-maps/utils';
 ```
 
+The `./utils` entry includes both recommended helpers and more advanced low-level utilities. Prefer the documented helpers below unless you have a specific integration need.
+
+### Recommended `./utils` helpers
+
+For most applications, start with these helpers:
+
+- Geography loading and preparation: `fetchGeographiesCache`, `preloadGeography`, `getFeatures`, `getMesh`, `prepareFeatures`, `prepareMesh`, `createConnectorPath`
+- Validation and security: `validateGeographyUrl`, `validateGeographyData`, `configureGeographySecurity`, `enableDevelopmentMode`
+- Integrity helpers: `configureSRI`, `enableStrictSRI`, `disableSRI`, `addCustomSRI`, `getSRIForUrl`, `validateSRI`
+- Data guards: `isTopology`, `isFeatureCollection`, `isFeature`, `isValidGeographyUrl`, `isValidGeographyData`
+
 ## Migration Notes (from react-simple-maps)
 
 1. Replace package + import path: `react-simple-maps` → `@vnedyalk0v/react19-simple-maps`.
@@ -217,6 +228,8 @@ import {
 ## Security Utilities
 
 The `./utils` subpath includes helpers for safer geography fetching. When you use URL-based geography data in `Geographies`, the internal fetch path applies URL validation, HTTPS-only defaults, resolved-hostname checks in server environments, response size checks, and optional SRI validation.
+
+Prefer `fetchGeographiesCache` for direct utility-based loading. `fetchGeographies` remains available for compatibility but is deprecated.
 
 ```tsx
 import {

@@ -1,6 +1,7 @@
 // Re-export utilities from focused modules
 export { getCoords } from './utils/coordinate-utils';
 export {
+  /** @deprecated Use fetchGeographiesCache instead. */
   fetchGeographies,
   fetchGeographiesCache,
   preloadGeography,
