@@ -49,8 +49,23 @@ function DeferredPositionHarness() {
       >
         set high zoom
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          setPosition({
+            x: 48,
+            y: 72,
+            k: 6,
+            dragging: new Event('zoom'),
+          });
+        }}
+      >
+        set position only
+      </button>
       <output data-testid="position-k">{position.k}</output>
       <output data-testid="optimistic-k">{optimisticPosition.k}</output>
+      <output data-testid="optimistic-x">{optimisticPosition.x}</output>
+      <output data-testid="optimistic-y">{optimisticPosition.y}</output>
       <output data-testid="transform-string">{transformString}</output>
     </>
   );
@@ -62,22 +77,24 @@ describe('useDeferredPosition', () => {
       .spyOn(console, 'error')
       .mockImplementation(() => {});
 
-    const { getByRole } = render(<DeferredPositionHarness />);
-    fireEvent.click(getByRole('button', { name: 'update position' }));
+    try {
+      const { getByRole } = render(<DeferredPositionHarness />);
+      fireEvent.click(getByRole('button', { name: 'update position' }));
 
-    const optimisticWarnings = consoleErrorSpy.mock.calls.filter((call) =>
-      call.some(
-        (value) =>
-          typeof value === 'string' &&
-          value.includes(
-            'An optimistic state update occurred outside a transition or action',
-          ),
-      ),
-    );
+      const optimisticWarnings = consoleErrorSpy.mock.calls.filter((call) =>
+        call.some(
+          (value) =>
+            typeof value === 'string' &&
+            value.includes(
+              'An optimistic state update occurred outside a transition or action',
+            ),
+        ),
+      );
 
-    expect(optimisticWarnings).toHaveLength(0);
-
-    consoleErrorSpy.mockRestore();
+      expect(optimisticWarnings).toHaveLength(0);
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('preserves caller-provided zoom values instead of clamping them', () => {
@@ -89,6 +106,20 @@ describe('useDeferredPosition', () => {
     expect(screen.getByTestId('optimistic-k').textContent).toBe('12');
     expect(screen.getByTestId('transform-string').textContent).toContain(
       'scale(12)',
+    );
+  });
+
+  it('keeps optimistic state and transform string in sync when setPosition is used directly', () => {
+    const { getByRole } = render(<DeferredPositionHarness />);
+
+    fireEvent.click(getByRole('button', { name: 'set position only' }));
+
+    expect(screen.getByTestId('position-k').textContent).toBe('6');
+    expect(screen.getByTestId('optimistic-k').textContent).toBe('6');
+    expect(screen.getByTestId('optimistic-x').textContent).toBe('48');
+    expect(screen.getByTestId('optimistic-y').textContent).toBe('72');
+    expect(screen.getByTestId('transform-string').textContent).toBe(
+      'translate(48 72) scale(6)',
     );
   });
 });

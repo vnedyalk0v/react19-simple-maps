@@ -1,5 +1,5 @@
 // Auto-generated SRI hashes for geography data sources
-// Generated on: 2025-09-03T12:00:33.734Z
+// Generated on: 2026-04-06T10:59:03.181Z
 // Do not edit manually - run 'npm run generate-sri' to update
 
 import type { SRIConfig } from '../types';

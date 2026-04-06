@@ -136,13 +136,14 @@ export default function useGeographies({
   const preparedGeographies = useMemo(() => {
     if (rawFeatures.length === 0) return [];
 
+    const pathFunctionToken = getPathFunctionCacheToken(path);
+
     // Try WeakMap cache first if we have the original geography object
     if (
       loadedData &&
       typeof loadedData === 'object' &&
       !Array.isArray(loadedData)
     ) {
-      const pathFunctionToken = getPathFunctionCacheToken(path);
       const weakMapCached = getCachedPreparedFeaturesWeakMap(
         loadedData,
         pathFunctionToken,
@@ -170,7 +171,6 @@ export default function useGeographies({
       typeof loadedData === 'object' &&
       !Array.isArray(loadedData)
     ) {
-      const pathFunctionToken = getPathFunctionCacheToken(path);
       cachePreparedFeaturesWeakMap(loadedData, prepared, pathFunctionToken);
     }
 

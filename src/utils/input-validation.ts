@@ -26,17 +26,37 @@ export const DEFAULT_VALIDATION_CONFIG: ValidationConfig = {
   maxObjectDepth: 10,
 };
 
-let currentValidationConfig: ValidationConfig = DEFAULT_VALIDATION_CONFIG;
+function createValidationConfig(
+  config: Partial<ValidationConfig>,
+): ValidationConfig {
+  const nextConfig: ValidationConfig = {
+    ...DEFAULT_VALIDATION_CONFIG,
+    ...config,
+  };
+
+  if (
+    typeof process !== 'undefined' &&
+    process.env.NODE_ENV === 'production' &&
+    nextConfig.allowUnsafeContent
+  ) {
+    nextConfig.allowUnsafeContent = false;
+  }
+
+  return Object.freeze(nextConfig);
+}
+
+let currentValidationConfig: ValidationConfig = createValidationConfig({});
 
 /**
  * Configure input validation settings
  * @param config - Validation configuration
  */
 export function configureValidation(config: Partial<ValidationConfig>): void {
-  currentValidationConfig = {
-    ...DEFAULT_VALIDATION_CONFIG,
-    ...config,
-  };
+  currentValidationConfig = createValidationConfig(config);
+}
+
+export function getValidationConfig(): ValidationConfig {
+  return currentValidationConfig;
 }
 
 /**
@@ -89,10 +109,38 @@ export function sanitizeString(
  * @returns Validated URL string
  */
 export function validateURL(input: unknown): string {
-  const sanitized = sanitizeString(input);
+  if (typeof input !== 'string') {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      `Expected string, got ${typeof input}`,
+    );
+  }
+
+  const candidate = input.trim();
+  if (!candidate) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      'URL must be a non-empty string',
+    );
+  }
+
+  if (candidate.length > currentValidationConfig.maxStringLength) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      `String too long: ${candidate.length} characters (max: ${currentValidationConfig.maxStringLength})`,
+    );
+  }
+
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(candidate)) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      'URL contains invalid control characters',
+    );
+  }
 
   try {
-    const url = new URL(sanitized);
+    const url = new URL(candidate);
 
     // Check for dangerous protocols
     const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:'];
@@ -120,7 +168,7 @@ export function validateURL(input: unknown): string {
     if (error instanceof TypeError) {
       throw createGeographyFetchError(
         'VALIDATION_ERROR',
-        `Invalid URL format: ${sanitized}`,
+        `Invalid URL format: ${candidate}`,
       );
     }
     throw error;
