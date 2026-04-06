@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.6
+
+### Patch Changes
+
+- Removed GitHub Packages as a distribution target for this package.
+  - The package now publishes only to the npm registry.
+  - The installation and release documentation now reflects npm as the supported distribution channel.
+
 ## 2.0.5
 
 ### Patch Changes
