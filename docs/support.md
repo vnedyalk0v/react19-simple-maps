@@ -16,6 +16,14 @@
 - The package follows semantic versioning for its documented public API.
 - Additive, non-breaking improvements should ship in patch or minor releases.
 - Breaking API, packaging, or supported-platform changes should ship only in a major release unless explicitly documented otherwise.
+- CI-only, workflow-only, and docs-only maintenance should not trigger a package release unless it changes supported package behavior or distribution.
+
+## `./utils` API guidance
+
+- `@vnedyalk0v/react19-simple-maps/utils` is public API and must be treated as semver-relevant.
+- Prefer documenting and promoting the recommended helpers for geography loading, validation, security configuration, integrity checks, and TopoJSON or GeoJSON preparation.
+- Advanced low-level utilities may remain public for compatibility, but new exports in that category should be added sparingly.
+- Deprecated helpers should stay available for compatibility until a major release removes them.
 
 ## Security and data fetching expectations
 
