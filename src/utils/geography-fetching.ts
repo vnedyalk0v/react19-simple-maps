@@ -4,15 +4,18 @@ import { Topology } from 'topojson-specification';
 import { GeographyError } from '../types';
 import {
   validateGeographyUrl,
+  validateResolvedGeographyUrl,
   validateContentType,
   validateResponseSize,
   readResponseWithSizeLimit,
   validateGeographyData,
-  GEOGRAPHY_FETCH_CONFIG,
+  getGeographySecurityConfig,
+  type GeographySecurityConfig,
 } from './geography-validation';
 import { createGeographyFetchError } from './error-utils';
 import {
   getSRIForUrl,
+  getSRIConfig,
   validateSRIFromArrayBuffer,
 } from './subresource-integrity';
 
@@ -25,11 +28,14 @@ const MAX_REDIRECTS = 5;
  * @param signal - AbortController signal for timeout
  * @returns Fetch options object
  */
-function createSecureFetchOptions(signal: AbortSignal): RequestInit {
+function createSecureFetchOptions(
+  signal: AbortSignal,
+  config: GeographySecurityConfig,
+): RequestInit {
   return {
     signal,
     headers: {
-      Accept: GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES.join(', '),
+      Accept: config.ALLOWED_CONTENT_TYPES.join(', '),
       'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
     },
     // Security headers
@@ -49,6 +55,7 @@ function createSecureFetchOptions(signal: AbortSignal): RequestInit {
 async function fetchWithRedirectValidation(
   url: string,
   options: RequestInit,
+  config: GeographySecurityConfig,
 ): Promise<Response> {
   let currentUrl = url;
 
@@ -81,7 +88,8 @@ async function fetchWithRedirectValidation(
     const redirectUrl = new URL(location, currentUrl).href;
 
     // Validate the redirect target against the same URL security policy
-    validateGeographyUrl(redirectUrl);
+    validateGeographyUrl(redirectUrl, config);
+    await validateResolvedGeographyUrl(redirectUrl, config);
 
     currentUrl = redirectUrl;
   }
@@ -119,12 +127,16 @@ function createTimeoutController(timeoutMs: number): {
  * @param url - The URL that was being fetched
  * @returns A GeographyError
  */
-function handleFetchError(error: unknown, url: string): GeographyError {
+function handleFetchError(
+  error: unknown,
+  url: string,
+  config: GeographySecurityConfig,
+): GeographyError {
   if (error instanceof Error) {
     if (error.name === 'AbortError') {
       return createGeographyFetchError(
         'GEOGRAPHY_LOAD_ERROR',
-        `Request timeout after ${GEOGRAPHY_FETCH_CONFIG.TIMEOUT_MS}ms`,
+        `Request timeout after ${config.TIMEOUT_MS}ms`,
         url,
         error,
       );
@@ -224,22 +236,27 @@ export async function fetchGeographies(
  */
 export const fetchGeographiesCache = cache(
   async (url: string): Promise<Topology | FeatureCollection> => {
+    const securityConfig = getGeographySecurityConfig();
+    const sriEnforcementConfig = getSRIConfig();
+
     // Validate URL before making request
-    validateGeographyUrl(url);
+    validateGeographyUrl(url, securityConfig);
+    await validateResolvedGeographyUrl(url, securityConfig);
 
     // Check if SRI validation is required
-    const sriConfig = getSRIForUrl(url);
+    const sriConfig = getSRIForUrl(url, sriEnforcementConfig);
 
     // Create timeout controller
     const { controller, cleanup } = createTimeoutController(
-      GEOGRAPHY_FETCH_CONFIG.TIMEOUT_MS,
+      securityConfig.TIMEOUT_MS,
     );
 
     try {
       // Make secure fetch request with redirect validation
       const response = await fetchWithRedirectValidation(
         url,
-        createSecureFetchOptions(controller.signal),
+        createSecureFetchOptions(controller.signal, securityConfig),
+        securityConfig,
       );
       cleanup();
 
@@ -253,11 +270,14 @@ export const fetchGeographiesCache = cache(
       }
 
       // Validate content type and fast pre-check of Content-Length
-      validateContentType(response);
-      await validateResponseSize(response);
+      validateContentType(response, securityConfig);
+      await validateResponseSize(response, securityConfig);
 
       // Read body with hard streaming size limit (guards against falsified Content-Length)
-      const arrayBuffer = await readResponseWithSizeLimit(response);
+      const arrayBuffer = await readResponseWithSizeLimit(
+        response,
+        securityConfig.MAX_RESPONSE_SIZE,
+      );
 
       // Handle SRI validation if required
       if (sriConfig) {
@@ -268,7 +288,7 @@ export const fetchGeographiesCache = cache(
       return await parseGeographyFromArrayBuffer(arrayBuffer, url);
     } catch (error) {
       cleanup();
-      throw handleFetchError(error, url);
+      throw handleFetchError(error, url, securityConfig);
     }
   },
 );

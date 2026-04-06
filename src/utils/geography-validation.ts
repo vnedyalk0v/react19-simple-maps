@@ -1,23 +1,5 @@
 import { createGeographyFetchError } from './error-utils';
-
-/**
- * Simple URL validation to avoid circular dependency
- * @param url - URL to validate
- * @returns Validated URL string
- */
-function validateURL(url: string): string {
-  if (!url || typeof url !== 'string') {
-    throw new Error('URL must be a non-empty string');
-  }
-
-  // Basic URL validation
-  try {
-    new URL(url);
-    return url.trim();
-  } catch {
-    throw new Error('Invalid URL format');
-  }
-}
+import { validateURL } from './input-validation';
 
 // Security configuration for geography fetching
 export interface GeographySecurityConfig {
@@ -46,9 +28,46 @@ export const DEVELOPMENT_GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig = {
   STRICT_HTTPS_ONLY: false,
 } as const;
 
+function isProductionEnvironment(): boolean {
+  return (
+    typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
+  );
+}
+
+function createGeographyFetchConfig(
+  config: Partial<GeographySecurityConfig>,
+): GeographySecurityConfig {
+  const nextConfig: GeographySecurityConfig = {
+    ...DEFAULT_GEOGRAPHY_FETCH_CONFIG,
+    ...config,
+    ALLOWED_CONTENT_TYPES: [
+      ...(config.ALLOWED_CONTENT_TYPES ??
+        DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES),
+    ],
+    ALLOWED_PROTOCOLS: [
+      ...(config.ALLOWED_PROTOCOLS ??
+        DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS),
+    ],
+  };
+
+  if (isProductionEnvironment()) {
+    nextConfig.STRICT_HTTPS_ONLY = true;
+    nextConfig.ALLOW_HTTP_LOCALHOST = false;
+    nextConfig.ALLOWED_PROTOCOLS = [
+      ...DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS,
+    ];
+  }
+
+  return Object.freeze({
+    ...nextConfig,
+    ALLOWED_CONTENT_TYPES: Object.freeze([...nextConfig.ALLOWED_CONTENT_TYPES]),
+    ALLOWED_PROTOCOLS: Object.freeze([...nextConfig.ALLOWED_PROTOCOLS]),
+  });
+}
+
 // Current active configuration (defaults to secure)
 export let GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig =
-  DEFAULT_GEOGRAPHY_FETCH_CONFIG;
+  createGeographyFetchConfig({});
 
 /**
  * Configure geography fetching security settings
@@ -57,10 +76,11 @@ export let GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig =
 export function configureGeographySecurity(
   config: Partial<GeographySecurityConfig>,
 ): void {
-  GEOGRAPHY_FETCH_CONFIG = {
-    ...DEFAULT_GEOGRAPHY_FETCH_CONFIG,
-    ...config,
-  };
+  GEOGRAPHY_FETCH_CONFIG = createGeographyFetchConfig(config);
+}
+
+export function getGeographySecurityConfig(): GeographySecurityConfig {
+  return GEOGRAPHY_FETCH_CONFIG;
 }
 
 /**
@@ -70,7 +90,7 @@ export function configureGeographySecurity(
 export function enableDevelopmentMode(
   allowHttpLocalhost: boolean = true,
 ): void {
-  if (process.env.NODE_ENV === 'production') {
+  if (isProductionEnvironment()) {
     // eslint-disable-next-line no-console
     console.warn(
       'Attempted to enable development mode in production - ignoring for security',
@@ -78,10 +98,10 @@ export function enableDevelopmentMode(
     return;
   }
 
-  GEOGRAPHY_FETCH_CONFIG = {
+  GEOGRAPHY_FETCH_CONFIG = createGeographyFetchConfig({
     ...DEVELOPMENT_GEOGRAPHY_FETCH_CONFIG,
     ALLOW_HTTP_LOCALHOST: allowHttpLocalhost,
-  };
+  });
 
   // eslint-disable-next-line no-console
   console.warn(
@@ -110,7 +130,7 @@ function stripIPv6Brackets(hostname: string): string {
  * @param hostname - The hostname to check (may include IPv6 brackets)
  * @returns True if the hostname is a private/reserved IP address
  */
-function isPrivateIPAddress(hostname: string): boolean {
+export function isPrivateIPAddress(hostname: string): boolean {
   if (!hostname || hostname === 'localhost') {
     return false;
   }
@@ -184,20 +204,77 @@ function isPrivateIPAddress(hostname: string): boolean {
   return false;
 }
 
+type HostnameAddressResolver = (hostname: string) => Promise<string[]>;
+
+function shouldResolveHostnamesForSecurity(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    process.release?.name === 'node' &&
+    typeof window === 'undefined'
+  );
+}
+
+async function resolveHostnameAddresses(hostname: string): Promise<string[]> {
+  if (!shouldResolveHostnamesForSecurity()) {
+    return [];
+  }
+
+  const bareHostname = stripIPv6Brackets(hostname);
+  if (!bareHostname) {
+    return [];
+  }
+
+  const dnsModule =
+    typeof process !== 'undefined' &&
+    typeof process.getBuiltinModule === 'function'
+      ? (process.getBuiltinModule('node:dns/promises') as {
+          lookup?: (
+            hostname: string,
+            options: { all: true; verbatim: true },
+          ) => Promise<Array<{ address: string }>>;
+        } | null)
+      : null;
+
+  if (!dnsModule?.lookup) {
+    throw createGeographyFetchError(
+      'SECURITY_ERROR',
+      `Unable to resolve hostname ${bareHostname} for security validation`,
+      bareHostname,
+    );
+  }
+
+  try {
+    const records = await dnsModule.lookup(bareHostname, {
+      all: true,
+      verbatim: true,
+    });
+    return records.map((record) => record.address);
+  } catch (error) {
+    throw createGeographyFetchError(
+      'SECURITY_ERROR',
+      `Unable to resolve hostname ${bareHostname} for security validation`,
+      bareHostname,
+      error instanceof Error ? error : undefined,
+    );
+  }
+}
+
 /**
  * Validates a geography URL for security and format compliance
  * @param url - The URL to validate
  * @throws {Error} If the URL is invalid or insecure
  */
-export function validateGeographyUrl(url: string): void {
-  // Use comprehensive URL validation from input-validation module
+export function validateGeographyUrl(
+  url: string,
+  config: GeographySecurityConfig = GEOGRAPHY_FETCH_CONFIG,
+): void {
   const validatedUrl = validateURL(url);
 
   try {
     const parsedUrl = new URL(validatedUrl);
 
     // Strict HTTPS-only mode
-    if (GEOGRAPHY_FETCH_CONFIG.STRICT_HTTPS_ONLY) {
+    if (config.STRICT_HTTPS_ONLY) {
       if (parsedUrl.protocol !== 'https:') {
         throw createGeographyFetchError(
           'SECURITY_ERROR',
@@ -207,11 +284,8 @@ export function validateGeographyUrl(url: string): void {
       }
     } else {
       // Check protocol security with configured protocols
-      if (
-        !GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS.includes(parsedUrl.protocol)
-      ) {
-        const allowedProtocols =
-          GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS.join(', ');
+      if (!config.ALLOWED_PROTOCOLS.includes(parsedUrl.protocol)) {
+        const allowedProtocols = config.ALLOWED_PROTOCOLS.join(', ');
         throw createGeographyFetchError(
           'SECURITY_ERROR',
           `Unsupported protocol: ${parsedUrl.protocol}. Only ${allowedProtocols} are allowed.`,
@@ -222,7 +296,7 @@ export function validateGeographyUrl(url: string): void {
       // HTTP protocol validation
       if (parsedUrl.protocol === 'http:') {
         // Check if HTTP localhost is explicitly allowed
-        if (!GEOGRAPHY_FETCH_CONFIG.ALLOW_HTTP_LOCALHOST) {
+        if (!config.ALLOW_HTTP_LOCALHOST) {
           throw createGeographyFetchError(
             'SECURITY_ERROR',
             'HTTP protocol is disabled for security. Use HTTPS or enable development mode explicitly.',
@@ -245,7 +319,7 @@ export function validateGeographyUrl(url: string): void {
         }
 
         // Additional production check
-        if (process.env.NODE_ENV === 'production') {
+        if (isProductionEnvironment()) {
           throw createGeographyFetchError(
             'SECURITY_ERROR',
             'HTTP localhost access is not allowed in production',
@@ -268,7 +342,7 @@ export function validateGeographyUrl(url: string): void {
       bareHostname === '127.0.0.1' ||
       bareHostname === '::1'
     ) {
-      if (process.env.NODE_ENV === 'production') {
+      if (isProductionEnvironment()) {
         throw createGeographyFetchError(
           'SECURITY_ERROR',
           'Localhost access is not allowed in production',
@@ -298,12 +372,53 @@ export function validateGeographyUrl(url: string): void {
   }
 }
 
+export async function validateResolvedGeographyUrl(
+  url: string,
+  config: GeographySecurityConfig = GEOGRAPHY_FETCH_CONFIG,
+  resolveAddresses: HostnameAddressResolver = resolveHostnameAddresses,
+): Promise<void> {
+  validateGeographyUrl(url, config);
+
+  if (
+    resolveAddresses === resolveHostnameAddresses &&
+    !shouldResolveHostnamesForSecurity()
+  ) {
+    return;
+  }
+
+  const { hostname } = new URL(url);
+  const bareHostname = stripIPv6Brackets(hostname);
+  if (
+    !bareHostname ||
+    bareHostname === 'localhost' ||
+    isPrivateIPAddress(hostname)
+  ) {
+    return;
+  }
+
+  const resolvedAddresses = await resolveAddresses(bareHostname);
+  if (
+    resolvedAddresses.some((resolvedAddress) =>
+      isPrivateIPAddress(resolvedAddress),
+    )
+  ) {
+    throw createGeographyFetchError(
+      'SECURITY_ERROR',
+      `Hostname ${bareHostname} resolves to a private IP address, which is not allowed`,
+      url,
+    );
+  }
+}
+
 /**
  * Validates response content type
  * @param response - The fetch response to validate
  * @throws {Error} If content type is invalid
  */
-export function validateContentType(response: Response): void {
+export function validateContentType(
+  response: Response,
+  config: GeographySecurityConfig = GEOGRAPHY_FETCH_CONFIG,
+): void {
   const contentType = response.headers.get('content-type');
   if (!contentType) {
     throw createGeographyFetchError(
@@ -312,14 +427,13 @@ export function validateContentType(response: Response): void {
     );
   }
 
-  const isValidType = GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES.some(
-    (type) => contentType.toLowerCase().includes(type),
-  );
+  const mimeType = contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  const isValidType = config.ALLOWED_CONTENT_TYPES.includes(mimeType);
 
   if (!isValidType) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
-      `Invalid content type: ${contentType}. Expected one of: ${GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES.join(', ')}`,
+      `Invalid content type: ${contentType}. Expected one of: ${config.ALLOWED_CONTENT_TYPES.join(', ')}`,
     );
   }
 }
@@ -331,14 +445,17 @@ export function validateContentType(response: Response): void {
  * @param response - The fetch response to validate
  * @throws {Error} If Content-Length exceeds the configured maximum
  */
-export async function validateResponseSize(response: Response): Promise<void> {
+export async function validateResponseSize(
+  response: Response,
+  config: GeographySecurityConfig = GEOGRAPHY_FETCH_CONFIG,
+): Promise<void> {
   const contentLength = response.headers.get('content-length');
   if (contentLength) {
     const size = parseInt(contentLength, 10);
-    if (size > GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE) {
+    if (size > config.MAX_RESPONSE_SIZE) {
       throw createGeographyFetchError(
         'VALIDATION_ERROR',
-        `Response too large: ${size} bytes. Maximum allowed: ${GEOGRAPHY_FETCH_CONFIG.MAX_RESPONSE_SIZE} bytes`,
+        `Response too large: ${size} bytes. Maximum allowed: ${config.MAX_RESPONSE_SIZE} bytes`,
       );
     }
   }

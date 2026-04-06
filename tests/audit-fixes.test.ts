@@ -67,6 +67,17 @@ describe('Validation error messages (finding 6.1)', () => {
     }
   });
 
+  it('validateURL rejects malformed input instead of sanitizing it into a different URL', () => {
+    try {
+      validateURL('<https://example.com>');
+      expect.fail('should have thrown');
+    } catch (err) {
+      const error = err as Error & { type: string };
+      expect(error.type).toBe('VALIDATION_ERROR');
+      expect(error.message).toContain('Invalid URL format');
+    }
+  });
+
   it('validateArray includes descriptive message', () => {
     try {
       validateArray('not-an-array');
