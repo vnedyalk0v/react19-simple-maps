@@ -216,6 +216,9 @@ describe('Bundle monitor: git metadata redaction', () => {
     delete process.env.BUNDLE_REPORT_REDACT_GIT;
 
     const savedPath = process.env.PATH;
+    const stderrSpy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
     process.env.PATH = '';
     vi.resetModules();
 
@@ -230,7 +233,9 @@ describe('Bundle monitor: git metadata redaction', () => {
       } else {
         expect.fail('expected report.git to contain error string');
       }
+      expect(stderrSpy).not.toHaveBeenCalled();
     } finally {
+      stderrSpy.mockRestore();
       process.env.PATH = savedPath;
     }
   });
