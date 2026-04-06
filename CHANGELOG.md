@@ -7,7 +7,9 @@ the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-No unreleased user-facing or package-impacting changes.
+### Fixed
+
+- Made the `ZoomableGroup` pending indicator SVG-safe so zoom and pan status UI renders correctly inside map SVG trees.
 
 ## [2.0.3] - 2026-04-02
 
