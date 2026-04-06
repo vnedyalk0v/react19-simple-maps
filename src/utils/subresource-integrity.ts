@@ -21,7 +21,17 @@ export const KNOWN_GEOGRAPHY_SRI: Record<string, SRIConfig> = {
     hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
     enforceIntegrity: true,
   },
+  'https://unpkg.com/world-atlas@2.0.2/countries-110m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
+    enforceIntegrity: true,
+  },
   'https://unpkg.com/world-atlas@2/countries-50m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
+    enforceIntegrity: true,
+  },
+  'https://unpkg.com/world-atlas@2.0.2/countries-50m.json': {
     algorithm: 'sha384',
     hash: 'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
     enforceIntegrity: true,
@@ -32,7 +42,17 @@ export const KNOWN_GEOGRAPHY_SRI: Record<string, SRIConfig> = {
     hash: 'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
     enforceIntegrity: true,
   },
+  'https://unpkg.com/world-atlas@2.0.2/land-110m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
+    enforceIntegrity: true,
+  },
   'https://unpkg.com/world-atlas@2/land-50m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
+    enforceIntegrity: true,
+  },
+  'https://unpkg.com/world-atlas@2.0.2/land-50m.json': {
     algorithm: 'sha384',
     hash: 'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
     enforceIntegrity: true,

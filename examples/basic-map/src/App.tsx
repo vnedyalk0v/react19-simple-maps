@@ -8,8 +8,8 @@ import {
 } from '@vnedyalk0v/react19-simple-maps';
 import type { Feature, Geometry } from 'geojson';
 
-// World geography data
-const geoUrl = 'https://unpkg.com/world-atlas@2/countries-110m.json';
+// World geography data pinned to an exact version to avoid redirect-related fetch issues
+const geoUrl = 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json';
 
 // Major cities
 const cities = [

@@ -14,7 +14,17 @@ export const KNOWN_GEOGRAPHY_SRI: Record<string, SRIConfig> = {
     hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
     enforceIntegrity: true,
   },
+  'https://unpkg.com/world-atlas@2.0.2/countries-110m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
+    enforceIntegrity: true,
+  },
   'https://unpkg.com/world-atlas@2/countries-50m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
+    enforceIntegrity: true,
+  },
+  'https://unpkg.com/world-atlas@2.0.2/countries-50m.json': {
     algorithm: 'sha384',
     hash: 'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
     enforceIntegrity: true,
@@ -24,7 +34,17 @@ export const KNOWN_GEOGRAPHY_SRI: Record<string, SRIConfig> = {
     hash: 'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
     enforceIntegrity: true,
   },
+  'https://unpkg.com/world-atlas@2.0.2/land-110m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
+    enforceIntegrity: true,
+  },
   'https://unpkg.com/world-atlas@2/land-50m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
+    enforceIntegrity: true,
+  },
+  'https://unpkg.com/world-atlas@2.0.2/land-50m.json': {
     algorithm: 'sha384',
     hash: 'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
     enforceIntegrity: true,
@@ -43,7 +63,23 @@ export const ALL_GEOGRAPHY_HASHES = {
     sha512:
       'sha512-W+P8jGpOdYyc9v8NVamu/6VYAk5K6UUqpcosdOjYAjCYE7mbRv+Mz87E+cKRD8nJEGoFfj5d6lcBxpoxrw4ZnQ==',
   },
+  'https://unpkg.com/world-atlas@2.0.2/countries-110m.json': {
+    size: 107761,
+    sha256: 'sha256-JRbJFYZ8e68Y3exyeuxGwxVUGgfPs9eaZVmwXV6U7ug=',
+    sha384:
+      'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
+    sha512:
+      'sha512-W+P8jGpOdYyc9v8NVamu/6VYAk5K6UUqpcosdOjYAjCYE7mbRv+Mz87E+cKRD8nJEGoFfj5d6lcBxpoxrw4ZnQ==',
+  },
   'https://unpkg.com/world-atlas@2/countries-50m.json': {
+    size: 756420,
+    sha256: 'sha256-BDQs3B4wFrzX2xYw3pVoTWe3n+PIxGAyHoeu9GlQI5Q=',
+    sha384:
+      'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
+    sha512:
+      'sha512-DLFdDvg8jbo/sCLrmNhQ7ca9NRkuBeVVhIja5cgRQjfTf3Ptnjh7JZbuhMumiyu59288pQq+0j2+OanMh//dAg==',
+  },
+  'https://unpkg.com/world-atlas@2.0.2/countries-50m.json': {
     size: 756420,
     sha256: 'sha256-BDQs3B4wFrzX2xYw3pVoTWe3n+PIxGAyHoeu9GlQI5Q=',
     sha384:
@@ -59,7 +95,23 @@ export const ALL_GEOGRAPHY_HASHES = {
     sha512:
       'sha512-cbDiYxWqgPUQqZyvXEB640snrQfVFd/tschEJUeIOMRZHTemPe7M93wONgct71x0C5oTwSPCm2tOV3wN4DyGkw==',
   },
+  'https://unpkg.com/world-atlas@2.0.2/land-110m.json': {
+    size: 55207,
+    sha256: 'sha256-6tX2gRnEmpJQkC59owO8sgk0G7uP7+c2mkObSLcEZYo=',
+    sha384:
+      'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
+    sha512:
+      'sha512-cbDiYxWqgPUQqZyvXEB640snrQfVFd/tschEJUeIOMRZHTemPe7M93wONgct71x0C5oTwSPCm2tOV3wN4DyGkw==',
+  },
   'https://unpkg.com/world-atlas@2/land-50m.json': {
+    size: 545534,
+    sha256: 'sha256-YZR3/2kMCGiF5Fy5FwfXg4BVYb11ro5De31GlLAgTg8=',
+    sha384:
+      'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
+    sha512:
+      'sha512-YXQNbLp8f6IgatOiTqEwmcyDIsXZ1tQNAD499i6NvBEKiXNF7C7VPnIKiMS/GDkWu2fdhy6ie5JMam0kfXcR0Q==',
+  },
+  'https://unpkg.com/world-atlas@2.0.2/land-50m.json': {
     size: 545534,
     sha256: 'sha256-YZR3/2kMCGiF5Fy5FwfXg4BVYb11ro5De31GlLAgTg8=',
     sha384:

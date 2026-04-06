@@ -266,6 +266,13 @@ describe('SEC-003: SRI URL canonicalization', () => {
     expect(result?.enforceIntegrity).toBe(true);
   });
 
+  it('should find SRI for a pinned unpkg world-atlas URL', () => {
+    const url = 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json';
+    const result = getSRIForUrl(url);
+    expect(result).not.toBeNull();
+    expect(result?.enforceIntegrity).toBe(true);
+  });
+
   it('should find SRI for known URL with trailing fragment', () => {
     const url = 'https://unpkg.com/world-atlas@2/countries-110m.json#ignored';
     const result = getSRIForUrl(url);
