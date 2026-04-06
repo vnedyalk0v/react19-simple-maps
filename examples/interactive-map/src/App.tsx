@@ -73,6 +73,18 @@ const App: React.FC = () => {
     { name: 'Americas', center: createCoordinates(-80, 20), zoom: 2 },
   ];
 
+  const handleCountryClick = (name: string) => {
+    setSelectedCountry(name);
+  };
+
+  const handleCountryEnter = (name: string) => {
+    setHoveredCountry(name);
+  };
+
+  const handleCountryLeave = () => {
+    setHoveredCountry(null);
+  };
+
   return (
     <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
       <h1>🗺️ Interactive Map Showcase</h1>
@@ -208,54 +220,151 @@ const App: React.FC = () => {
             )}
           >
             <Geographies geography="https://unpkg.com/world-atlas@2.0.2/countries-50m.json">
-              {({ geographies, borders }) => (
-                <>
-                  {geographies.map((geo) => (
-                    <Geography
-                      key={geo.properties?.name || geo.id}
-                      geography={geo}
-                      onClick={() => {
-                        const name = geo.properties?.name || 'Unknown';
-                        setSelectedCountry(name);
-                      }}
-                      onMouseEnter={() => {
-                        const name = geo.properties?.name || 'Unknown';
-                        setHoveredCountry(name);
-                      }}
-                      onMouseLeave={() => setHoveredCountry(null)}
-                      style={{
-                        default: {
-                          fill:
-                            selectedCountry === geo.properties?.name
-                              ? '#1976d2'
-                              : hoveredCountry === geo.properties?.name
-                                ? '#42a5f5'
-                                : '#e0e0e0',
-                          outline: 'none',
-                        },
-                        hover: {
-                          fill: '#42a5f5',
-                          outline: 'none',
-                          cursor: 'pointer',
-                        },
-                        pressed: {
-                          fill: '#1976d2',
-                          outline: 'none',
-                        },
-                      }}
-                    />
-                  ))}
-                  {borders ? (
-                    <path
-                      d={borders}
-                      fill="none"
-                      stroke="#FFFFFF"
-                      strokeWidth={0.5}
-                      pointerEvents="none"
-                    />
-                  ) : null}
-                </>
-              )}
+              {({ geographies, borders }) => {
+                const overlayCountryNames = new Set(
+                  [selectedCountry, hoveredCountry].filter(
+                    (name): name is string => Boolean(name),
+                  ),
+                );
+
+                const baseGeographies = geographies.filter((geo) => {
+                  const countryName = geo.properties?.name || 'Unknown';
+                  return !overlayCountryNames.has(countryName);
+                });
+
+                const hoveredOverlayCountry =
+                  hoveredCountry && hoveredCountry !== selectedCountry
+                    ? hoveredCountry
+                    : null;
+
+                const hoveredGeography = hoveredOverlayCountry
+                  ? geographies.find(
+                      (geo) =>
+                        (geo.properties?.name || 'Unknown') ===
+                        hoveredOverlayCountry,
+                    )
+                  : null;
+
+                const selectedOverlayCountry = selectedCountry;
+
+                const selectedGeography = selectedOverlayCountry
+                  ? geographies.find(
+                      (geo) =>
+                        (geo.properties?.name || 'Unknown') ===
+                        selectedOverlayCountry,
+                    )
+                  : null;
+
+                return (
+                  <>
+                    {baseGeographies.map((geo) => {
+                      const name = geo.properties?.name || 'Unknown';
+
+                      return (
+                        <Geography
+                          key={name || geo.id}
+                          geography={geo}
+                          onClick={() => handleCountryClick(name)}
+                          onMouseEnter={() => handleCountryEnter(name)}
+                          onMouseLeave={handleCountryLeave}
+                          style={{
+                            default: {
+                              fill: '#e0e0e0',
+                              outline: 'none',
+                            },
+                            hover: {
+                              fill: '#42a5f5',
+                              outline: 'none',
+                              cursor: 'pointer',
+                            },
+                            pressed: {
+                              fill: '#1976d2',
+                              outline: 'none',
+                            },
+                          }}
+                        />
+                      );
+                    })}
+                    {borders ? (
+                      <path
+                        d={borders}
+                        fill="none"
+                        stroke="#FFFFFF"
+                        strokeWidth={0.5}
+                        pointerEvents="none"
+                      />
+                    ) : null}
+                    {hoveredGeography && hoveredOverlayCountry ? (
+                      <Geography
+                        key={`hovered-${hoveredOverlayCountry}`}
+                        geography={hoveredGeography}
+                        onClick={() =>
+                          handleCountryClick(hoveredOverlayCountry)
+                        }
+                        onMouseEnter={() =>
+                          handleCountryEnter(hoveredOverlayCountry)
+                        }
+                        onMouseLeave={handleCountryLeave}
+                        style={{
+                          default: {
+                            fill: '#42a5f5',
+                            outline: 'none',
+                            stroke: '#1e88e5',
+                            strokeWidth: 1,
+                          },
+                          hover: {
+                            fill: '#42a5f5',
+                            outline: 'none',
+                            stroke: '#1e88e5',
+                            strokeWidth: 1,
+                            cursor: 'pointer',
+                          },
+                          pressed: {
+                            fill: '#1976d2',
+                            outline: 'none',
+                            stroke: '#1565c0',
+                            strokeWidth: 1,
+                          },
+                        }}
+                      />
+                    ) : null}
+                    {selectedGeography && selectedOverlayCountry ? (
+                      <Geography
+                        key={`selected-${selectedOverlayCountry}`}
+                        geography={selectedGeography}
+                        onClick={() =>
+                          handleCountryClick(selectedOverlayCountry)
+                        }
+                        onMouseEnter={() =>
+                          handleCountryEnter(selectedOverlayCountry)
+                        }
+                        onMouseLeave={handleCountryLeave}
+                        style={{
+                          default: {
+                            fill: '#1976d2',
+                            outline: 'none',
+                            stroke: '#0d47a1',
+                            strokeWidth: 1.2,
+                          },
+                          hover: {
+                            fill: '#1976d2',
+                            outline: 'none',
+                            stroke: '#0d47a1',
+                            strokeWidth: 1.2,
+                            cursor: 'pointer',
+                          },
+                          pressed: {
+                            fill: '#1565c0',
+                            outline: 'none',
+                            stroke: '#0d47a1',
+                            strokeWidth: 1.2,
+                          },
+                        }}
+                      />
+                    ) : null}
+                  </>
+                );
+              }}
             </Geographies>
 
             {showCities &&

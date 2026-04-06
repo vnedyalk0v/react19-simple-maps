@@ -86,9 +86,25 @@ const App: React.FC = () => {
                 );
               }
 
+              const selectedGeography = selectedCountry
+                ? geographies.find((geo) => {
+                    const countryName =
+                      geo.properties?.NAME || geo.properties?.name;
+                    return countryName === selectedCountry;
+                  })
+                : null;
+
+              const regularGeographies = selectedCountry
+                ? geographies.filter((geo) => {
+                    const countryName =
+                      geo.properties?.NAME || geo.properties?.name;
+                    return countryName !== selectedCountry;
+                  })
+                : geographies;
+
               return (
                 <>
-                  {geographies.map((geo, index) => {
+                  {regularGeographies.map((geo, index) => {
                     const countryName =
                       geo.properties?.NAME || geo.properties?.name;
 
@@ -99,10 +115,7 @@ const App: React.FC = () => {
                         onClick={handleGeographyClick}
                         style={{
                           default: {
-                            fill:
-                              selectedCountry === countryName
-                                ? '#B3D9FF'
-                                : '#D6D6DA',
+                            fill: '#D6D6DA',
                             outline: 'none',
                           },
                           hover: {
@@ -125,6 +138,34 @@ const App: React.FC = () => {
                       stroke="#FFFFFF"
                       strokeWidth={0.5}
                       pointerEvents="none"
+                    />
+                  ) : null}
+                  {selectedGeography ? (
+                    <Geography
+                      key={`selected-${selectedCountry}`}
+                      geography={selectedGeography}
+                      onClick={handleGeographyClick}
+                      style={{
+                        default: {
+                          fill: '#B3D9FF',
+                          outline: 'none',
+                          stroke: '#4A90E2',
+                          strokeWidth: 1.2,
+                        },
+                        hover: {
+                          fill: '#B3D9FF',
+                          outline: 'none',
+                          stroke: '#4A90E2',
+                          strokeWidth: 1.2,
+                          cursor: 'pointer',
+                        },
+                        pressed: {
+                          fill: '#9CCBFF',
+                          outline: 'none',
+                          stroke: '#4A90E2',
+                          strokeWidth: 1.2,
+                        },
+                      }}
                     />
                   ) : null}
                 </>
