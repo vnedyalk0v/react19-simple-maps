@@ -1,7 +1,6 @@
 # @vnedyalk0v/react19-simple-maps
 
 [![npm version](https://img.shields.io/npm/v/@vnedyalk0v/react19-simple-maps.svg)](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps)
-[![GitHub Package Registry](https://img.shields.io/badge/GitHub%20Packages-Available-blue.svg)](https://github.com/vnedyalk0v/react19-simple-maps/packages)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/@vnedyalk0v/react19-simple-maps?color=%2328cb95&label=gzip)](https://bundlephobia.com/package/@vnedyalk0v/react19-simple-maps)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19%20Ready-61dafb.svg)](https://react.dev/)
@@ -25,7 +24,6 @@ Create interactive SVG maps in React with d3-geo and topojson using a TypeScript
 ## Quick Links
 
 - [npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps)
-- [GitHub Packages](https://github.com/vnedyalk0v/react19-simple-maps/packages)
 - [Examples](./examples/)
 - [Changelog](./CHANGELOG.md)
 - [Issues](https://github.com/vnedyalk0v/react19-simple-maps/issues)
@@ -47,16 +45,6 @@ pnpm add @vnedyalk0v/react19-simple-maps
 ```
 
 > **ESM-only:** This package only supports `import` syntax. `require(...)` is not supported.
-
-### From GitHub Packages (Alternative)
-
-```bash
-# Configure npm to use GitHub Packages for @vnedyalk0v scope
-echo "@vnedyalk0v:registry=https://npm.pkg.github.com" >> ~/.npmrc
-
-# Install from GitHub Packages
-npm install @vnedyalk0v/react19-simple-maps
-```
 
 ### Requirements
 
@@ -273,7 +261,7 @@ npm run lint
 
 ## Publishing
 
-Changesets is configured for versioning and releases. The GitHub Actions workflow in `.github/workflows/publish.yml` runs on pushes to `main` and publishes to npm (and GitHub Packages) when configured with tokens.
+Changesets is configured for versioning and releases. The GitHub Actions workflow in `.github/workflows/publish.yml` runs on pushes to `main` and publishes to npm when configured with the required token.
 
 ## License
 
