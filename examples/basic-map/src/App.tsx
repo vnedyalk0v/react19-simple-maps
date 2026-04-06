@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <div className="container">
       <div className="header">
         <h1>Basic World Map</h1>
-        <p>A simple example using react19-simple-maps v1.0.4</p>
+        <p>A simple example using react19-simple-maps v2.0.3</p>
         {selectedCountry && (
           <div className="status">
             Selected: <strong>{selectedCountry}</strong>
@@ -77,7 +77,7 @@ const App: React.FC = () => {
           height={500}
         >
           <Geographies geography={geoUrl}>
-            {({ geographies }) => {
+            {({ geographies, borders }) => {
               if (!geographies || geographies.length === 0) {
                 return (
                   <text x="400" y="250" textAnchor="middle" fill="red">
@@ -86,38 +86,49 @@ const App: React.FC = () => {
                 );
               }
 
-              return geographies.map((geo, index) => {
-                const countryName =
-                  geo.properties?.NAME || geo.properties?.name;
+              return (
+                <>
+                  {geographies.map((geo, index) => {
+                    const countryName =
+                      geo.properties?.NAME || geo.properties?.name;
 
-                return (
-                  <Geography
-                    key={countryName || geo.id || index}
-                    geography={geo}
-                    onClick={handleGeographyClick}
-                    style={{
-                      default: {
-                        fill:
-                          selectedCountry === countryName
-                            ? '#B3D9FF'
-                            : '#D6D6DA',
-                        outline: 'none',
-                        stroke: '#FFFFFF',
-                        strokeWidth: 0.5,
-                      },
-                      hover: {
-                        fill: '#F53',
-                        outline: 'none',
-                        cursor: 'pointer',
-                      },
-                      pressed: {
-                        fill: '#E42',
-                        outline: 'none',
-                      },
-                    }}
-                  />
-                );
-              });
+                    return (
+                      <Geography
+                        key={countryName || geo.id || index}
+                        geography={geo}
+                        onClick={handleGeographyClick}
+                        style={{
+                          default: {
+                            fill:
+                              selectedCountry === countryName
+                                ? '#B3D9FF'
+                                : '#D6D6DA',
+                            outline: 'none',
+                          },
+                          hover: {
+                            fill: '#F53',
+                            outline: 'none',
+                            cursor: 'pointer',
+                          },
+                          pressed: {
+                            fill: '#E42',
+                            outline: 'none',
+                          },
+                        }}
+                      />
+                    );
+                  })}
+                  {borders ? (
+                    <path
+                      d={borders}
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth={0.5}
+                      pointerEvents="none"
+                    />
+                  ) : null}
+                </>
+              );
             }}
           </Geographies>
 
