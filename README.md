@@ -93,7 +93,7 @@ import {
   createCoordinates,
 } from '@vnedyalk0v/react19-simple-maps';
 
-const geoUrl = 'https://unpkg.com/world-atlas@2/countries-110m.json';
+const geoUrl = 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json';
 
 const MapChart = () => {
   return (

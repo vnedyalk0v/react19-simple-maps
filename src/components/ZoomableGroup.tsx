@@ -9,7 +9,6 @@ import {
 import { useMapContext } from './MapProvider';
 import { ZoomPanProvider } from './ZoomPanProvider';
 import useZoomPan from './useZoomPan';
-import { ZoomPanIndicator } from './LoadingStates';
 
 // Type guard to check if props are SimpleZoomableGroupProps
 function isSimpleProps(
@@ -84,7 +83,7 @@ function ZoomableGroup(
   const finalScaleExtent =
     scaleExtent ?? createScaleExtent(finalMinZoom, finalMaxZoom);
 
-  const { mapRef, transformString, position, isPending } = useZoomPan({
+  const { mapRef, transformString, position } = useZoomPan({
     center,
     ...(filterZoomEvent && { filterZoomEvent }),
     ...(onMoveStart && { onMoveStart }),
@@ -109,11 +108,6 @@ function ZoomableGroup(
         >
           {children}
         </g>
-        {/* Show pending indicator during zoom/pan transitions */}
-        <ZoomPanIndicator
-          isPending={isPending}
-          className="rsm-zoom-pan-overlay"
-        />
       </g>
     </ZoomPanProvider>
   );

@@ -8,8 +8,8 @@ import {
 } from '@vnedyalk0v/react19-simple-maps';
 import type { Feature, Geometry } from 'geojson';
 
-// World geography data
-const geoUrl = 'https://unpkg.com/world-atlas@2/countries-110m.json';
+// World geography data pinned to an exact version to avoid redirect-related fetch issues
+const geoUrl = 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json';
 
 // Major cities
 const cities = [
@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <div className="container">
       <div className="header">
         <h1>Basic World Map</h1>
-        <p>A simple example using react19-simple-maps v1.0.4</p>
+        <p>A simple example using react19-simple-maps v2.0.3</p>
         {selectedCountry && (
           <div className="status">
             Selected: <strong>{selectedCountry}</strong>
@@ -77,7 +77,7 @@ const App: React.FC = () => {
           height={500}
         >
           <Geographies geography={geoUrl}>
-            {({ geographies }) => {
+            {({ geographies, borders }) => {
               if (!geographies || geographies.length === 0) {
                 return (
                   <text x="400" y="250" textAnchor="middle" fill="red">
@@ -86,38 +86,90 @@ const App: React.FC = () => {
                 );
               }
 
-              return geographies.map((geo, index) => {
-                const countryName =
-                  geo.properties?.NAME || geo.properties?.name;
+              const selectedGeography = selectedCountry
+                ? geographies.find((geo) => {
+                    const countryName =
+                      geo.properties?.NAME || geo.properties?.name;
+                    return countryName === selectedCountry;
+                  })
+                : null;
 
-                return (
-                  <Geography
-                    key={countryName || geo.id || index}
-                    geography={geo}
-                    onClick={handleGeographyClick}
-                    style={{
-                      default: {
-                        fill:
-                          selectedCountry === countryName
-                            ? '#B3D9FF'
-                            : '#D6D6DA',
-                        outline: 'none',
-                        stroke: '#FFFFFF',
-                        strokeWidth: 0.5,
-                      },
-                      hover: {
-                        fill: '#F53',
-                        outline: 'none',
-                        cursor: 'pointer',
-                      },
-                      pressed: {
-                        fill: '#E42',
-                        outline: 'none',
-                      },
-                    }}
-                  />
-                );
-              });
+              const regularGeographies = selectedCountry
+                ? geographies.filter((geo) => {
+                    const countryName =
+                      geo.properties?.NAME || geo.properties?.name;
+                    return countryName !== selectedCountry;
+                  })
+                : geographies;
+
+              return (
+                <>
+                  {regularGeographies.map((geo, index) => {
+                    const countryName =
+                      geo.properties?.NAME || geo.properties?.name;
+
+                    return (
+                      <Geography
+                        key={countryName || geo.id || index}
+                        geography={geo}
+                        onClick={handleGeographyClick}
+                        style={{
+                          default: {
+                            fill: '#D6D6DA',
+                            outline: 'none',
+                          },
+                          hover: {
+                            fill: '#F53',
+                            outline: 'none',
+                            cursor: 'pointer',
+                          },
+                          pressed: {
+                            fill: '#E42',
+                            outline: 'none',
+                          },
+                        }}
+                      />
+                    );
+                  })}
+                  {borders ? (
+                    <path
+                      d={borders}
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth={0.5}
+                      pointerEvents="none"
+                    />
+                  ) : null}
+                  {selectedGeography ? (
+                    <Geography
+                      key={`selected-${selectedCountry}`}
+                      geography={selectedGeography}
+                      onClick={handleGeographyClick}
+                      style={{
+                        default: {
+                          fill: '#B3D9FF',
+                          outline: 'none',
+                          stroke: '#4A90E2',
+                          strokeWidth: 1.2,
+                        },
+                        hover: {
+                          fill: '#B3D9FF',
+                          outline: 'none',
+                          stroke: '#4A90E2',
+                          strokeWidth: 1.2,
+                          cursor: 'pointer',
+                        },
+                        pressed: {
+                          fill: '#9CCBFF',
+                          outline: 'none',
+                          stroke: '#4A90E2',
+                          strokeWidth: 1.2,
+                        },
+                      }}
+                    />
+                  ) : null}
+                </>
+              );
             }}
           </Geographies>
 
