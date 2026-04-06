@@ -105,11 +105,7 @@ jobs:
         continue-on-error: true
         run: |
           npm ci
-          npm run build
-          npm run type-check
-          npm run lint
-          npm run check-format
-          npm run test
+          npm run ci
 
       - name: Complete release PR CI check
         if: always() && steps.release_pr.outputs.exists == 'true' && steps.release_pr_check.outputs.id != ''
