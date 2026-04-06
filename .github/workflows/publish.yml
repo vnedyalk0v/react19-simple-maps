@@ -18,6 +18,7 @@ jobs:
       contents: write
       packages: write
       pull-requests: write
+      checks: write
       id-token: write
 
     steps:
@@ -49,6 +50,85 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Find open release PR
+        if: steps.changesets.outputs.published != 'true'
+        id: release_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr_json=$(gh pr list \
+            --base main \
+            --head changeset-release/main \
+            --state open \
+            --json number,headRefOid \
+            --jq '.[0]')
+
+          if [ -z "$pr_json" ] || [ "$pr_json" = "null" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          echo "number=$(echo "$pr_json" | jq -r '.number')" >> "$GITHUB_OUTPUT"
+          echo "sha=$(echo "$pr_json" | jq -r '.headRefOid')" >> "$GITHUB_OUTPUT"
+
+      - name: Start release PR CI check
+        if: steps.release_pr.outputs.exists == 'true'
+        id: release_pr_check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          check_id=$(gh api repos/${{ github.repository }}/check-runs \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -f name='ci' \
+            -f head_sha='${{ steps.release_pr.outputs.sha }}' \
+            -f status='in_progress' \
+            -f details_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
+            --jq '.id')
+
+          echo "id=$check_id" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release PR merge commit
+        if: steps.release_pr.outputs.exists == 'true'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: refs/pull/${{ steps.release_pr.outputs.number }}/merge
+          fetch-depth: 0
+
+      - name: Validate release PR
+        if: steps.release_pr.outputs.exists == 'true'
+        id: release_pr_validation
+        continue-on-error: true
+        run: |
+          npm ci
+          npm run build
+          npm run type-check
+          npm run lint
+          npm run check-format
+          npm run test
+
+      - name: Complete release PR CI check
+        if: always() && steps.release_pr.outputs.exists == 'true' && steps.release_pr_check.outputs.id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          conclusion=success
+          if [ "${{ steps.release_pr_validation.outcome }}" != "success" ]; then
+            conclusion=failure
+          fi
+
+          gh api repos/${{ github.repository }}/check-runs/${{ steps.release_pr_check.outputs.id }} \
+            -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -f status='completed' \
+            -f conclusion="$conclusion" \
+            -f completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Fail workflow when release PR validation fails
+        if: steps.release_pr.outputs.exists == 'true' && steps.release_pr_validation.outcome != 'success'
+        run: exit 1
 
       - name: Publish to GitHub Package Registry
         if: steps.changesets.outputs.published == 'true'
