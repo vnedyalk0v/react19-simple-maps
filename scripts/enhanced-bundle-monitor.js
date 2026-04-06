@@ -199,6 +199,13 @@ function analyzeOptimizations(content, filePath = '') {
   return analysis;
 }
 
+function execGitCommand(command) {
+  return execSync(command, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }).trim();
+}
+
 function generateEnhancedReport() {
   const bundlePaths = Object.keys(BUNDLE_TARGETS);
   const analyses = bundlePaths.map(analyzeBundle);
@@ -214,7 +221,7 @@ function generateEnhancedReport() {
   if (!redactGit) {
     try {
       gitInfo = {
-        commit: execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim(),
+        commit: execGitCommand('git rev-parse HEAD'),
         branch: '<redacted>',
         timestamp: new Date().toISOString(),
       };
