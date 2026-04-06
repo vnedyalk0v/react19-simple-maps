@@ -54,4 +54,58 @@ describe('Geographies integration', () => {
     const renderedPath = container.querySelector('path.rsm-geography');
     expect(renderedPath?.getAttribute('d')).toBeTruthy();
   });
+
+  it('recomputes prepared SVG paths when the projection changes', async () => {
+    const { container, rerender } = render(
+      <ComposableMap projection="geoEqualEarth">
+        <Geographies geography={featureCollection}>
+          {({ geographies }) => (
+            <>
+              {geographies.map((geo) => (
+                <Geography key={geo.rsmKey} geography={geo} />
+              ))}
+            </>
+          )}
+        </Geographies>
+      </ComposableMap>,
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('path.rsm-geography')?.getAttribute('d'),
+      ).toBeTruthy();
+    });
+
+    const equalEarthPath = container
+      .querySelector('path.rsm-geography')
+      ?.getAttribute('d');
+
+    rerender(
+      <ComposableMap projection="geoMercator">
+        <Geographies geography={featureCollection}>
+          {({ geographies }) => (
+            <>
+              {geographies.map((geo) => (
+                <Geography key={geo.rsmKey} geography={geo} />
+              ))}
+            </>
+          )}
+        </Geographies>
+      </ComposableMap>,
+    );
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('path.rsm-geography')?.getAttribute('d'),
+      ).toBeTruthy();
+    });
+
+    const mercatorPath = container
+      .querySelector('path.rsm-geography')
+      ?.getAttribute('d');
+
+    expect(equalEarthPath).toBeTruthy();
+    expect(mercatorPath).toBeTruthy();
+    expect(mercatorPath).not.toBe(equalEarthPath);
+  });
 });

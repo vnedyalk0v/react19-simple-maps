@@ -104,6 +104,28 @@ const CACHE_CONFIG = {
   ENABLE_COORDINATE_CACHE: true,
 };
 
+const objectCacheTokens = new WeakMap<object, string>();
+let objectCacheTokenCounter = 0;
+
+function getObjectCacheToken(value: unknown): string {
+  if (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null
+  ) {
+    const existingToken = objectCacheTokens.get(value);
+    if (existingToken) {
+      return existingToken;
+    }
+
+    objectCacheTokenCounter += 1;
+    const nextToken = `obj:${objectCacheTokenCounter}`;
+    objectCacheTokens.set(value, nextToken);
+    return nextToken;
+  }
+
+  return String(value);
+}
+
 // Generate cache key from geography data
 function generateCacheKey(data: unknown, additionalKey?: string): string {
   const baseKey =
@@ -173,10 +195,7 @@ export function generatePreparedFeaturesCacheKey(
     .map((f) => f.id || f.properties?.NAME || '')
     .join(',')
     .slice(0, 100);
-  const pathKey =
-    typeof pathFunction === 'function'
-      ? pathFunction.toString().slice(0, 50)
-      : 'default';
+  const pathKey = getObjectCacheToken(pathFunction);
   return `prepared:${featuresKey}:${pathKey}`;
 }
 
@@ -184,11 +203,12 @@ export function generateMeshCacheKey(
   data: unknown,
   pathFunction: unknown,
 ): string {
-  const pathKey =
-    typeof pathFunction === 'function'
-      ? pathFunction.toString().slice(0, 50)
-      : 'default';
+  const pathKey = getObjectCacheToken(pathFunction);
   return generateCacheKey(data, `mesh:${pathKey}`);
+}
+
+export function getPathFunctionCacheToken(pathFunction: unknown): string {
+  return getObjectCacheToken(pathFunction);
 }
 
 // Clear all caches (useful for testing or memory management)
@@ -290,14 +310,14 @@ export function cacheGeographyData(
  */
 export function getCachedPreparedFeaturesWeakMap(
   geographyObject: FeatureCollection | Topology,
-  pathFunctionString: string,
+  pathFunctionToken: string,
 ): PreparedFeature[] | null {
   if (!CACHE_CONFIG.ENABLE_WEAKMAP_CACHE) return null;
 
   const cached = weakMapCaches.preparedFeaturesCache.get(geographyObject);
   if (
     cached &&
-    cached.pathFunction === pathFunctionString &&
+    cached.pathFunction === pathFunctionToken &&
     Date.now() - cached.timestamp < CACHE_CONFIG.TTL
   ) {
     return cached.prepared;
@@ -311,13 +331,13 @@ export function getCachedPreparedFeaturesWeakMap(
 export function cachePreparedFeaturesWeakMap(
   geographyObject: FeatureCollection | Topology,
   prepared: PreparedFeature[],
-  pathFunctionString: string,
+  pathFunctionToken: string,
 ): void {
   if (!CACHE_CONFIG.ENABLE_WEAKMAP_CACHE) return;
 
   weakMapCaches.preparedFeaturesCache.set(geographyObject, {
     prepared,
-    pathFunction: pathFunctionString,
+    pathFunction: pathFunctionToken,
     timestamp: Date.now(),
   });
 }

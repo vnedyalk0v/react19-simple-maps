@@ -1,13 +1,15 @@
 import { Ref, memo, useEffect } from 'react';
-import { ComposableMapProps } from '../types';
+import { ComposableMapProps, ProjectionConfig } from '../types';
 import { MapProvider } from './MapProvider';
 import { useMapDebugger } from '../utils/debugging';
+
+const EMPTY_PROJECTION_CONFIG: ProjectionConfig = Object.freeze({});
 
 function ComposableMap({
   width = 800,
   height = 600,
   projection = 'geoEqualEarth',
-  projectionConfig = {},
+  projectionConfig = EMPTY_PROJECTION_CONFIG,
   className = '',
   debug = false,
   children,

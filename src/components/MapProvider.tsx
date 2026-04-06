@@ -11,6 +11,7 @@ import {
 const { geoPath, ...projections } = d3Geo;
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
+const EMPTY_PROJECTION_CONFIG: ProjectionConfig = Object.freeze({});
 
 interface MakeProjectionParams {
   projectionConfig?: ProjectionConfig;
@@ -20,7 +21,7 @@ interface MakeProjectionParams {
 }
 
 const makeProjection = ({
-  projectionConfig = {},
+  projectionConfig = EMPTY_PROJECTION_CONFIG,
   projection = 'geoEqualEarth',
   width = 800,
   height = 600,
@@ -76,7 +77,7 @@ const MapProvider: React.FC<MapProviderProps> = ({
   width,
   height,
   projection,
-  projectionConfig = {},
+  projectionConfig = EMPTY_PROJECTION_CONFIG,
   children,
 }) => {
   const projMemo = useMemo(() => {
