@@ -214,6 +214,43 @@ function shouldResolveHostnamesForSecurity(): boolean {
   );
 }
 
+async function loadNodeDnsModule(): Promise<{
+  lookup?: (
+    hostname: string,
+    options: { all: true; verbatim: true },
+  ) => Promise<Array<{ address: string }>>;
+} | null> {
+  if (typeof process !== 'undefined') {
+    const builtinModule =
+      typeof process.getBuiltinModule === 'function'
+        ? (process.getBuiltinModule('node:dns/promises') as {
+            lookup?: (
+              hostname: string,
+              options: { all: true; verbatim: true },
+            ) => Promise<Array<{ address: string }>>;
+          } | null)
+        : null;
+
+    if (builtinModule?.lookup) {
+      return builtinModule;
+    }
+  }
+
+  try {
+    const specifier = 'node:dns/promises';
+    const importedModule = (await import(/* @vite-ignore */ specifier)) as {
+      lookup?: (
+        hostname: string,
+        options: { all: true; verbatim: true },
+      ) => Promise<Array<{ address: string }>>;
+    };
+
+    return importedModule.lookup ? importedModule : null;
+  } catch {
+    return null;
+  }
+}
+
 async function resolveHostnameAddresses(hostname: string): Promise<string[]> {
   if (!shouldResolveHostnamesForSecurity()) {
     return [];
@@ -224,16 +261,7 @@ async function resolveHostnameAddresses(hostname: string): Promise<string[]> {
     return [];
   }
 
-  const dnsModule =
-    typeof process !== 'undefined' &&
-    typeof process.getBuiltinModule === 'function'
-      ? (process.getBuiltinModule('node:dns/promises') as {
-          lookup?: (
-            hostname: string,
-            options: { all: true; verbatim: true },
-          ) => Promise<Array<{ address: string }>>;
-        } | null)
-      : null;
+  const dnsModule = await loadNodeDnsModule();
 
   if (!dnsModule?.lookup) {
     throw createGeographyFetchError(
