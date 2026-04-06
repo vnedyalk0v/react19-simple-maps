@@ -19,6 +19,7 @@ import {
   getSRIForUrl,
   getSRIConfig,
   configureSRI,
+  addCustomSRI,
   disableSRI,
   DEFAULT_SRI_CONFIG,
 } from '../src/utils/subresource-integrity';
@@ -309,6 +310,22 @@ describe('SEC-003: SRI URL canonicalization', () => {
       /SRI enforcement/i,
     );
   });
+
+  it('preserves custom SRI entries across partial config updates', () => {
+    addCustomSRI('https://example.com/custom.json', {
+      algorithm: 'sha384',
+      hash: 'sha384-customhash',
+      enforceIntegrity: true,
+    });
+
+    configureSRI({ enforceForAllSources: true });
+
+    expect(getSRIForUrl('https://example.com/custom.json')).toEqual({
+      algorithm: 'sha384',
+      hash: 'sha384-customhash',
+      enforceIntegrity: true,
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -365,6 +382,38 @@ describe('SEC-005: production security config hardening', () => {
     expect(config.STRICT_HTTPS_ONLY).toBe(true);
     expect(config.ALLOW_HTTP_LOCALHOST).toBe(false);
     expect(config.ALLOWED_PROTOCOLS).toEqual(['https:']);
+  });
+
+  it('preserves custom geography limits when enabling development mode', async () => {
+    process.env.NODE_ENV = 'development';
+    const { enableDevelopmentMode } =
+      await import('../src/utils/geography-validation');
+
+    configureGeographySecurity({
+      TIMEOUT_MS: 5000,
+      MAX_RESPONSE_SIZE: 10 * 1024 * 1024,
+    });
+    enableDevelopmentMode(true);
+
+    const config = getGeographySecurityConfig();
+    expect(config.TIMEOUT_MS).toBe(5000);
+    expect(config.MAX_RESPONSE_SIZE).toBe(10 * 1024 * 1024);
+    expect(config.ALLOW_HTTP_LOCALHOST).toBe(true);
+    expect(config.STRICT_HTTPS_ONLY).toBe(false);
+    expect(config.ALLOWED_PROTOCOLS).toEqual(['https:', 'http:']);
+  });
+
+  it('merges partial geography security updates with the existing config', () => {
+    configureGeographySecurity({
+      TIMEOUT_MS: 5000,
+      MAX_RESPONSE_SIZE: 10 * 1024 * 1024,
+    });
+    configureGeographySecurity({ ALLOW_HTTP_LOCALHOST: true });
+
+    const config = getGeographySecurityConfig();
+    expect(config.TIMEOUT_MS).toBe(5000);
+    expect(config.MAX_RESPONSE_SIZE).toBe(10 * 1024 * 1024);
+    expect(config.ALLOW_HTTP_LOCALHOST).toBe(true);
   });
 
   it('does not disable known-source SRI enforcement in production', () => {

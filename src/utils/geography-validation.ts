@@ -36,17 +36,17 @@ function isProductionEnvironment(): boolean {
 
 function createGeographyFetchConfig(
   config: Partial<GeographySecurityConfig>,
+  baseConfig: GeographySecurityConfig = GEOGRAPHY_FETCH_CONFIG,
 ): GeographySecurityConfig {
   const nextConfig: GeographySecurityConfig = {
     ...DEFAULT_GEOGRAPHY_FETCH_CONFIG,
+    ...baseConfig,
     ...config,
     ALLOWED_CONTENT_TYPES: [
-      ...(config.ALLOWED_CONTENT_TYPES ??
-        DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES),
+      ...(config.ALLOWED_CONTENT_TYPES ?? baseConfig.ALLOWED_CONTENT_TYPES),
     ],
     ALLOWED_PROTOCOLS: [
-      ...(config.ALLOWED_PROTOCOLS ??
-        DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS),
+      ...(config.ALLOWED_PROTOCOLS ?? baseConfig.ALLOWED_PROTOCOLS),
     ],
   };
 
@@ -66,8 +66,15 @@ function createGeographyFetchConfig(
 }
 
 // Current active configuration (defaults to secure)
-export let GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig =
-  createGeographyFetchConfig({});
+export let GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig = Object.freeze({
+  ...DEFAULT_GEOGRAPHY_FETCH_CONFIG,
+  ALLOWED_CONTENT_TYPES: Object.freeze([
+    ...DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES,
+  ]),
+  ALLOWED_PROTOCOLS: Object.freeze([
+    ...DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS,
+  ]),
+});
 
 /**
  * Configure geography fetching security settings
@@ -76,7 +83,10 @@ export let GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig =
 export function configureGeographySecurity(
   config: Partial<GeographySecurityConfig>,
 ): void {
-  GEOGRAPHY_FETCH_CONFIG = createGeographyFetchConfig(config);
+  GEOGRAPHY_FETCH_CONFIG = createGeographyFetchConfig(
+    config,
+    GEOGRAPHY_FETCH_CONFIG,
+  );
 }
 
 export function getGeographySecurityConfig(): GeographySecurityConfig {
@@ -98,10 +108,14 @@ export function enableDevelopmentMode(
     return;
   }
 
-  GEOGRAPHY_FETCH_CONFIG = createGeographyFetchConfig({
-    ...DEVELOPMENT_GEOGRAPHY_FETCH_CONFIG,
-    ALLOW_HTTP_LOCALHOST: allowHttpLocalhost,
-  });
+  GEOGRAPHY_FETCH_CONFIG = createGeographyFetchConfig(
+    {
+      ALLOWED_PROTOCOLS: DEVELOPMENT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_PROTOCOLS,
+      STRICT_HTTPS_ONLY: DEVELOPMENT_GEOGRAPHY_FETCH_CONFIG.STRICT_HTTPS_ONLY,
+      ALLOW_HTTP_LOCALHOST: allowHttpLocalhost,
+    },
+    GEOGRAPHY_FETCH_CONFIG,
+  );
 
   // eslint-disable-next-line no-console
   console.warn(

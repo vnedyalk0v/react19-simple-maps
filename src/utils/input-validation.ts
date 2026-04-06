@@ -132,7 +132,7 @@ export function validateURL(input: unknown): string {
   }
 
   // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(candidate)) {
+  if (/[\x00-\x1F\x7F]/.test(candidate)) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
       'URL contains invalid control characters',
