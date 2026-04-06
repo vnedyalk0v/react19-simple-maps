@@ -50,6 +50,7 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 - Keep browser-only APIs guarded. Do not assume `window`, `document`, `navigator`, or DOM availability during server rendering.
 - If you change the public API, also update types, README, examples, tests, and release notes in the same task.
 - Prefer additive changes. Do not break existing consumers unless a breaking change is explicitly requested.
+- Read `docs/support.md` only when the task affects support guarantees, platform compatibility, distribution channels, release expectations, or the public `./utils` API policy.
 
 ## React 19 Rules (Required)
 
