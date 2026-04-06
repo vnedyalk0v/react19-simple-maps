@@ -19,8 +19,5 @@ coverage/
 # Logs
 *.log
 
-# Documentation (internal use only)
-docs/
-
 # Generated reports
 reports/*.json

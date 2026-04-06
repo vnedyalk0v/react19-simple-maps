@@ -86,7 +86,6 @@ This keeps `dev` aligned with release, version, and changelog changes merged int
 Publishing currently targets:
 
 - npm registry
-- GitHub Packages
 
 Main publish command:
 

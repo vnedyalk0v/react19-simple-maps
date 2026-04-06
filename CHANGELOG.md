@@ -36,18 +36,7 @@ the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Clarified that development and build workflows require Node.js 20.19.0 or newer, and CI now validates the package on Node.js 20 and Node.js 22.
-
-### Fixed
-
-- Removed the built-in `ZoomableGroup` zoom and pan indicator so direct map interactions stay visually clean.
-- Pinned the README and example geography URLs to exact world-atlas versions so the example maps load reliably without redirect-related fetch failures.
-- Removed React 19 optimistic update warnings during zoom and pan interactions by replacing transition-incompatible optimistic state updates with immediate local interaction state.
-- Fixed projection updates and stabilized projection reuse across unrelated rerenders so changing projections updates geography shapes correctly and hover interactions no longer recreate map projection state.
-- Reduced hover flicker in the interactive example by reserving space for hover details and rendering shared country borders separately instead of stroking each geography individually.
-- Updated both examples to render selected countries in a top overlay layer so selected outlines stay visually consistent, kept the basic example on shared border rendering to reduce edge flicker there as well, and refreshed the example app dependency ranges to current React 19 and Vite patch lines.
-- Fixed `useDeferredPosition` so controlled zoom values continue to respect caller-provided zoom bounds instead of being clamped to an internal `0.1..10` range.
-- Hardened geography fetching in server environments by blocking hostnames that resolve to private IP addresses, keeping production fetch security on hardened defaults, preserving custom security and integrity settings across partial updates, and tightening content-type and malformed URL validation.
+- Removed GitHub Packages as a distribution target. The package now publishes only to npm, and the installation or release documentation now reflects npm as the supported distribution channel.
 
 ## [2.0.3] - 2026-04-02
 
