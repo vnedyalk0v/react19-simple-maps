@@ -3,7 +3,7 @@ interface ZoomPanIndicatorProps {
   className?: string;
 }
 
-// Zoom/Pan loading indicator for smooth transitions
+// SVG-safe zoom/pan loading indicator for use inside <svg> / <g> trees
 export function ZoomPanIndicator({
   isPending,
   className = '',
@@ -11,39 +11,43 @@ export function ZoomPanIndicator({
   if (!isPending) return null;
 
   return (
-    <div className={`rsm-zoom-pan-indicator ${className}`} aria-live="polite">
-      <div className="rsm-zoom-pan-spinner">
-        <svg width="20" height="20" viewBox="0 0 20 20">
-          <circle
-            cx="10"
-            cy="10"
-            r="8"
-            fill="none"
-            stroke="#007acc"
-            strokeWidth="2"
-            opacity="0.3"
+    <g
+      className={`rsm-zoom-pan-indicator ${className}`}
+      role="status"
+      aria-busy="true"
+      aria-label="Updating map view"
+    >
+      <title>Updating map view</title>
+      <g className="rsm-zoom-pan-spinner" transform="translate(10 10)">
+        <circle
+          cx="10"
+          cy="10"
+          r="8"
+          fill="none"
+          stroke="#007acc"
+          strokeWidth="2"
+          opacity="0.3"
+        />
+        <circle
+          cx="10"
+          cy="10"
+          r="8"
+          fill="none"
+          stroke="#007acc"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray="12.566"
+          strokeDashoffset="12.566"
+        >
+          <animate
+            attributeName="stroke-dashoffset"
+            dur="0.8s"
+            values="12.566;0"
+            repeatCount="indefinite"
           />
-          <circle
-            cx="10"
-            cy="10"
-            r="8"
-            fill="none"
-            stroke="#007acc"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeDasharray="12.566"
-            strokeDashoffset="12.566"
-          >
-            <animate
-              attributeName="stroke-dashoffset"
-              dur="0.8s"
-              values="12.566;0"
-              repeatCount="indefinite"
-            />
-          </circle>
-        </svg>
-      </div>
-    </div>
+        </circle>
+      </g>
+    </g>
   );
 }
 

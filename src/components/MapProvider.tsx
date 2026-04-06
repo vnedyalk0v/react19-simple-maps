@@ -3,14 +3,12 @@ import * as d3Geo from 'd3-geo';
 import { GeoProjection } from 'd3-geo';
 import { MapContextType, ProjectionConfig } from '../types';
 import { createGeographyError } from '../utils';
-import {
-  validateProjectionConfig,
-  sanitizeString,
-} from '../utils/input-validation';
+import { validateProjectionConfig } from '../utils/input-validation';
 
 const { geoPath, ...projections } = d3Geo;
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
+const EMPTY_PROJECTION_CONFIG: ProjectionConfig = Object.freeze({});
 
 interface MakeProjectionParams {
   projectionConfig?: ProjectionConfig;
@@ -20,7 +18,7 @@ interface MakeProjectionParams {
 }
 
 const makeProjection = ({
-  projectionConfig = {},
+  projectionConfig = EMPTY_PROJECTION_CONFIG,
   projection = 'geoEqualEarth',
   width = 800,
   height = 600,
@@ -29,17 +27,29 @@ const makeProjection = ({
 
   if (isFunc) return projection as GeoProjection;
 
-  // Validate and sanitize projection input
-  const sanitizedProjection = sanitizeString(projection);
+  const trimmedProjection = projection.trim();
+  if (!trimmedProjection) {
+    throw createGeographyError(
+      'PROJECTION_ERROR',
+      'Projection name must be a non-empty string',
+    );
+  }
+
+  if (!/^geo[A-Za-z0-9]+$/.test(trimmedProjection)) {
+    throw createGeographyError(
+      'PROJECTION_ERROR',
+      `Invalid projection name: ${trimmedProjection}`,
+    );
+  }
 
   // Validate projection configuration
   const validatedConfig = validateProjectionConfig(projectionConfig);
 
-  const projectionName = sanitizedProjection as keyof typeof projections;
+  const projectionName = trimmedProjection as keyof typeof projections;
   if (!(projectionName in projections)) {
     throw createGeographyError(
       'PROJECTION_ERROR',
-      `Unknown projection: ${sanitizedProjection}`,
+      `Unknown projection: ${trimmedProjection}`,
       undefined,
       { availableProjections: Object.keys(projections) },
     );
@@ -76,7 +86,7 @@ const MapProvider: React.FC<MapProviderProps> = ({
   width,
   height,
   projection,
-  projectionConfig = {},
+  projectionConfig = EMPTY_PROJECTION_CONFIG,
   children,
 }) => {
   const projMemo = useMemo(() => {

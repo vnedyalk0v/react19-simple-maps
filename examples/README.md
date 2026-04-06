@@ -9,7 +9,7 @@ This directory contains TypeScript examples for `@vnedyalk0v/react19-simple-maps
 
 ## Security Notes
 
-Both examples include CSP meta tags and basic security headers in `index.html`. The Vite dev server also sets CSP/headers in `vite.config.ts`. The CSP allows `https://unpkg.com` for geography data.
+Both examples include CSP meta tags and basic security headers in `index.html`. The Vite dev server also sets CSP/headers in `vite.config.ts`. The examples use pinned `https://unpkg.com` geography URLs to avoid redirect-related fetch issues in browsers while staying within the CSP allowlist.
 
 See [SECURITY.md](./SECURITY.md) for details.
 

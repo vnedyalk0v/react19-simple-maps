@@ -93,7 +93,7 @@ import {
   createCoordinates,
 } from '@vnedyalk0v/react19-simple-maps';
 
-const geoUrl = 'https://unpkg.com/world-atlas@2/countries-110m.json';
+const geoUrl = 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json';
 
 const MapChart = () => {
   return (
@@ -228,7 +228,7 @@ import {
 
 ## Security Utilities
 
-The `./utils` subpath includes helpers for safer geography fetching. When you use URL-based geography data in `Geographies`, the internal fetch path applies URL validation, HTTPS-only defaults, response size checks, and optional SRI validation.
+The `./utils` subpath includes helpers for safer geography fetching. When you use URL-based geography data in `Geographies`, the internal fetch path applies URL validation, HTTPS-only defaults, resolved-hostname checks in server environments, response size checks, and optional SRI validation.
 
 ```tsx
 import {
@@ -245,6 +245,8 @@ if (process.env.NODE_ENV === 'development') {
   enableDevelopmentMode(true); // allow HTTP localhost
 }
 ```
+
+In production, the fetch path keeps HTTPS-only protections enabled and does not disable integrity checks for known geography sources.
 
 ## Debugging
 

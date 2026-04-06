@@ -9,12 +9,18 @@ import {
 } from 'vitest';
 import {
   validateGeographyUrl,
+  validateResolvedGeographyUrl,
+  validateContentType,
   configureGeographySecurity,
+  getGeographySecurityConfig,
   DEFAULT_GEOGRAPHY_FETCH_CONFIG,
 } from '../src/utils/geography-validation';
 import {
   getSRIForUrl,
+  getSRIConfig,
   configureSRI,
+  addCustomSRI,
+  disableSRI,
   DEFAULT_SRI_CONFIG,
 } from '../src/utils/subresource-integrity';
 
@@ -266,6 +272,13 @@ describe('SEC-003: SRI URL canonicalization', () => {
     expect(result?.enforceIntegrity).toBe(true);
   });
 
+  it('should find SRI for a pinned unpkg world-atlas URL', () => {
+    const url = 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json';
+    const result = getSRIForUrl(url);
+    expect(result).not.toBeNull();
+    expect(result?.enforceIntegrity).toBe(true);
+  });
+
   it('should find SRI for known URL with trailing fragment', () => {
     const url = 'https://unpkg.com/world-atlas@2/countries-110m.json#ignored';
     const result = getSRIForUrl(url);
@@ -295,6 +308,142 @@ describe('SEC-003: SRI URL canonicalization', () => {
 
     expect(() => getSRIForUrl('https://example.com/unknown.json')).toThrow(
       /SRI enforcement/i,
+    );
+  });
+
+  it('preserves custom SRI entries across partial config updates', () => {
+    addCustomSRI('https://example.com/custom.json', {
+      algorithm: 'sha384',
+      hash: 'sha384-customhash',
+      enforceIntegrity: true,
+    });
+
+    configureSRI({ enforceForAllSources: true });
+
+    expect(getSRIForUrl('https://example.com/custom.json')).toEqual({
+      algorithm: 'sha384',
+      hash: 'sha384-customhash',
+      enforceIntegrity: true,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-004: Resolved hostname validation blocks private-address DNS targets
+// ---------------------------------------------------------------------------
+describe('SEC-004: resolved hostname validation', () => {
+  beforeEach(() => {
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+  });
+
+  it('should block hostnames that resolve to private IP addresses', async () => {
+    await expect(
+      validateResolvedGeographyUrl(
+        'https://example.com/data.json',
+        getGeographySecurityConfig(),
+        async () => ['127.0.0.1'],
+      ),
+    ).rejects.toThrow(/resolves to a private IP address/i);
+  });
+
+  it('should allow hostnames that resolve only to public IP addresses', async () => {
+    await expect(
+      validateResolvedGeographyUrl(
+        'https://example.com/data.json',
+        getGeographySecurityConfig(),
+        async () => ['93.184.216.34'],
+      ),
+    ).resolves.toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-005: Production config hardening should not allow weaker global settings
+// ---------------------------------------------------------------------------
+describe('SEC-005: production security config hardening', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+    configureSRI({ ...DEFAULT_SRI_CONFIG });
+  });
+
+  it('keeps HTTPS-only geography fetching in production', () => {
+    process.env.NODE_ENV = 'production';
+
+    configureGeographySecurity({
+      STRICT_HTTPS_ONLY: false,
+      ALLOW_HTTP_LOCALHOST: true,
+      ALLOWED_PROTOCOLS: ['https:', 'http:'],
+    });
+
+    const config = getGeographySecurityConfig();
+    expect(config.STRICT_HTTPS_ONLY).toBe(true);
+    expect(config.ALLOW_HTTP_LOCALHOST).toBe(false);
+    expect(config.ALLOWED_PROTOCOLS).toEqual(['https:']);
+  });
+
+  it('preserves custom geography limits when enabling development mode', async () => {
+    process.env.NODE_ENV = 'development';
+    const { enableDevelopmentMode } =
+      await import('../src/utils/geography-validation');
+
+    configureGeographySecurity({
+      TIMEOUT_MS: 5000,
+      MAX_RESPONSE_SIZE: 10 * 1024 * 1024,
+    });
+    enableDevelopmentMode(true);
+
+    const config = getGeographySecurityConfig();
+    expect(config.TIMEOUT_MS).toBe(5000);
+    expect(config.MAX_RESPONSE_SIZE).toBe(10 * 1024 * 1024);
+    expect(config.ALLOW_HTTP_LOCALHOST).toBe(true);
+    expect(config.STRICT_HTTPS_ONLY).toBe(false);
+    expect(config.ALLOWED_PROTOCOLS).toEqual(['https:', 'http:']);
+  });
+
+  it('merges partial geography security updates with the existing config', () => {
+    configureGeographySecurity({
+      TIMEOUT_MS: 5000,
+      MAX_RESPONSE_SIZE: 10 * 1024 * 1024,
+    });
+    configureGeographySecurity({ ALLOW_HTTP_LOCALHOST: true });
+
+    const config = getGeographySecurityConfig();
+    expect(config.TIMEOUT_MS).toBe(5000);
+    expect(config.MAX_RESPONSE_SIZE).toBe(10 * 1024 * 1024);
+    expect(config.ALLOW_HTTP_LOCALHOST).toBe(true);
+  });
+
+  it('does not disable known-source SRI enforcement in production', () => {
+    process.env.NODE_ENV = 'production';
+
+    disableSRI();
+
+    expect(getSRIConfig().enforceForKnownSources).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-006: Content-Type validation should match exact MIME types
+// ---------------------------------------------------------------------------
+describe('SEC-006: strict content-type validation', () => {
+  it('accepts valid JSON content types with parameters', () => {
+    const response = new Response('{}', {
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    });
+
+    expect(() => validateContentType(response)).not.toThrow();
+  });
+
+  it('rejects misleading content types that only contain JSON as a substring', () => {
+    const response = new Response('{}', {
+      headers: { 'content-type': 'text/plain application/json' },
+    });
+
+    expect(() => validateContentType(response)).toThrow(
+      /Invalid content type/i,
     );
   });
 });

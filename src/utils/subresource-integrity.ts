@@ -21,7 +21,17 @@ export const KNOWN_GEOGRAPHY_SRI: Record<string, SRIConfig> = {
     hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
     enforceIntegrity: true,
   },
+  'https://unpkg.com/world-atlas@2.0.2/countries-110m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
+    enforceIntegrity: true,
+  },
   'https://unpkg.com/world-atlas@2/countries-50m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
+    enforceIntegrity: true,
+  },
+  'https://unpkg.com/world-atlas@2.0.2/countries-50m.json': {
     algorithm: 'sha384',
     hash: 'sha384-Aw4s9pX1PTPntIYkZ/qV9IYiF5Gv8eTl6Dd/TT56zfO1Wwd+owFwYUuuXNUMrWkc',
     enforceIntegrity: true,
@@ -32,7 +42,17 @@ export const KNOWN_GEOGRAPHY_SRI: Record<string, SRIConfig> = {
     hash: 'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
     enforceIntegrity: true,
   },
+  'https://unpkg.com/world-atlas@2.0.2/land-110m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-5oFOGoMd0tkagYW08lVco4uAi7XDEDBwBxOdeKx+SA1ihbsHiR/aFAJGretluTzG',
+    enforceIntegrity: true,
+  },
   'https://unpkg.com/world-atlas@2/land-50m.json': {
+    algorithm: 'sha384',
+    hash: 'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
+    enforceIntegrity: true,
+  },
+  'https://unpkg.com/world-atlas@2.0.2/land-50m.json': {
     algorithm: 'sha384',
     hash: 'sha384-c0VeCJd1wVbV5WQZNjf1hcMqPr9QXweEArnbdgS1k75TBNjta2M/NddyAulA/Glb',
     enforceIntegrity: true,
@@ -56,46 +76,82 @@ export const DEFAULT_SRI_CONFIG: SRIEnforcementConfig = {
   customSRIMap: {},
 };
 
-let currentSRIConfig: SRIEnforcementConfig = DEFAULT_SRI_CONFIG;
+function isProductionEnvironment(): boolean {
+  return (
+    typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
+  );
+}
+
+function createSRIEnforcementConfig(
+  config: Partial<SRIEnforcementConfig>,
+  baseConfig: SRIEnforcementConfig = currentSRIConfig,
+): SRIEnforcementConfig {
+  const nextConfig: SRIEnforcementConfig = {
+    ...DEFAULT_SRI_CONFIG,
+    ...baseConfig,
+    ...config,
+    customSRIMap: {
+      ...DEFAULT_SRI_CONFIG.customSRIMap,
+      ...baseConfig.customSRIMap,
+      ...config.customSRIMap,
+    },
+  };
+
+  if (isProductionEnvironment()) {
+    nextConfig.enforceForKnownSources = true;
+  }
+
+  return Object.freeze({
+    ...nextConfig,
+    customSRIMap: Object.freeze({ ...nextConfig.customSRIMap }),
+  });
+}
+
+let currentSRIConfig: SRIEnforcementConfig = Object.freeze({
+  ...DEFAULT_SRI_CONFIG,
+  customSRIMap: Object.freeze({ ...DEFAULT_SRI_CONFIG.customSRIMap }),
+});
 
 /**
  * Configure SRI enforcement settings
  * @param config - SRI enforcement configuration
  */
 export function configureSRI(config: Partial<SRIEnforcementConfig>): void {
-  currentSRIConfig = {
-    ...DEFAULT_SRI_CONFIG,
-    ...config,
-  };
+  currentSRIConfig = createSRIEnforcementConfig(config, currentSRIConfig);
+}
+
+export function getSRIConfig(): SRIEnforcementConfig {
+  return currentSRIConfig;
 }
 
 /**
  * Enable strict SRI mode (enforce for all sources)
  */
 export function enableStrictSRI(): void {
-  currentSRIConfig = {
+  currentSRIConfig = createSRIEnforcementConfig({
     ...currentSRIConfig,
     enforceForKnownSources: true,
     enforceForAllSources: true,
     allowUnknownSources: false,
-  };
+  });
 }
 
 /**
  * Disable SRI enforcement (not recommended for production)
  */
 export function disableSRI(): void {
-  if (process.env.NODE_ENV === 'production') {
+  if (isProductionEnvironment()) {
     // eslint-disable-next-line no-console
     console.warn('Disabling SRI in production is not recommended for security');
+    return;
   }
 
-  currentSRIConfig = {
+  currentSRIConfig = createSRIEnforcementConfig({
     ...currentSRIConfig,
     enforceForKnownSources: false,
     enforceForAllSources: false,
     allowUnknownSources: true,
-  };
+  });
 }
 
 /**
@@ -263,31 +319,31 @@ function canonicalizeUrlForSRI(url: string): string {
  * @param url - URL to check
  * @returns SRI configuration if validation is required, null otherwise
  */
-export function getSRIForUrl(url: string): SRIConfig | null {
+export function getSRIForUrl(
+  url: string,
+  config: SRIEnforcementConfig = currentSRIConfig,
+): SRIConfig | null {
   const canonical = canonicalizeUrlForSRI(url);
 
   // Check custom SRI map first (canonical then raw)
-  if (currentSRIConfig.customSRIMap[canonical]) {
-    return currentSRIConfig.customSRIMap[canonical];
+  if (config.customSRIMap[canonical]) {
+    return config.customSRIMap[canonical];
   }
-  if (currentSRIConfig.customSRIMap[url]) {
-    return currentSRIConfig.customSRIMap[url];
+  if (config.customSRIMap[url]) {
+    return config.customSRIMap[url];
   }
 
   // Check known sources (canonical then raw)
-  if (
-    KNOWN_GEOGRAPHY_SRI[canonical] &&
-    currentSRIConfig.enforceForKnownSources
-  ) {
+  if (KNOWN_GEOGRAPHY_SRI[canonical] && config.enforceForKnownSources) {
     return KNOWN_GEOGRAPHY_SRI[canonical];
   }
-  if (KNOWN_GEOGRAPHY_SRI[url] && currentSRIConfig.enforceForKnownSources) {
+  if (KNOWN_GEOGRAPHY_SRI[url] && config.enforceForKnownSources) {
     return KNOWN_GEOGRAPHY_SRI[url];
   }
 
   // If enforcing for all sources but no SRI available
-  if (currentSRIConfig.enforceForAllSources) {
-    if (!currentSRIConfig.allowUnknownSources) {
+  if (config.enforceForAllSources) {
+    if (!config.allowUnknownSources) {
       throw createGeographyFetchError(
         'SECURITY_ERROR',
         `SRI enforcement is enabled but no integrity hash is available for ${url}`,
@@ -306,10 +362,14 @@ export function getSRIForUrl(url: string): SRIConfig | null {
  */
 export function addCustomSRI(url: string, sri: SRIConfig): void {
   const canonical = canonicalizeUrlForSRI(url);
-  currentSRIConfig.customSRIMap[canonical] = sri;
-  if (canonical !== url) {
-    currentSRIConfig.customSRIMap[url] = sri;
-  }
+  currentSRIConfig = createSRIEnforcementConfig({
+    ...currentSRIConfig,
+    customSRIMap: {
+      ...currentSRIConfig.customSRIMap,
+      [canonical]: sri,
+      ...(canonical !== url ? { [url]: sri } : {}),
+    },
+  });
 }
 
 /**

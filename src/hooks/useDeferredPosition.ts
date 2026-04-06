@@ -2,7 +2,6 @@ import {
   useState,
   useDeferredValue,
   useTransition,
-  useOptimistic,
   useMemo,
   useCallback,
 } from 'react';
@@ -50,11 +49,11 @@ export function useDeferredPosition({
 
   const [position, setPosition] = useState<ZoomPanPosition>(initialPosition);
 
-  // Optimistic updates for immediate UI feedback during interactions
-  const [optimisticPosition, setOptimisticPosition] = useOptimistic(
-    position,
-    (_currentPosition, optimisticUpdate: ZoomPanPosition) => optimisticUpdate,
-  );
+  // Keep a live position for immediate UI feedback during drag/zoom interactions.
+  // useOptimistic is intended for transition/action-driven optimistic UI and emits
+  // runtime warnings for this continuous interaction pattern.
+  const [optimisticPosition, setOptimisticPosition] =
+    useState<ZoomPanPosition>(initialPosition);
 
   // React 19 optimization: Smart deferred value with performance hints
   const smoothPosition = useDeferredValue(optimisticPosition, initialPosition);
@@ -79,6 +78,7 @@ export function useDeferredPosition({
 
       setUpdateCount((prev) => prev + 1);
       setLastUpdateTime(now);
+      setOptimisticPosition(newPosition);
 
       // React 19 optimization: Batch rapid updates based on threshold
       if (timeSinceLastUpdate < deferredUpdateThreshold) {
@@ -94,16 +94,10 @@ export function useDeferredPosition({
     [lastUpdateTime, deferredUpdateThreshold, startTransition],
   );
 
-  // Enhanced optimistic position setter with validation
+  // Keep the optimistic position aligned with the caller-provided transform.
   const enhancedSetOptimisticPosition = useCallback(
     (newPosition: ZoomPanPosition) => {
-      // Validate position bounds to prevent invalid optimistic updates
-      const validatedPosition = {
-        ...newPosition,
-        k: Math.max(0.1, Math.min(10, newPosition.k)), // Reasonable zoom bounds
-      };
-
-      setOptimisticPosition(validatedPosition);
+      setOptimisticPosition(newPosition);
     },
     [setOptimisticPosition],
   );

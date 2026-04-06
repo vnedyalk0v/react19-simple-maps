@@ -22,6 +22,7 @@ import {
   generatePreparedFeaturesCacheKey,
   generateMeshCacheKey,
   getCachedGeographyData,
+  getPathFunctionCacheToken,
   cacheGeographyData,
   getCachedPreparedFeaturesWeakMap,
   cachePreparedFeaturesWeakMap,
@@ -135,16 +136,17 @@ export default function useGeographies({
   const preparedGeographies = useMemo(() => {
     if (rawFeatures.length === 0) return [];
 
+    const pathFunctionToken = getPathFunctionCacheToken(path);
+
     // Try WeakMap cache first if we have the original geography object
     if (
       loadedData &&
       typeof loadedData === 'object' &&
       !Array.isArray(loadedData)
     ) {
-      const pathFunctionString = path.toString().slice(0, 100);
       const weakMapCached = getCachedPreparedFeaturesWeakMap(
         loadedData,
-        pathFunctionString,
+        pathFunctionToken,
       );
       if (weakMapCached) {
         return weakMapCached;
@@ -169,8 +171,7 @@ export default function useGeographies({
       typeof loadedData === 'object' &&
       !Array.isArray(loadedData)
     ) {
-      const pathFunctionString = path.toString().slice(0, 100);
-      cachePreparedFeaturesWeakMap(loadedData, prepared, pathFunctionString);
+      cachePreparedFeaturesWeakMap(loadedData, prepared, pathFunctionToken);
     }
 
     return prepared;
