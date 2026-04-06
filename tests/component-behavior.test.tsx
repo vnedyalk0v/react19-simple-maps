@@ -204,7 +204,7 @@ describe('Geography component behavior', () => {
 });
 
 describe('ZoomableGroup component behavior', () => {
-  it('renders a pending indicator with SVG elements only', () => {
+  it('does not render a zoom or pan pending indicator', () => {
     mockUseZoomPan.mockReturnValue({
       mapRef: { current: null },
       position: { x: 0, y: 0, k: 1 },
@@ -221,9 +221,7 @@ describe('ZoomableGroup component behavior', () => {
     );
 
     expect(screen.getByTestId('zoomable-child')).toBeTruthy();
-    const indicator = container.querySelector('.rsm-zoom-pan-indicator');
-    expect(indicator?.tagName.toLowerCase()).toBe('g');
+    expect(container.querySelector('.rsm-zoom-pan-indicator')).toBeNull();
     expect(container.querySelector('svg div')).toBeNull();
-    expect(container.querySelector('.rsm-zoom-pan-spinner svg')).toBeNull();
   });
 });

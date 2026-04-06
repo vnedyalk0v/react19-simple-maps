@@ -9,7 +9,7 @@ the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Made the `ZoomableGroup` pending indicator SVG-safe so zoom and pan status UI renders correctly inside map SVG trees.
+- Removed the built-in `ZoomableGroup` zoom and pan indicator so direct map interactions stay visually clean.
 - Pinned the README and example geography URLs to exact world-atlas versions so the example maps load reliably without redirect-related fetch failures.
 - Removed React 19 optimistic update warnings during zoom and pan interactions by replacing transition-incompatible optimistic state updates with immediate local interaction state.
 - Fixed projection updates and stabilized projection reuse across unrelated rerenders so changing projections updates geography shapes correctly and hover interactions no longer recreate map projection state.

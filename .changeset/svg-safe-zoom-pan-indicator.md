@@ -2,9 +2,9 @@
 '@vnedyalk0v/react19-simple-maps': patch
 ---
 
-Made the `ZoomableGroup` pending indicator SVG-safe, pinned the example geography URLs to exact world-atlas versions, removed React 19 optimistic update warnings during zoom interactions, and fixed projection changes in the example maps.
+Removed the built-in `ZoomableGroup` zoom and pan indicator, pinned the example geography URLs to exact world-atlas versions, removed React 19 optimistic update warnings during zoom interactions, and fixed projection changes in the example maps.
 
-- Prevents invalid HTML from being rendered inside `<svg>` / `<g>` content during pending zoom and pan transitions.
+- Stops showing the built-in top-left zoom and pan indicator during map interactions so direct manipulation stays visually clean.
 - Avoids redirect-related fetch failures in the README and example apps by using direct `https://unpkg.com/world-atlas@2.0.2/...` geography URLs.
 - Replaces transition-incompatible optimistic zoom state updates with immediate local state so browser zoom and pan interactions no longer spam React console errors.
 - Keeps map projection and path caching aligned with the active projection so changing projections updates rendered geography shapes correctly and unrelated hover rerenders no longer recreate projection state.
