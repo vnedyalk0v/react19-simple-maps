@@ -1,31 +1,58 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useDeferredPosition } from '../src/hooks/useDeferredPosition';
 
 function DeferredPositionHarness() {
-  const { setOptimisticPosition, setPosition, startTransition } =
-    useDeferredPosition();
+  const {
+    setOptimisticPosition,
+    setPosition,
+    startTransition,
+    position,
+    optimisticPosition,
+    transformString,
+  } = useDeferredPosition({ deferredUpdateThreshold: 0 });
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        const nextPosition = {
-          x: 12,
-          y: 18,
-          k: 1.5,
-          dragging: new Event('zoom'),
-        };
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          const nextPosition = {
+            x: 12,
+            y: 18,
+            k: 1.5,
+            dragging: new Event('zoom'),
+          };
 
-        setOptimisticPosition(nextPosition);
-        startTransition(() => {
+          setOptimisticPosition(nextPosition);
+          startTransition(() => {
+            setPosition(nextPosition);
+          });
+        }}
+      >
+        update position
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const nextPosition = {
+            x: 24,
+            y: 36,
+            k: 12,
+            dragging: new Event('zoom'),
+          };
+
+          setOptimisticPosition(nextPosition);
           setPosition(nextPosition);
-        });
-      }}
-    >
-      update position
-    </button>
+        }}
+      >
+        set high zoom
+      </button>
+      <output data-testid="position-k">{position.k}</output>
+      <output data-testid="optimistic-k">{optimisticPosition.k}</output>
+      <output data-testid="transform-string">{transformString}</output>
+    </>
   );
 }
 
@@ -51,5 +78,17 @@ describe('useDeferredPosition', () => {
     expect(optimisticWarnings).toHaveLength(0);
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('preserves caller-provided zoom values instead of clamping them', () => {
+    const { getByRole } = render(<DeferredPositionHarness />);
+
+    fireEvent.click(getByRole('button', { name: 'set high zoom' }));
+
+    expect(screen.getByTestId('position-k').textContent).toBe('12');
+    expect(screen.getByTestId('optimistic-k').textContent).toBe('12');
+    expect(screen.getByTestId('transform-string').textContent).toContain(
+      'scale(12)',
+    );
   });
 });
