@@ -15,7 +15,32 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  validate:
+    name: validate (${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Use Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run CI validation
+        run: npm run ci
+
+  example-builds:
+    name: example builds
     runs-on: ubuntu-latest
 
     steps:
@@ -26,10 +51,35 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            examples/basic-map/package-lock.json
+            examples/interactive-map/package-lock.json
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci
 
-      - name: Run CI validation
-        run: npm run ci
+      - name: Build basic example
+        working-directory: examples/basic-map
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build interactive example
+        working-directory: examples/interactive-map
+        run: |
+          npm ci
+          npm run build
+
+  ci:
+    if: always()
+    needs: [validate, example-builds]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify required CI jobs succeeded
+        run: |
+          if [ "${{ needs.validate.result }}" != "success" ] || [ "${{ needs.example-builds.result }}" != "success" ]; then
+            echo "Required CI jobs did not succeed."
+            exit 1
+          fi

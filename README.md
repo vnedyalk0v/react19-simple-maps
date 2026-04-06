@@ -62,7 +62,7 @@ npm install @vnedyalk0v/react19-simple-maps
 
 - **React**: 19.0.0 or higher (peer dependency)
 - **React DOM**: 19.0.0 or higher (peer dependency)
-- **Node.js**: 18.0.0 or higher (development/build)
+- **Node.js**: 20.19.0 or higher (development/build)
 - **TypeScript**: 5.0.0 or higher (recommended)
 
 ## Utilities Subpath
