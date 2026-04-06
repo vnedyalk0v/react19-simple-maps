@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.4
+
+### Patch Changes
+
+- Fixed `useDeferredPosition` so controlled zoom values are no longer clamped to an internal `0.1..10` range.
+  - Preserves caller-provided zoom levels so `scaleExtent`, `minZoom`, and `maxZoom` continue to control the valid range.
+  - Prevents controlled zoom state from drifting away from d3-zoom when applications intentionally allow values above `10`.
+- Hardened geography fetching and validation in server environments.
+  - Blocks geography hostnames that resolve to private IP addresses during server-side fetch validation, reducing SSRF exposure from hostile DNS.
+  - Keeps production fetch security on hardened defaults for HTTPS-only geography loading and known-source integrity enforcement, while preserving custom security limits and custom SRI entries across partial configuration updates.
+  - Tightens content-type validation to match exact MIME types and rejects malformed URL input, including embedded control characters, instead of sanitizing it into different accepted values.
+- Removed the built-in `ZoomableGroup` zoom and pan indicator, pinned the example geography URLs to exact world-atlas versions, removed React 19 optimistic update warnings during zoom interactions, and fixed projection changes in the example maps.
+  - Stops showing the built-in top-left zoom and pan indicator during map interactions so direct manipulation stays visually clean.
+  - Avoids redirect-related fetch failures in the README and example apps by using direct `https://unpkg.com/world-atlas@2.0.2/...` geography URLs.
+  - Replaces transition-incompatible optimistic zoom state updates with immediate local state so browser zoom and pan interactions no longer spam React console errors.
+  - Keeps map projection and path caching aligned with the active projection so changing projections updates rendered geography shapes correctly and unrelated hover rerenders no longer recreate projection state.
+  - Updates the interactive example to keep hover details from shifting page layout and to render shared country borders separately, reducing flicker when moving across country edges.
+  - Applies the same shared-border rendering approach to the basic example, renders selected countries in a top overlay layer so their outlines stay visually consistent, and refreshes the example app dependency ranges to current React 19 and Vite patch lines.
+
 All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
