@@ -76,39 +76,28 @@ export function useDeferredPosition({
       const now = performance.now();
       const timeSinceLastUpdate = now - lastUpdateTime;
 
-      const validatedPosition = {
-        ...newPosition,
-        k: Math.max(0.1, Math.min(10, newPosition.k)), // Reasonable zoom bounds
-      };
-
       setUpdateCount((prev) => prev + 1);
       setLastUpdateTime(now);
-      setOptimisticPosition(validatedPosition);
+      setOptimisticPosition(newPosition);
 
       // React 19 optimization: Batch rapid updates based on threshold
       if (timeSinceLastUpdate < deferredUpdateThreshold) {
         // For rapid updates, use transition to prevent blocking
         startTransition(() => {
-          setPosition(validatedPosition);
+          setPosition(newPosition);
         });
       } else {
         // For slower updates, update immediately
-        setPosition(validatedPosition);
+        setPosition(newPosition);
       }
     },
     [lastUpdateTime, deferredUpdateThreshold, startTransition],
   );
 
-  // Enhanced optimistic position setter with validation
+  // Keep the optimistic position aligned with the caller-provided transform.
   const enhancedSetOptimisticPosition = useCallback(
     (newPosition: ZoomPanPosition) => {
-      // Validate position bounds to prevent invalid optimistic updates
-      const validatedPosition = {
-        ...newPosition,
-        k: Math.max(0.1, Math.min(10, newPosition.k)), // Reasonable zoom bounds
-      };
-
-      setOptimisticPosition(validatedPosition);
+      setOptimisticPosition(newPosition);
     },
     [setOptimisticPosition],
   );

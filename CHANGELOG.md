@@ -15,6 +15,7 @@ the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Fixed projection updates and stabilized projection reuse across unrelated rerenders so changing projections updates geography shapes correctly and hover interactions no longer recreate map projection state.
 - Reduced hover flicker in the interactive example by reserving space for hover details and rendering shared country borders separately instead of stroking each geography individually.
 - Updated both examples to render selected countries in a top overlay layer so selected outlines stay visually consistent, kept the basic example on shared border rendering to reduce edge flicker there as well, and refreshed the example app dependency ranges to current React 19 and Vite patch lines.
+- Fixed `useDeferredPosition` so controlled zoom values continue to respect caller-provided zoom bounds instead of being clamped to an internal `0.1..10` range.
 
 ## [2.0.3] - 2026-04-02
 
