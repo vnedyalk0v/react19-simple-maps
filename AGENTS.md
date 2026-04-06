@@ -28,6 +28,9 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 - For every task, create a new branch from `dev`.
 - Before branching, update `dev` from remote so it is current with `origin/dev`.
 - Keep all task work on that new branch and open a PR to merge.
+- After a PR is merged, do not continue follow-up work on that branch. Create a new branch from updated `dev`.
+- Before claiming a fix is in `dev` or in a specific PR, verify the current git and GitHub state instead of relying on memory or prior conversation context.
+- If review feedback arrives after merge, treat it as a new task: branch from current `dev`, apply the fix, validate it, and open a new PR.
 
 ## Release Notes (Required)
 
@@ -93,6 +96,9 @@ const center = createCoordinates(0, 0);
 - Do not weaken security defaults without an explicit user request and matching tests/docs.
 - Update known SRI hashes only when adding verified URLs.
 - Keep any preloading, DNS hinting, or caching logic aligned with the same validation rules as the main fetch path.
+- Security hardening must preserve documented supported runtimes. If a safeguard depends on a platform API, provide a compatible fallback for supported Node versions.
+- Partial security configuration updates must be composable unless replacement behavior is explicitly documented.
+- When changing SRI sources or hashes, also verify that the generator inputs and checked-in generated artifacts stay in sync.
 
 ## Performance, KISS, and DRY
 
@@ -109,6 +115,7 @@ const center = createCoordinates(0, 0);
 - Remove unverifiable claims; prefer concrete statements tied to the repo.
 - Examples should demonstrate idiomatic package usage, not app-specific workarounds.
 - If you change public APIs, update examples and README accordingly.
+- If docs or examples show sequential configuration calls, verify that the documented call order composes correctly in the implementation.
 
 ## Tests and Validation
 
@@ -116,3 +123,7 @@ const center = createCoordinates(0, 0);
 - For bug fixes, add a focused regression test when practical.
 - Keep tests focused, deterministic, and free of unnecessary network or timing fragility.
 - When touching exported behavior, security-sensitive code, or build/package configuration, run the most relevant validation commands before finishing.
+- Verify review findings against the current code before fixing them. Only change code for findings that are actually valid.
+- Prefer behavioral assertions over implementation-detail assertions, especially under Strict Mode.
+- For fixes involving generated files, rerun the generator and verify the output matches the checked-in artifacts.
+- When reporting branch, PR, or merge status, verify repository state directly before answering.
