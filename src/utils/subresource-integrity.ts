@@ -84,12 +84,16 @@ function isProductionEnvironment(): boolean {
 
 function createSRIEnforcementConfig(
   config: Partial<SRIEnforcementConfig>,
+  baseConfig: SRIEnforcementConfig = currentSRIConfig,
 ): SRIEnforcementConfig {
   const nextConfig: SRIEnforcementConfig = {
     ...DEFAULT_SRI_CONFIG,
+    ...baseConfig,
     ...config,
     customSRIMap: {
-      ...(config.customSRIMap ?? DEFAULT_SRI_CONFIG.customSRIMap),
+      ...DEFAULT_SRI_CONFIG.customSRIMap,
+      ...baseConfig.customSRIMap,
+      ...config.customSRIMap,
     },
   };
 
@@ -103,14 +107,17 @@ function createSRIEnforcementConfig(
   });
 }
 
-let currentSRIConfig: SRIEnforcementConfig = createSRIEnforcementConfig({});
+let currentSRIConfig: SRIEnforcementConfig = Object.freeze({
+  ...DEFAULT_SRI_CONFIG,
+  customSRIMap: Object.freeze({ ...DEFAULT_SRI_CONFIG.customSRIMap }),
+});
 
 /**
  * Configure SRI enforcement settings
  * @param config - SRI enforcement configuration
  */
 export function configureSRI(config: Partial<SRIEnforcementConfig>): void {
-  currentSRIConfig = createSRIEnforcementConfig(config);
+  currentSRIConfig = createSRIEnforcementConfig(config, currentSRIConfig);
 }
 
 export function getSRIConfig(): SRIEnforcementConfig {
