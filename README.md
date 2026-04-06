@@ -11,6 +11,13 @@ Create interactive SVG maps in React with d3-geo and topojson using a TypeScript
 
 > Modernized fork of [react-simple-maps](https://github.com/zcreativelabs/react-simple-maps) with React 19 support and TypeScript-first tooling.
 
+## Why this package?
+
+- Built specifically for **React 19+** instead of preserving compatibility with older React release lines.
+- Ships as a **modern ESM-only library** with explicit exports, tree-shakeable output, and TypeScript definitions.
+- Provides a **TypeScript-first API** with branded coordinate helpers that reduce common map-coordinate mistakes.
+- Includes **safer URL-based geography loading** with validation, HTTPS-first defaults, response-size checks, and optional SRI helpers.
+
 ## Key Features
 
 - React 19+ only (peer dependencies)
@@ -25,6 +32,8 @@ Create interactive SVG maps in React with d3-geo and topojson using a TypeScript
 
 - [npm Package](https://www.npmjs.com/package/@vnedyalk0v/react19-simple-maps)
 - [Examples](./examples/)
+- [Support Policy](./docs/support.md)
+- [CI/CD Architecture](./docs/ci-cd.md)
 - [Changelog](./CHANGELOG.md)
 - [Issues](https://github.com/vnedyalk0v/react19-simple-maps/issues)
 - [Discussions](https://github.com/vnedyalk0v/react19-simple-maps/discussions)
@@ -53,6 +62,8 @@ pnpm add @vnedyalk0v/react19-simple-maps
 - **Node.js**: 20.19.0 or higher (development/build)
 - **TypeScript**: 5.0.0 or higher (recommended)
 
+For support expectations, compatibility boundaries, and release behavior, see the [Support Policy](./docs/support.md).
+
 ## Utilities Subpath
 
 You can import helper utilities directly from the `./utils` subpath:
@@ -63,6 +74,17 @@ import {
   configureSRI,
 } from '@vnedyalk0v/react19-simple-maps/utils';
 ```
+
+The `./utils` entry includes both recommended helpers and more advanced low-level utilities. Prefer the documented helpers below unless you have a specific integration need.
+
+### Recommended `./utils` helpers
+
+For most applications, start with these helpers:
+
+- Geography loading and preparation: `fetchGeographiesCache`, `preloadGeography`, `getFeatures`, `getMesh`, `prepareFeatures`, `prepareMesh`, `createConnectorPath`
+- Validation and security: `validateGeographyUrl`, `validateGeographyData`, `configureGeographySecurity`, `enableDevelopmentMode`
+- Integrity helpers: `configureSRI`, `enableStrictSRI`, `disableSRI`, `addCustomSRI`, `getSRIForUrl`, `validateSRI`
+- Data guards: `isTopology`, `isFeatureCollection`, `isFeature`, `isValidGeographyUrl`, `isValidGeographyData`
 
 ## Migration Notes (from react-simple-maps)
 
@@ -217,6 +239,8 @@ import {
 ## Security Utilities
 
 The `./utils` subpath includes helpers for safer geography fetching. When you use URL-based geography data in `Geographies`, the internal fetch path applies URL validation, HTTPS-only defaults, resolved-hostname checks in server environments, response size checks, and optional SRI validation.
+
+Prefer `fetchGeographiesCache` for direct utility-based loading. `fetchGeographies` remains available for compatibility but is deprecated.
 
 ```tsx
 import {
