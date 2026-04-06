@@ -26,6 +26,10 @@ the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Clarified that development and build workflows require Node.js 20.19.0 or newer, and CI now validates the package on Node.js 20 and Node.js 22.
+
 ### Fixed
 
 - Removed the built-in `ZoomableGroup` zoom and pan indicator so direct map interactions stay visually clean.
