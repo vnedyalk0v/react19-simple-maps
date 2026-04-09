@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <div className="container">
       <div className="header">
         <h1>Basic World Map</h1>
-        <p>A simple example using react19-simple-maps v2.0.3</p>
+        <p>A simple example using react19-simple-maps</p>
         {selectedCountry && (
           <div className="status">
             Selected: <strong>{selectedCountry}</strong>

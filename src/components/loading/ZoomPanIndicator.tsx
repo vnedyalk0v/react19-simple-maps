@@ -15,7 +15,6 @@ export function ZoomPanIndicator({
       className={`rsm-zoom-pan-indicator ${className}`}
       role="status"
       aria-busy="true"
-      aria-label="Updating map view"
     >
       <title>Updating map view</title>
       <g className="rsm-zoom-pan-spinner" transform="translate(10 10)">

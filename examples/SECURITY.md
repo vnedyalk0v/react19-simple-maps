@@ -53,7 +53,7 @@ The examples also set these headers (via HTML meta tags and dev server headers):
 
 ## External Resources
 
-The examples load geography data from pinned `https://unpkg.com/world-atlas@2.0.2/...` URLs, which are explicitly allowed in the CSP `connect-src` directive. Pinning the exact package version avoids browser-visible redirect hops that can interfere with strict fetch validation.
+The examples load geography data from pinned `https://unpkg.com/world-atlas@2.0.2/...` URLs, which are explicitly allowed in the CSP `connect-src` directive. Pinning the exact package version avoids browser-visible redirect hops and keeps the requested geography URLs predictable.
 
 ## Customizing Security
 

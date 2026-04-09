@@ -21,6 +21,7 @@ import {
   configureSRI,
   addCustomSRI,
   disableSRI,
+  generateSRIHash,
   DEFAULT_SRI_CONFIG,
 } from '../src/utils/subresource-integrity';
 
@@ -426,6 +427,51 @@ describe('SEC-005: production security config hardening', () => {
 });
 
 // ---------------------------------------------------------------------------
+// SEC-003b: exported SRI hash generation validates URLs first
+// ---------------------------------------------------------------------------
+describe('SEC-003b: exported SRI hash generation validates URLs first', () => {
+  beforeEach(() => {
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+  });
+
+  it('rejects blocked URLs before issuing a fetch request', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('fetch should not be called'));
+
+    await expect(
+      generateSRIHash('https://127.0.0.1/private.json'),
+    ).rejects.toThrow(/private IP address|not allowed/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('enforces the configured response size limit when generating an SRI hash', async () => {
+    configureGeographySecurity({
+      STRICT_HTTPS_ONLY: false,
+      ALLOW_HTTP_LOCALHOST: true,
+      ALLOWED_PROTOCOLS: ['https:', 'http:'],
+      MAX_RESPONSE_SIZE: 4,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Uint8Array([1, 2, 3, 4, 5]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(generateSRIHash('http://localhost/data.json')).rejects.toThrow(
+      /Response too large/i,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SEC-006: Content-Type validation should match exact MIME types
 // ---------------------------------------------------------------------------
 describe('SEC-006: strict content-type validation', () => {
@@ -443,6 +489,22 @@ describe('SEC-006: strict content-type validation', () => {
     });
 
     expect(() => validateContentType(response)).toThrow(
+      /Invalid content type/i,
+    );
+  });
+
+  it('rejects near-miss MIME types that are not allowed geography payloads', () => {
+    const jsonRpcResponse = new Response('{}', {
+      headers: { 'content-type': 'application/json-rpc' },
+    });
+    const jsonLdResponse = new Response('{}', {
+      headers: { 'content-type': 'application/ld+json' },
+    });
+
+    expect(() => validateContentType(jsonRpcResponse)).toThrow(
+      /Invalid content type/i,
+    );
+    expect(() => validateContentType(jsonLdResponse)).toThrow(
       /Invalid content type/i,
     );
   });

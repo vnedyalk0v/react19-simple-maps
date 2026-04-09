@@ -262,7 +262,7 @@ const App: React.FC = () => {
 
                       return (
                         <Geography
-                          key={name || geo.id}
+                          key={`${geo.id ?? 'unknown'}-${name}`}
                           geography={geo}
                           onClick={() => handleCountryClick(name)}
                           onMouseEnter={() => handleCountryEnter(name)}

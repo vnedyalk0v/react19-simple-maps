@@ -126,10 +126,31 @@ function getObjectCacheToken(value: unknown): string {
   return String(value);
 }
 
+function hashString(value: string): string {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return `str:${value.length}:${(hash >>> 0).toString(16)}`;
+}
+
 // Generate cache key from geography data
 function generateCacheKey(data: unknown, additionalKey?: string): string {
-  const baseKey =
-    typeof data === 'string' ? data : JSON.stringify(data).slice(0, 100); // Limit key length
+  let baseKey: string;
+
+  if (typeof data === 'string') {
+    baseKey = hashString(data);
+  } else if (
+    (typeof data === 'object' || typeof data === 'function') &&
+    data !== null
+  ) {
+    baseKey = getObjectCacheToken(data);
+  } else {
+    baseKey = hashString(String(data));
+  }
 
   return additionalKey ? `${baseKey}:${additionalKey}` : baseKey;
 }
@@ -182,7 +203,7 @@ export function generateFeaturesCacheKey(
   parseGeographies?: (features: Feature<Geometry>[]) => Feature<Geometry>[],
 ): string {
   const parseKey = parseGeographies
-    ? parseGeographies.toString().slice(0, 50)
+    ? getObjectCacheToken(parseGeographies)
     : 'default';
   return generateCacheKey(data, `features:${parseKey}`);
 }
@@ -191,10 +212,7 @@ export function generatePreparedFeaturesCacheKey(
   features: Feature<Geometry>[],
   pathFunction: unknown,
 ): string {
-  const featuresKey = features
-    .map((f) => f.id || f.properties?.NAME || '')
-    .join(',')
-    .slice(0, 100);
+  const featuresKey = getObjectCacheToken(features);
   const pathKey = getObjectCacheToken(pathFunction);
   return `prepared:${featuresKey}:${pathKey}`;
 }

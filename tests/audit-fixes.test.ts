@@ -7,8 +7,16 @@ import {
   validateCoordinates,
   validateArray,
   validateObject,
+  validateProjectionConfig,
 } from '../src/utils/input-validation';
 import { createScaleExtent } from '../src/types';
+import {
+  generateFeaturesCacheKey,
+  generatePreparedFeaturesCacheKey,
+} from '../src/utils/geography-cache';
+import { validateGeographyData } from '../src/utils';
+import { getGeographyCoordinates } from '../src/utils/geography-utils';
+import type { Feature, Geometry } from 'geojson';
 
 // --- Fix 5: Validation helpers argument order ---
 describe('Validation error messages (finding 6.1)', () => {
@@ -204,5 +212,107 @@ describe('MapDebugger singleton (finding 7.1)', () => {
     debugger_.setDebugMode(false);
     debugger_.clear();
     consoleSpy.mockRestore();
+  });
+});
+
+describe('security hardening regressions', () => {
+  it('validateObject drops dangerous prototype keys and returns a null-prototype object', () => {
+    const payload = JSON.parse(
+      '{"safe":"value","__proto__":{"polluted":true,"center":[1,2]}}',
+    ) as Record<string, unknown>;
+
+    const validated = validateObject(payload);
+
+    expect(Object.getPrototypeOf(validated)).toBeNull();
+    expect(Object.hasOwn(validated, 'safe')).toBe(true);
+    expect(validated.safe).toBe('value');
+    expect(Object.hasOwn(validated, '__proto__')).toBe(false);
+    expect(Object.hasOwn(validated, 'center')).toBe(false);
+    expect((validated as Record<string, unknown>).center).toBeUndefined();
+  });
+
+  it('validateProjectionConfig ignores inherited values introduced through __proto__ payloads', () => {
+    const payload = JSON.parse(
+      '{"__proto__":{"center":[1,2],"scale":10}}',
+    ) as Record<string, unknown>;
+
+    expect(validateProjectionConfig(payload)).toEqual({});
+  });
+
+  it('uses object identity and function identity for feature cache keys', () => {
+    const first = {
+      type: 'Topology',
+      objects: { countries: { type: 'GeometryCollection', geometries: [] } },
+      arcs: [],
+      transform: { scale: [1, 1], translate: [0, 0] },
+      meta: 'a',
+    };
+    const second = {
+      type: 'Topology',
+      objects: { countries: { type: 'GeometryCollection', geometries: [] } },
+      arcs: [],
+      transform: { scale: [1, 1], translate: [0, 0] },
+      meta: 'b',
+    };
+
+    const parseOne = (features: Feature<Geometry>[]) => features;
+    const parseTwo = (features: Feature<Geometry>[]) => features;
+
+    expect(generateFeaturesCacheKey(first)).not.toBe(
+      generateFeaturesCacheKey(second),
+    );
+    expect(generateFeaturesCacheKey(first, parseOne)).not.toBe(
+      generateFeaturesCacheKey(first, parseTwo),
+    );
+  });
+
+  it('uses feature array identity for prepared feature cache keys', () => {
+    const makeFeature = (name: string): Feature<Geometry> => ({
+      type: 'Feature',
+      properties: { NAME: name },
+      geometry: { type: 'Point', coordinates: [0, 0] },
+    });
+
+    const first = [makeFeature('Shared')];
+    const second = [makeFeature('Shared')];
+    const path = () => 'M0,0';
+
+    expect(generatePreparedFeaturesCacheKey(first, path)).not.toBe(
+      generatePreparedFeaturesCacheKey(second, path),
+    );
+  });
+
+  it('returns null instead of overflowing the stack for deeply nested GeometryCollections', () => {
+    const nestedGeometry = Array.from({ length: 12 }).reduce<Geometry>(
+      (geometry) => ({
+        type: 'GeometryCollection',
+        geometries: [geometry],
+      }),
+      { type: 'Point', coordinates: [10, 20] },
+    );
+
+    const feature: Feature<Geometry> = {
+      type: 'Feature',
+      properties: {},
+      geometry: nestedGeometry,
+    };
+
+    expect(getGeographyCoordinates(feature)).toBeNull();
+  });
+
+  it('rejects malformed topology and feature collection shapes', () => {
+    expect(() =>
+      validateGeographyData({
+        type: 'Topology',
+        objects: [],
+      }),
+    ).toThrow(/objects map/i);
+
+    expect(() =>
+      validateGeographyData({
+        type: 'FeatureCollection',
+        features: 'not-an-array',
+      }),
+    ).toThrow(/features array/i);
   });
 });

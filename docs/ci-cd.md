@@ -40,8 +40,10 @@ That command includes:
 - formatting check
 - tests
 - build verification
+- runs validation under a Node.js matrix (20, 22) in the `validate` job
+- builds examples in a separate `example-builds` job to verify they work with the package
 
-This keeps local validation and GitHub validation aligned.
+This keeps local validation and GitHub validation aligned. See `.github/workflows/ci.yml` for the `validate` and `example-builds` job definitions.
 
 ## Release workflow
 

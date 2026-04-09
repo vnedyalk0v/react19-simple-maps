@@ -18,7 +18,7 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-function DefaultErrorFallback(error: Error, retry: () => void) {
+function DefaultErrorFallback(_error: Error, retry: () => void) {
   return (
     <g className="rsm-error-boundary" role="alert">
       <text
@@ -29,7 +29,7 @@ function DefaultErrorFallback(error: Error, retry: () => void) {
         dominantBaseline="middle"
         fill="currentColor"
       >
-        {`Failed to load geography data: ${error.message}`}
+        Failed to load geography data.
       </text>
       <text
         className="rsm-error-retry"

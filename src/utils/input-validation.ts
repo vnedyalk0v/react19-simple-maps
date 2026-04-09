@@ -36,7 +36,7 @@ function createValidationConfig(
 
   if (
     typeof process !== 'undefined' &&
-    process.env.NODE_ENV === 'production' &&
+    process?.env?.NODE_ENV === 'production' &&
     nextConfig.allowUnsafeContent
   ) {
     nextConfig.allowUnsafeContent = false;
@@ -278,6 +278,12 @@ export function validateArray<T>(
  * @param depth - Current depth (for recursion)
  * @returns Validated object
  */
+const DANGEROUS_OBJECT_KEYS = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+]);
+
 export function validateObject(
   input: unknown,
   depth: number = 0,
@@ -297,13 +303,14 @@ export function validateObject(
   }
 
   const obj = input as Record<string, unknown>;
-  const validated: Record<string, unknown> = {};
+  const validated: Record<string, unknown> = Object.create(null);
 
   for (const [key, value] of Object.entries(obj)) {
-    // Sanitize key
     const sanitizedKey = sanitizeString(key);
+    if (DANGEROUS_OBJECT_KEYS.has(sanitizedKey)) {
+      continue;
+    }
 
-    // Recursively validate nested objects
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       validated[sanitizedKey] = validateObject(value, depth + 1);
     } else {
@@ -323,11 +330,11 @@ export function validateProjectionConfig(input: unknown): ProjectionConfig {
   const obj = validateObject(input);
   const config: ProjectionConfig = {};
 
-  if ('center' in obj && obj.center !== undefined) {
+  if (Object.hasOwn(obj, 'center') && obj.center !== undefined) {
     config.center = validateCoordinates(obj.center);
   }
 
-  if ('rotate' in obj && obj.rotate !== undefined) {
+  if (Object.hasOwn(obj, 'rotate') && obj.rotate !== undefined) {
     if (Array.isArray(obj.rotate)) {
       const rotateArray = validateArray(obj.rotate, (item) =>
         validateNumber(item, -360, 360),
@@ -347,11 +354,11 @@ export function validateProjectionConfig(input: unknown): ProjectionConfig {
     }
   }
 
-  if ('scale' in obj && obj.scale !== undefined) {
+  if (Object.hasOwn(obj, 'scale') && obj.scale !== undefined) {
     config.scale = validateNumber(obj.scale, 0.1, 10000);
   }
 
-  if ('parallels' in obj && obj.parallels !== undefined) {
+  if (Object.hasOwn(obj, 'parallels') && obj.parallels !== undefined) {
     if (Array.isArray(obj.parallels)) {
       const parallelsArray = validateArray(obj.parallels, (item) =>
         validateNumber(item, -90, 90),
@@ -426,11 +433,14 @@ export function validateSecurityConfig(
   const obj = validateObject(input);
   const config: Partial<GeographySecurityConfig> = {};
 
-  if ('TIMEOUT_MS' in obj && obj.TIMEOUT_MS !== undefined) {
+  if (Object.hasOwn(obj, 'TIMEOUT_MS') && obj.TIMEOUT_MS !== undefined) {
     config.TIMEOUT_MS = validateNumber(obj.TIMEOUT_MS, 1000, 60000);
   }
 
-  if ('MAX_RESPONSE_SIZE' in obj && obj.MAX_RESPONSE_SIZE !== undefined) {
+  if (
+    Object.hasOwn(obj, 'MAX_RESPONSE_SIZE') &&
+    obj.MAX_RESPONSE_SIZE !== undefined
+  ) {
     config.MAX_RESPONSE_SIZE = validateNumber(
       obj.MAX_RESPONSE_SIZE,
       1024,
@@ -439,7 +449,7 @@ export function validateSecurityConfig(
   }
 
   if (
-    'ALLOWED_CONTENT_TYPES' in obj &&
+    Object.hasOwn(obj, 'ALLOWED_CONTENT_TYPES') &&
     obj.ALLOWED_CONTENT_TYPES !== undefined
   ) {
     config.ALLOWED_CONTENT_TYPES = validateArray(
@@ -448,7 +458,10 @@ export function validateSecurityConfig(
     );
   }
 
-  if ('ALLOWED_PROTOCOLS' in obj && obj.ALLOWED_PROTOCOLS !== undefined) {
+  if (
+    Object.hasOwn(obj, 'ALLOWED_PROTOCOLS') &&
+    obj.ALLOWED_PROTOCOLS !== undefined
+  ) {
     config.ALLOWED_PROTOCOLS = validateArray(obj.ALLOWED_PROTOCOLS, (item) => {
       const protocol = sanitizeString(item);
       if (!['https:', 'http:'].includes(protocol)) {
@@ -461,7 +474,10 @@ export function validateSecurityConfig(
     });
   }
 
-  if ('ALLOW_HTTP_LOCALHOST' in obj && obj.ALLOW_HTTP_LOCALHOST !== undefined) {
+  if (
+    Object.hasOwn(obj, 'ALLOW_HTTP_LOCALHOST') &&
+    obj.ALLOW_HTTP_LOCALHOST !== undefined
+  ) {
     if (typeof obj.ALLOW_HTTP_LOCALHOST !== 'boolean') {
       throw createGeographyFetchError(
         'VALIDATION_ERROR',
@@ -471,7 +487,10 @@ export function validateSecurityConfig(
     config.ALLOW_HTTP_LOCALHOST = obj.ALLOW_HTTP_LOCALHOST;
   }
 
-  if ('STRICT_HTTPS_ONLY' in obj && obj.STRICT_HTTPS_ONLY !== undefined) {
+  if (
+    Object.hasOwn(obj, 'STRICT_HTTPS_ONLY') &&
+    obj.STRICT_HTTPS_ONLY !== undefined
+  ) {
     if (typeof obj.STRICT_HTTPS_ONLY !== 'boolean') {
       throw createGeographyFetchError(
         'VALIDATION_ERROR',
@@ -493,9 +512,9 @@ export function validateSRIConfig(input: unknown): SRIConfig {
   const obj = validateObject(input);
 
   if (
-    !('algorithm' in obj) ||
-    !('hash' in obj) ||
-    !('enforceIntegrity' in obj)
+    !Object.hasOwn(obj, 'algorithm') ||
+    !Object.hasOwn(obj, 'hash') ||
+    !Object.hasOwn(obj, 'enforceIntegrity')
   ) {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
