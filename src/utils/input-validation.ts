@@ -36,7 +36,7 @@ function createValidationConfig(
 
   if (
     typeof process !== 'undefined' &&
-    process.env.NODE_ENV === 'production' &&
+    process?.env?.NODE_ENV === 'production' &&
     nextConfig.allowUnsafeContent
   ) {
     nextConfig.allowUnsafeContent = false;

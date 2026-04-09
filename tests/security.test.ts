@@ -492,4 +492,20 @@ describe('SEC-006: strict content-type validation', () => {
       /Invalid content type/i,
     );
   });
+
+  it('rejects near-miss MIME types that are not allowed geography payloads', () => {
+    const jsonRpcResponse = new Response('{}', {
+      headers: { 'content-type': 'application/json-rpc' },
+    });
+    const jsonLdResponse = new Response('{}', {
+      headers: { 'content-type': 'application/ld+json' },
+    });
+
+    expect(() => validateContentType(jsonRpcResponse)).toThrow(
+      /Invalid content type/i,
+    );
+    expect(() => validateContentType(jsonLdResponse)).toThrow(
+      /Invalid content type/i,
+    );
+  });
 });

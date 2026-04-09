@@ -35,11 +35,7 @@ describe('Geographies integration', () => {
           {({ geographies }) => (
             <>
               {geographies.map((geo) => (
-                <Geography
-                  key={geo.rsmKey}
-                  geography={geo}
-                  data-testid="integration-geography"
-                />
+                <Geography key={geo.rsmKey} geography={geo} />
               ))}
             </>
           )}
@@ -103,12 +99,6 @@ describe('Geographies integration', () => {
       expect(nextPath).not.toBe(equalEarthPath);
     });
 
-    const mercatorPath = container
-      .querySelector('path.rsm-geography')
-      ?.getAttribute('d');
-
     expect(equalEarthPath).toBeTruthy();
-    expect(mercatorPath).toBeTruthy();
-    expect(mercatorPath).not.toBe(equalEarthPath);
   });
 });

@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { StrictMode } from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useDeferredPosition } from '../src/hooks/useDeferredPosition';
 
-function DeferredPositionHarness() {
+interface DeferredPositionHarnessProps {
+  deferredUpdateThreshold?: number;
+}
+
+function DeferredPositionHarness({
+  deferredUpdateThreshold = 0,
+}: DeferredPositionHarnessProps) {
   const {
     setOptimisticPosition,
     setPosition,
@@ -11,7 +17,9 @@ function DeferredPositionHarness() {
     position,
     optimisticPosition,
     transformString,
-  } = useDeferredPosition({ deferredUpdateThreshold: 0 });
+    isPending,
+    isDeferred,
+  } = useDeferredPosition({ deferredUpdateThreshold });
 
   return (
     <>
@@ -67,7 +75,17 @@ function DeferredPositionHarness() {
       <output data-testid="optimistic-x">{optimisticPosition.x}</output>
       <output data-testid="optimistic-y">{optimisticPosition.y}</output>
       <output data-testid="transform-string">{transformString}</output>
+      <output data-testid="is-pending">{String(isPending)}</output>
+      <output data-testid="is-deferred">{String(isDeferred)}</output>
     </>
+  );
+}
+
+function renderHarness(props?: DeferredPositionHarnessProps) {
+  return render(
+    <StrictMode>
+      <DeferredPositionHarness {...props} />
+    </StrictMode>,
   );
 }
 
@@ -93,7 +111,7 @@ describe('useDeferredPosition', () => {
       });
 
     try {
-      render(<DeferredPositionHarness />);
+      renderHarness();
       fireEvent.click(screen.getByRole('button', { name: 'update position' }));
 
       const optimisticWarnings = consoleErrorSpy.mock.calls.filter((call) =>
@@ -113,23 +131,40 @@ describe('useDeferredPosition', () => {
   });
 
   it('preserves caller-provided zoom values instead of clamping them', () => {
-    render(<DeferredPositionHarness />);
+    renderHarness();
 
     fireEvent.click(screen.getByRole('button', { name: 'set high zoom' }));
 
     expect(screen.getByTestId('position-k').textContent).toBe('12');
     expect(screen.getByTestId('optimistic-k').textContent).toBe('12');
-    expect(screen.getByTestId('transform-string').textContent).toContain(
-      'scale(12)',
+    expect(screen.getByTestId('optimistic-x').textContent).toBe('24');
+    expect(screen.getByTestId('optimistic-y').textContent).toBe('36');
+    expect(screen.getByTestId('transform-string').textContent).toBe(
+      'translate(24 36) scale(12)',
     );
   });
 
   it('keeps optimistic state and transform string in sync when setPosition is used directly', () => {
-    render(<DeferredPositionHarness />);
+    renderHarness();
 
     fireEvent.click(screen.getByRole('button', { name: 'set position only' }));
 
     expect(screen.getByTestId('position-k').textContent).toBe('6');
+    expect(screen.getByTestId('optimistic-k').textContent).toBe('6');
+    expect(screen.getByTestId('optimistic-x').textContent).toBe('48');
+    expect(screen.getByTestId('optimistic-y').textContent).toBe('72');
+    expect(screen.getByTestId('transform-string').textContent).toBe(
+      'translate(48 72) scale(6)',
+    );
+  });
+
+  it('supports deferred interaction updates under StrictMode with a non-zero threshold', () => {
+    vi.spyOn(performance, 'now').mockReturnValue(50);
+
+    renderHarness({ deferredUpdateThreshold: 100 });
+
+    fireEvent.click(screen.getByRole('button', { name: 'set position only' }));
+
     expect(screen.getByTestId('optimistic-k').textContent).toBe('6');
     expect(screen.getByTestId('optimistic-x').textContent).toBe('48');
     expect(screen.getByTestId('optimistic-y').textContent).toBe('72');

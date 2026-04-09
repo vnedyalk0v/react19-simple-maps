@@ -135,7 +135,6 @@ export function getSRIConfig(): SRIEnforcementConfig {
  */
 export function enableStrictSRI(): void {
   currentSRIConfig = createSRIEnforcementConfig({
-    ...currentSRIConfig,
     enforceForKnownSources: true,
     enforceForAllSources: true,
     allowUnknownSources: false,

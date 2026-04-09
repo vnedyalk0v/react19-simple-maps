@@ -27,7 +27,7 @@
 
 ## Security and data fetching expectations
 
-- URL-based geography loading keeps HTTPS-only defaults in production.
+- URL-based geography loading keeps HTTPS-only defaults.
 - Geography validation and fetch hardening are part of the supported package behavior, not example-only helpers.
 - Security-sensitive changes should ship with matching tests and documentation updates.
 
