@@ -255,8 +255,8 @@ describe('security hardening regressions', () => {
       meta: 'b',
     };
 
-    const parseOne = (features: never[]) => features;
-    const parseTwo = (features: never[]) => features;
+    const parseOne = (features: Feature<Geometry>[]) => features;
+    const parseTwo = (features: Feature<Geometry>[]) => features;
 
     expect(generateFeaturesCacheKey(first)).not.toBe(
       generateFeaturesCacheKey(second),

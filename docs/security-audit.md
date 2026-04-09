@@ -1,7 +1,7 @@
 # Security Audit Validation and Remediation Status
 
 **Date**: 2026-04-09  
-**Reviewer**: Security engineering validation  
+**Reviewer**: Security Team - Library Maintainers (`@vnedyalk0v`), follow-up reference: PR #94  
 **Scope**: Current `src/` codebase, published package surface (`.` and `./utils`), and shared-runtime behavior  
 **Classification**: Internal maintainer review
 
@@ -9,7 +9,9 @@
 
 ## Summary
 
-This document re-validates the previously reported findings against the current codebase and records the remediation status after applying targeted fixes.
+This document re-validates the findings documented in this audit record against the current codebase and records the remediation status after applying targeted fixes.
+
+**Finding ID note:** `S-###` denotes internal security finding IDs used in this audit record for tracking and follow-up.
 
 The review uses a **library threat model**:
 
@@ -46,7 +48,7 @@ The review uses a **library threat model**:
 
 ## Remediated Findings
 
-### S-005: `validateObject()` prototype mutation via `__proto__`
+### S-005 (see Finding ID note): `validateObject()` prototype mutation via `__proto__`
 
 **Status:** Fixed
 

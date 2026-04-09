@@ -163,18 +163,22 @@ describe('GeographyErrorBoundary behavior', () => {
       throw new Error('https://internal.example.com/secret-topology.json');
     };
 
-    render(
-      <svg>
-        <GeographyErrorBoundary>
-          <Thrower />
-        </GeographyErrorBoundary>
-      </svg>,
-    );
+    try {
+      render(
+        <svg>
+          <GeographyErrorBoundary>
+            <Thrower />
+          </GeographyErrorBoundary>
+        </svg>,
+      );
 
-    expect(screen.getByText('Failed to load geography data.')).toBeTruthy();
-    expect(screen.queryByText(/https:\/\/internal\.example\.com/i)).toBeNull();
-
-    consoleErrorSpy.mockRestore();
+      expect(screen.getByText('Failed to load geography data.')).toBeTruthy();
+      expect(
+        screen.queryByText(/https:\/\/internal\.example\.com/i),
+      ).toBeNull();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 });
 

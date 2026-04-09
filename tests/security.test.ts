@@ -427,7 +427,7 @@ describe('SEC-005: production security config hardening', () => {
 });
 
 // ---------------------------------------------------------------------------
-// SEC-006: Content-Type validation should match exact MIME types
+// SEC-003b: exported SRI hash generation validates URLs first
 // ---------------------------------------------------------------------------
 describe('SEC-003b: exported SRI hash generation validates URLs first', () => {
   beforeEach(() => {
