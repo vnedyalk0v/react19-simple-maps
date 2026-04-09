@@ -1,6 +1,6 @@
 import React, { StrictMode } from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useDeferredPosition } from '../src/hooks/useDeferredPosition';
 
 interface DeferredPositionHarnessProps {
@@ -90,6 +90,10 @@ function renderHarness(props?: DeferredPositionHarnessProps) {
 }
 
 describe('useDeferredPosition', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('does not trigger React optimistic update warnings during interaction updates', () => {
     const originalConsoleError = console.error;
     const consoleErrorSpy = vi
