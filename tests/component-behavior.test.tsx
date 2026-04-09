@@ -19,6 +19,7 @@ import ComposableMap from '../src/components/ComposableMap';
 import Geographies from '../src/components/Geographies';
 import Geography from '../src/components/Geography';
 import ZoomableGroup from '../src/components/ZoomableGroup';
+import GeographyErrorBoundary from '../src/components/GeographyErrorBoundary';
 
 const preparedFeature: PreparedFeature = {
   type: 'Feature',
@@ -149,6 +150,31 @@ describe('Geographies component behavior', () => {
 
     expect(screen.getByTestId('geographies-children')).toBeTruthy();
     expect(screen.getAllByTestId('rendered-prepared-geo')).toHaveLength(1);
+  });
+});
+
+describe('GeographyErrorBoundary behavior', () => {
+  it('default fallback keeps detailed error messages out of the UI', () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    const Thrower = () => {
+      throw new Error('https://internal.example.com/secret-topology.json');
+    };
+
+    render(
+      <svg>
+        <GeographyErrorBoundary>
+          <Thrower />
+        </GeographyErrorBoundary>
+      </svg>,
+    );
+
+    expect(screen.getByText('Failed to load geography data.')).toBeTruthy();
+    expect(screen.queryByText(/https:\/\/internal\.example\.com/i)).toBeNull();
+
+    consoleErrorSpy.mockRestore();
   });
 });
 

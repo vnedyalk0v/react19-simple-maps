@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+No unreleased user-facing or package-impacting changes.
+
 ## 2.0.6
 
 ### Patch Changes
@@ -39,12 +43,6 @@ All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this 
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
 the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-### Changed
-
-- Removed GitHub Packages as a distribution target. The package now publishes only to npm, and the installation or release documentation now reflects npm as the supported distribution channel.
 
 ## [2.0.3] - 2026-04-02
 

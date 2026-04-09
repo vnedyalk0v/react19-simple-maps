@@ -21,6 +21,7 @@ import {
   configureSRI,
   addCustomSRI,
   disableSRI,
+  generateSRIHash,
   DEFAULT_SRI_CONFIG,
 } from '../src/utils/subresource-integrity';
 
@@ -422,6 +423,28 @@ describe('SEC-005: production security config hardening', () => {
     disableSRI();
 
     expect(getSRIConfig().enforceForKnownSources).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-006: Content-Type validation should match exact MIME types
+// ---------------------------------------------------------------------------
+describe('SEC-003b: exported SRI hash generation validates URLs first', () => {
+  beforeEach(() => {
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+  });
+
+  it('rejects blocked URLs before issuing a fetch request', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('fetch should not be called'));
+
+    await expect(
+      generateSRIHash('https://127.0.0.1/private.json'),
+    ).rejects.toThrow(/private IP address|not allowed/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
   });
 });
 

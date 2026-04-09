@@ -1,4 +1,9 @@
 import { createGeographyFetchError } from './error-utils';
+import {
+  getGeographySecurityConfig,
+  validateGeographyUrl,
+  validateResolvedGeographyUrl,
+} from './geography-validation';
 
 /**
  * Subresource Integrity (SRI) configuration for external geography data
@@ -384,6 +389,10 @@ export async function generateSRIHash(
   algorithm: 'sha256' | 'sha384' | 'sha512' = 'sha384',
 ): Promise<string> {
   try {
+    const securityConfig = getGeographySecurityConfig();
+    validateGeographyUrl(url, securityConfig);
+    await validateResolvedGeographyUrl(url, securityConfig);
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
