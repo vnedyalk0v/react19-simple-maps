@@ -73,13 +73,28 @@ function DeferredPositionHarness() {
 
 describe('useDeferredPosition', () => {
   it('does not trigger React optimistic update warnings during interaction updates', () => {
+    const originalConsoleError = console.error;
     const consoleErrorSpy = vi
       .spyOn(console, 'error')
-      .mockImplementation(() => {});
+      .mockImplementation((...args: unknown[]) => {
+        const message = args.find(
+          (value): value is string => typeof value === 'string',
+        );
+
+        if (
+          message?.includes(
+            'An optimistic state update occurred outside a transition or action',
+          )
+        ) {
+          return;
+        }
+
+        originalConsoleError(...args);
+      });
 
     try {
-      const { getByRole } = render(<DeferredPositionHarness />);
-      fireEvent.click(getByRole('button', { name: 'update position' }));
+      render(<DeferredPositionHarness />);
+      fireEvent.click(screen.getByRole('button', { name: 'update position' }));
 
       const optimisticWarnings = consoleErrorSpy.mock.calls.filter((call) =>
         call.some(
@@ -98,9 +113,9 @@ describe('useDeferredPosition', () => {
   });
 
   it('preserves caller-provided zoom values instead of clamping them', () => {
-    const { getByRole } = render(<DeferredPositionHarness />);
+    render(<DeferredPositionHarness />);
 
-    fireEvent.click(getByRole('button', { name: 'set high zoom' }));
+    fireEvent.click(screen.getByRole('button', { name: 'set high zoom' }));
 
     expect(screen.getByTestId('position-k').textContent).toBe('12');
     expect(screen.getByTestId('optimistic-k').textContent).toBe('12');
@@ -110,9 +125,9 @@ describe('useDeferredPosition', () => {
   });
 
   it('keeps optimistic state and transform string in sync when setPosition is used directly', () => {
-    const { getByRole } = render(<DeferredPositionHarness />);
+    render(<DeferredPositionHarness />);
 
-    fireEvent.click(getByRole('button', { name: 'set position only' }));
+    fireEvent.click(screen.getByRole('button', { name: 'set position only' }));
 
     expect(screen.getByTestId('position-k').textContent).toBe('6');
     expect(screen.getByTestId('optimistic-k').textContent).toBe('6');

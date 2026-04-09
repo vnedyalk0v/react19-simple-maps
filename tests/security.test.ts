@@ -434,6 +434,11 @@ describe('SEC-003b: exported SRI hash generation validates URLs first', () => {
     configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
+  });
+
   it('rejects blocked URLs before issuing a fetch request', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -443,8 +448,26 @@ describe('SEC-003b: exported SRI hash generation validates URLs first', () => {
       generateSRIHash('https://127.0.0.1/private.json'),
     ).rejects.toThrow(/private IP address|not allowed/i);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
-    fetchSpy.mockRestore();
+  it('enforces the configured response size limit when generating an SRI hash', async () => {
+    configureGeographySecurity({
+      STRICT_HTTPS_ONLY: false,
+      ALLOW_HTTP_LOCALHOST: true,
+      ALLOWED_PROTOCOLS: ['https:', 'http:'],
+      MAX_RESPONSE_SIZE: 4,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(new Uint8Array([1, 2, 3, 4, 5]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(generateSRIHash('http://localhost/data.json')).rejects.toThrow(
+      /Response too large/i,
+    );
   });
 });
 

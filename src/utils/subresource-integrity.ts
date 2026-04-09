@@ -1,6 +1,7 @@
 import { createGeographyFetchError } from './error-utils';
 import {
   getGeographySecurityConfig,
+  readResponseWithSizeLimit,
   validateGeographyUrl,
   validateResolvedGeographyUrl,
 } from './geography-validation';
@@ -83,7 +84,7 @@ export const DEFAULT_SRI_CONFIG: SRIEnforcementConfig = {
 
 function isProductionEnvironment(): boolean {
   return (
-    typeof process !== 'undefined' && process.env.NODE_ENV === 'production'
+    typeof process !== 'undefined' && process?.env?.NODE_ENV === 'production'
   );
 }
 
@@ -388,17 +389,25 @@ export async function generateSRIHash(
   url: string,
   algorithm: 'sha256' | 'sha384' | 'sha512' = 'sha384',
 ): Promise<string> {
-  try {
-    const securityConfig = getGeographySecurityConfig();
-    validateGeographyUrl(url, securityConfig);
-    await validateResolvedGeographyUrl(url, securityConfig);
+  const securityConfig = getGeographySecurityConfig();
+  validateGeographyUrl(url, securityConfig);
+  await validateResolvedGeographyUrl(url, securityConfig);
 
-    const response = await fetch(url);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, securityConfig.TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) {
       throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
     }
 
-    const data = await response.arrayBuffer();
+    const data = await readResponseWithSizeLimit(
+      response,
+      securityConfig.MAX_RESPONSE_SIZE,
+    );
     const algorithmMap = {
       sha256: 'SHA-256' as const,
       sha384: 'SHA-384' as const,
@@ -414,6 +423,8 @@ export async function generateSRIHash(
       url,
       error instanceof Error ? error : new Error(String(error)),
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

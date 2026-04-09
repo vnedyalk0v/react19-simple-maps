@@ -95,9 +95,12 @@ describe('Geographies integration', () => {
     );
 
     await waitFor(() => {
-      expect(
-        container.querySelector('path.rsm-geography')?.getAttribute('d'),
-      ).toBeTruthy();
+      const nextPath = container
+        .querySelector('path.rsm-geography')
+        ?.getAttribute('d');
+
+      expect(nextPath).toBeTruthy();
+      expect(nextPath).not.toBe(equalEarthPath);
     });
 
     const mercatorPath = container

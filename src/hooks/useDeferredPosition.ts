@@ -94,20 +94,12 @@ export function useDeferredPosition({
     [lastUpdateTime, deferredUpdateThreshold, startTransition],
   );
 
-  // Keep the optimistic position aligned with the caller-provided transform.
-  const enhancedSetOptimisticPosition = useCallback(
-    (newPosition: ZoomPanPosition) => {
-      setOptimisticPosition(newPosition);
-    },
-    [setOptimisticPosition],
-  );
-
   return {
     position,
     smoothPosition,
     optimisticPosition,
     setPosition: enhancedSetPosition,
-    setOptimisticPosition: enhancedSetOptimisticPosition,
+    setOptimisticPosition,
     isPending,
     startTransition,
     transformString,
