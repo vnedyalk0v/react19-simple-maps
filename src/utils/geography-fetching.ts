@@ -225,7 +225,17 @@ export async function fetchGeographies(
   }
   try {
     return await fetchGeographiesCache(url);
-  } catch {
+  } catch (error) {
+    if (
+      typeof process !== 'undefined' &&
+      process?.env?.NODE_ENV !== 'production'
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        'fetchGeographies failed and returned undefined for backward compatibility.',
+        error,
+      );
+    }
     return undefined;
   }
 }

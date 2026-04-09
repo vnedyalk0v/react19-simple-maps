@@ -80,6 +80,13 @@ export let GEOGRAPHY_FETCH_CONFIG: GeographySecurityConfig = Object.freeze({
  * Configure geography fetching security settings
  * @param config - Security configuration to apply
  */
+/**
+ * Updates the shared module-level geography security configuration.
+ *
+ * This setting is global to the current module instance. In SSR or other
+ * long-lived shared runtimes, changing it affects subsequent consumers that
+ * import the same package instance.
+ */
 export function configureGeographySecurity(
   config: Partial<GeographySecurityConfig>,
 ): void {
@@ -582,6 +589,25 @@ export function validateGeographyData(data: unknown): void {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
       `Invalid geography data: expected Topology or FeatureCollection, got ${obj.type}`,
+    );
+  }
+
+  if (
+    obj.type === 'Topology' &&
+    (typeof obj.objects !== 'object' ||
+      obj.objects === null ||
+      Array.isArray(obj.objects))
+  ) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      'Invalid topology data: expected a non-null objects map',
+    );
+  }
+
+  if (obj.type === 'FeatureCollection' && !Array.isArray(obj.features)) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      'Invalid feature collection data: expected a features array',
     );
   }
 }

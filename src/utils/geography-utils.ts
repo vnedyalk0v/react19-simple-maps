@@ -88,10 +88,16 @@ export function getGeographyBounds(
  * @param geography - GeoJSON feature
  * @returns First available coordinate or null
  */
-export function getGeographyCoordinates(
+const MAX_GEOMETRY_COLLECTION_DEPTH = 10;
+
+function getGeographyCoordinatesInternal(
   geography: Feature<Geometry>,
+  depth: number,
 ): Coordinates | null {
-  // Validate input
+  if (depth > MAX_GEOMETRY_COLLECTION_DEPTH) {
+    return null;
+  }
+
   if (!geography?.geometry) {
     return null;
   }
@@ -203,10 +209,13 @@ export function getGeographyCoordinates(
         geometry.geometries[0]
       ) {
         // Recursively try to get coordinates from first geometry
-        return getGeographyCoordinates({
-          ...geography,
-          geometry: geometry.geometries[0],
-        });
+        return getGeographyCoordinatesInternal(
+          {
+            ...geography,
+            geometry: geometry.geometries[0],
+          },
+          depth + 1,
+        );
       }
       break;
 
@@ -215,6 +224,12 @@ export function getGeographyCoordinates(
   }
 
   return null;
+}
+
+export function getGeographyCoordinates(
+  geography: Feature<Geometry>,
+): Coordinates | null {
+  return getGeographyCoordinatesInternal(geography, 0);
 }
 
 /**

@@ -26,13 +26,13 @@ Runs on:
 - PRs to `main`
 - pushes to `dev`
 
-The workflow installs dependencies and runs the canonical validation command:
+The workflow installs dependencies and uses the canonical validation command:
 
 ```bash
 npm run ci
 ```
 
-That command includes:
+`npm run ci` runs the local validation steps:
 
 - build
 - type-check
@@ -41,7 +41,12 @@ That command includes:
 - tests
 - build verification
 
-This keeps local validation and GitHub validation aligned.
+The CI orchestration itself lives in `.github/workflows/ci.yml`, which defines:
+
+- the `validate` job, running `npm run ci` under a Node.js matrix (`20`, `22`)
+- the `example-builds` job, which builds both examples separately to verify they work with the package
+
+This keeps local validation and GitHub validation aligned while keeping the command behavior and workflow job behavior distinct.
 
 ## Release workflow
 
