@@ -115,7 +115,7 @@ References:
 - npm provenance docs:
   https://docs.npmjs.com/generating-provenance-statements
 
-### 2. High - CI and release workflows do unnecessary install-time builds
+### 2. Low - CI and release workflows do unnecessary install-time builds
 
 Evidence:
 
@@ -303,11 +303,10 @@ Evidence:
 - `prepareFeatures` returns spread features with `svgPath`, but never creates
   `rsmKey` (`src/utils/geography-processing.ts:204-225`).
 - README usage keys geographies by `geo.rsmKey` (`README.md:119-124`).
+- Tests also key geographies by `geo.rsmKey`
+  (`tests/geographies-integration.test.tsx:38`).
 - A runtime check against the built output produced:
   `{ "hasRsmKey": false, "rsmKey": null, "keys": ["type","properties","geometry","svgPath"] }`.
-- A recent live CI log emitted a React key warning from
-  `tests/geographies-integration.test.tsx`, although the local targeted run did
-  not reproduce that warning.
 
 Impact:
 
