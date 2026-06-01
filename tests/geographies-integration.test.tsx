@@ -1,9 +1,11 @@
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { FeatureCollection, Geometry } from 'geojson';
+import { geoPath } from 'd3-geo';
 import ComposableMap from '../src/components/ComposableMap';
 import Geographies from '../src/components/Geographies';
 import Geography from '../src/components/Geography';
+import { prepareFeatures } from '../src/utils/geography-processing';
 
 const featureCollection: FeatureCollection<Geometry> = {
   type: 'FeatureCollection',
@@ -35,7 +37,11 @@ describe('Geographies integration', () => {
           {({ geographies }) => (
             <>
               {geographies.map((geo) => (
-                <Geography key={geo.rsmKey} geography={geo} />
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  data-rsm-key={geo.rsmKey}
+                />
               ))}
             </>
           )}
@@ -49,6 +55,78 @@ describe('Geographies integration', () => {
 
     const renderedPath = container.querySelector('path.rsm-geography');
     expect(renderedPath?.getAttribute('d')).toBeTruthy();
+    expect(renderedPath?.getAttribute('data-rsm-key')).toBe('geo-0');
+  });
+
+  it('assigns stable prepared feature keys from rsmKey, id, then index', () => {
+    const keyedFeatures = [
+      {
+        ...featureCollection.features[0],
+        id: 'ignored-id',
+        rsmKey: 'existing-key',
+      },
+      {
+        ...featureCollection.features[0],
+        id: 'feature-id',
+      },
+      featureCollection.features[0],
+    ];
+
+    const prepared = prepareFeatures(keyedFeatures, geoPath());
+
+    expect(prepared.map((geo) => geo.rsmKey)).toEqual([
+      'existing-key',
+      'feature-id',
+      'geo-2',
+    ]);
+  });
+
+  it('disambiguates fallback keys from existing feature keys', () => {
+    const keyedFeatures = [
+      {
+        ...featureCollection.features[0],
+        rsmKey: 'geo-1',
+      },
+      featureCollection.features[0],
+      {
+        ...featureCollection.features[0],
+        id: 'geo-2',
+      },
+      featureCollection.features[0],
+    ];
+
+    const prepared = prepareFeatures(keyedFeatures, geoPath());
+    const rsmKeys = prepared.map((geo) => geo.rsmKey);
+
+    expect(rsmKeys).toEqual(['geo-1', 'geo-1-1', 'geo-2', 'geo-3']);
+    expect(new Set(rsmKeys).size).toBe(rsmKeys.length);
+  });
+
+  it('disambiguates duplicate explicit feature keys', () => {
+    const keyedFeatures = [
+      {
+        ...featureCollection.features[0],
+        rsmKey: 'same-key',
+      },
+      {
+        ...featureCollection.features[0],
+        rsmKey: 'same-key',
+      },
+      {
+        ...featureCollection.features[0],
+        id: 'same-id',
+      },
+      {
+        ...featureCollection.features[0],
+        id: 'same-id',
+      },
+    ];
+
+    const prepared = prepareFeatures(keyedFeatures, geoPath());
+    const rsmKeys = prepared.map((geo) => geo.rsmKey);
+
+    expect(rsmKeys).toEqual(['same-key', 'same-key-1', 'same-id', 'same-id-1']);
+    expect(new Set(rsmKeys).size).toBe(rsmKeys.length);
   });
 
   it('recomputes prepared SVG paths when the projection changes', async () => {

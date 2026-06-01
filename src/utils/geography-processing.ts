@@ -195,6 +195,67 @@ export function prepareMesh(
   return result;
 }
 
+function getExplicitFeatureKey(feature: Feature<Geometry>): string | null {
+  const existingKey = (
+    feature as Feature<Geometry> & { rsmKey?: string | number }
+  ).rsmKey;
+
+  if (existingKey !== undefined && existingKey !== null) {
+    return String(existingKey);
+  }
+
+  if (feature.id !== undefined && feature.id !== null) {
+    return String(feature.id);
+  }
+
+  return null;
+}
+
+function isKeyUnavailable(
+  key: string,
+  unavailableKeySets: Set<string>[],
+): boolean {
+  return unavailableKeySets.some((unavailableKeys) => unavailableKeys.has(key));
+}
+
+function getUniqueRsmKey(
+  baseKey: string,
+  unavailableKeySets: Set<string>[],
+): string {
+  if (!isKeyUnavailable(baseKey, unavailableKeySets)) {
+    return baseKey;
+  }
+
+  let suffix = 1;
+  let fallbackKey = `${baseKey}-${suffix}`;
+  while (isKeyUnavailable(fallbackKey, unavailableKeySets)) {
+    suffix += 1;
+    fallbackKey = `${baseKey}-${suffix}`;
+  }
+
+  return fallbackKey;
+}
+
+function getUniqueExplicitRsmKey(
+  explicitKey: string,
+  usedKeys: Set<string>,
+  reservedExplicitKeys: Set<string>,
+): string {
+  if (!usedKeys.has(explicitKey)) {
+    return explicitKey;
+  }
+
+  return getUniqueRsmKey(explicitKey, [usedKeys, reservedExplicitKeys]);
+}
+
+function getUniqueFallbackRsmKey(
+  index: number,
+  usedKeys: Set<string>,
+  reservedExplicitKeys: Set<string>,
+): string {
+  return getUniqueRsmKey(`geo-${index}`, [usedKeys, reservedExplicitKeys]);
+}
+
 /**
  * Prepares features by generating SVG paths for each feature
  * @param features - Array of features to prepare
@@ -209,19 +270,42 @@ export function prepareFeatures(
     return [];
   }
 
-  return features
-    .map((feature) => {
+  const preparedCandidates = features
+    .map((feature, index) => {
       const svgPath = path(feature);
       if (!svgPath) {
         return null;
       }
 
       return {
-        ...feature,
+        explicitKey: getExplicitFeatureKey(feature),
+        feature,
+        index,
         svgPath,
-      } as PreparedFeature;
+      };
     })
-    .filter((feature): feature is PreparedFeature => feature !== null);
+    .filter((feature) => feature !== null);
+
+  const reservedExplicitKeys = new Set(
+    preparedCandidates
+      .map((candidate) => candidate.explicitKey)
+      .filter((rsmKey): rsmKey is string => rsmKey !== null),
+  );
+  const usedKeys = new Set<string>();
+
+  return preparedCandidates.map(({ explicitKey, feature, index, svgPath }) => {
+    const rsmKey =
+      explicitKey !== null
+        ? getUniqueExplicitRsmKey(explicitKey, usedKeys, reservedExplicitKeys)
+        : getUniqueFallbackRsmKey(index, usedKeys, reservedExplicitKeys);
+    usedKeys.add(rsmKey);
+
+    return {
+      ...feature,
+      svgPath,
+      rsmKey,
+    } as PreparedFeature;
+  });
 }
 
 /**

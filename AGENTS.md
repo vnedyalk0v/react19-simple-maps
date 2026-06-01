@@ -35,9 +35,9 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 ## Release Notes (Required)
 
 - For every user-facing or package-impacting change, create a new `.changeset/*.md` file that follows `RELEASE_NOTES_GUIDELINES.md`.
-- The changeset file must describe the change clearly so the changelog can be generated correctly.
-- For every user-facing or package-impacting change, update `CHANGELOG.md` in the standardized format described in `RELEASE_NOTES_GUIDELINES.md`.
-- Read `RELEASE_NOTES_GUIDELINES.md` only when the task requires a changeset or changelog update.
+- The changeset file must describe the change clearly so Changesets can generate changelog entries and release text.
+- Do not manually update `CHANGELOG.md` for normal feature or fix work; Changesets release PRs own generated version sections.
+- Read `RELEASE_NOTES_GUIDELINES.md` only when the task requires a changeset or explicit changelog maintenance.
 - Do not update `CHANGELOG.md` for tooling-only, CI-only, lockfile-only, or other internal-only maintenance.
 - Never reference internal tooling, review bots, or IDE names (e.g., CodeRabbit, Cursor, Copilot) in changesets, changelog entries, commit messages, code comments, or any user-facing text. Describe _what_ changed and _why_, not which tool suggested it.
 
