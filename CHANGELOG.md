@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.9
+
+### Patch Changes
+
+- Prepared geographies now always expose a stable `rsmKey` value for React list keys.
+  - Existing `rsmKey` values are preserved, feature `id` values are used when available, and deterministic index keys are used as a fallback.
+- Synthesized prepared geography keys now avoid collisions with existing feature keys.
+  - Fallback `rsmKey` values keep React list keys unique when a GeoJSON `id` or existing `rsmKey` already uses the same `geo-*` shape.
+  - Duplicate explicit `rsmKey` and GeoJSON `id` values are also disambiguated with stable suffixes.
+
 All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
 
 This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
