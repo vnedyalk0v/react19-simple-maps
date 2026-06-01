@@ -211,23 +211,49 @@ function getExplicitFeatureKey(feature: Feature<Geometry>): string | null {
   return null;
 }
 
-function getUniqueFallbackRsmKey(
-  index: number,
-  unavailableKeys: Set<string>,
+function isKeyUnavailable(
+  key: string,
+  unavailableKeySets: Set<string>[],
+): boolean {
+  return unavailableKeySets.some((unavailableKeys) => unavailableKeys.has(key));
+}
+
+function getUniqueRsmKey(
+  baseKey: string,
+  unavailableKeySets: Set<string>[],
 ): string {
-  const baseKey = `geo-${index}`;
-  if (!unavailableKeys.has(baseKey)) {
+  if (!isKeyUnavailable(baseKey, unavailableKeySets)) {
     return baseKey;
   }
 
   let suffix = 1;
   let fallbackKey = `${baseKey}-${suffix}`;
-  while (unavailableKeys.has(fallbackKey)) {
+  while (isKeyUnavailable(fallbackKey, unavailableKeySets)) {
     suffix += 1;
     fallbackKey = `${baseKey}-${suffix}`;
   }
 
   return fallbackKey;
+}
+
+function getUniqueExplicitRsmKey(
+  explicitKey: string,
+  usedKeys: Set<string>,
+  reservedExplicitKeys: Set<string>,
+): string {
+  if (!usedKeys.has(explicitKey)) {
+    return explicitKey;
+  }
+
+  return getUniqueRsmKey(explicitKey, [usedKeys, reservedExplicitKeys]);
+}
+
+function getUniqueFallbackRsmKey(
+  index: number,
+  usedKeys: Set<string>,
+  reservedExplicitKeys: Set<string>,
+): string {
+  return getUniqueRsmKey(`geo-${index}`, [usedKeys, reservedExplicitKeys]);
 }
 
 /**
@@ -260,16 +286,19 @@ export function prepareFeatures(
     })
     .filter((feature) => feature !== null);
 
-  const unavailableKeys = new Set(
+  const reservedExplicitKeys = new Set(
     preparedCandidates
       .map((candidate) => candidate.explicitKey)
       .filter((rsmKey): rsmKey is string => rsmKey !== null),
   );
+  const usedKeys = new Set<string>();
 
   return preparedCandidates.map(({ explicitKey, feature, index, svgPath }) => {
     const rsmKey =
-      explicitKey ?? getUniqueFallbackRsmKey(index, unavailableKeys);
-    unavailableKeys.add(rsmKey);
+      explicitKey !== null
+        ? getUniqueExplicitRsmKey(explicitKey, usedKeys, reservedExplicitKeys)
+        : getUniqueFallbackRsmKey(index, usedKeys, reservedExplicitKeys);
+    usedKeys.add(rsmKey);
 
     return {
       ...feature,
