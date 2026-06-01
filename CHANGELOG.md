@@ -2,7 +2,7 @@
 
 ## 2.0.7
 
-### Patch Changes
+### Changed
 
 - Hardened geography validation and cache isolation.
   - Blocks prototype-mutation payloads during object validation and avoids inherited-value reads in projection and security config parsing.

@@ -40,6 +40,8 @@ npm run ci
 - formatting check
 - tests
 - build verification
+- runs validation under a Node.js matrix (20, 22) in the `validate` job
+- builds examples in a separate `example-builds` job to verify they work with the package
 
 The CI orchestration itself lives in `.github/workflows/ci.yml`, which defines:
 
@@ -55,6 +57,7 @@ Workflow: `.github/workflows/publish.yml`
 Runs on:
 
 - pushes to `main`
+- merged Changesets release PRs targeting `main`
 - manual dispatch
 
 Uses Changesets to:
@@ -68,7 +71,7 @@ Because the Changesets release PR is bot-created and can skip normal PR-triggere
 - validates its merge ref
 - reports the required `ci` check directly to the release branch head commit
 
-This keeps release PRs compatible with branch protection.
+This keeps release PRs compatible with branch protection. The same workflow also listens for merged release PRs so the publish step still runs even when the merge commit is authored by automation and does not trigger a follow-up `push` workflow reliably.
 
 ## Sync workflow
 
