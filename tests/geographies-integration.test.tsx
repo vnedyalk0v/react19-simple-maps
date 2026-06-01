@@ -1,9 +1,11 @@
 import { render, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { FeatureCollection, Geometry } from 'geojson';
+import { geoPath } from 'd3-geo';
 import ComposableMap from '../src/components/ComposableMap';
 import Geographies from '../src/components/Geographies';
 import Geography from '../src/components/Geography';
+import { prepareFeatures } from '../src/utils/geography-processing';
 
 const featureCollection: FeatureCollection<Geometry> = {
   type: 'FeatureCollection',
@@ -35,7 +37,11 @@ describe('Geographies integration', () => {
           {({ geographies }) => (
             <>
               {geographies.map((geo) => (
-                <Geography key={geo.rsmKey} geography={geo} />
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  data-rsm-key={geo.rsmKey}
+                />
               ))}
             </>
           )}
@@ -49,6 +55,30 @@ describe('Geographies integration', () => {
 
     const renderedPath = container.querySelector('path.rsm-geography');
     expect(renderedPath?.getAttribute('d')).toBeTruthy();
+    expect(renderedPath?.getAttribute('data-rsm-key')).toBe('geo-0');
+  });
+
+  it('assigns stable prepared feature keys from rsmKey, id, then index', () => {
+    const keyedFeatures = [
+      {
+        ...featureCollection.features[0],
+        id: 'ignored-id',
+        rsmKey: 'existing-key',
+      },
+      {
+        ...featureCollection.features[0],
+        id: 'feature-id',
+      },
+      featureCollection.features[0],
+    ];
+
+    const prepared = prepareFeatures(keyedFeatures, geoPath());
+
+    expect(prepared.map((geo) => geo.rsmKey)).toEqual([
+      'existing-key',
+      'feature-id',
+      'geo-2',
+    ]);
   });
 
   it('recomputes prepared SVG paths when the projection changes', async () => {

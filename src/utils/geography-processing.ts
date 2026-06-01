@@ -195,6 +195,22 @@ export function prepareMesh(
   return result;
 }
 
+function getFeatureRsmKey(feature: Feature<Geometry>, index: number): string {
+  const existingKey = (
+    feature as Feature<Geometry> & { rsmKey?: string | number }
+  ).rsmKey;
+
+  if (existingKey !== undefined && existingKey !== null) {
+    return String(existingKey);
+  }
+
+  if (feature.id !== undefined && feature.id !== null) {
+    return String(feature.id);
+  }
+
+  return `geo-${index}`;
+}
+
 /**
  * Prepares features by generating SVG paths for each feature
  * @param features - Array of features to prepare
@@ -210,7 +226,7 @@ export function prepareFeatures(
   }
 
   return features
-    .map((feature) => {
+    .map((feature, index) => {
       const svgPath = path(feature);
       if (!svgPath) {
         return null;
@@ -219,6 +235,7 @@ export function prepareFeatures(
       return {
         ...feature,
         svgPath,
+        rsmKey: getFeatureRsmKey(feature, index),
       } as PreparedFeature;
     })
     .filter((feature): feature is PreparedFeature => feature !== null);

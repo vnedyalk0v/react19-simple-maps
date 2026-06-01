@@ -1,6 +1,17 @@
 # Changelog
 
+All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
+
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
+the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## 2.0.8
+
+### Patch Changes
+
+- Updated development tooling and release workflow maintenance without changing the public runtime API.
+
+## 2.0.7
 
 ### Patch Changes
 
@@ -10,21 +21,6 @@
   - Applies the hardened geography URL validation pipeline to `generateSRIHash`.
   - Adds safer default geography error messaging.
   - Fails more predictably on malformed nested geography input.
-
-## 2.0.7
-
-### Changed
-
-- Hardened geography validation and cache isolation.
-  - Blocks prototype-mutation payloads during object validation and avoids inherited-value reads in projection and security config parsing.
-  - Replaces collision-prone geography cache keys with object-identity-based keys so different datasets or parsing functions do not reuse the wrong cached results.
-  - Applies the hardened geography URL validation pipeline to `generateSRIHash`.
-  - Adds safer default geography error messaging.
-  - Fails more predictably on malformed nested geography input.
-
-## [Unreleased]
-
-No unreleased user-facing or package-impacting changes.
 
 ## [2.0.6] - 2026-04-06
 
@@ -70,11 +66,6 @@ No unreleased user-facing or package-impacting changes.
 
 - Removed the built-in `ZoomableGroup` zoom and pan indicator.
   - Stops showing the built-in top-left zoom and pan indicator during map interactions so direct manipulation stays visually clean.
-
-All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
-
-This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
-the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [2.0.3] - 2026-04-02
 

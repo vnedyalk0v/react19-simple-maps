@@ -30,7 +30,7 @@
     "build": "tsc --project tsconfig.build.json && NODE_ENV=production rollup -c",
     "build:types": "tsc --project tsconfig.build.json",
     "watch": "rollup -cw",
-    "prepare": "npm run build",
+    "prepack": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
