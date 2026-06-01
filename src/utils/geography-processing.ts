@@ -195,7 +195,7 @@ export function prepareMesh(
   return result;
 }
 
-function getFeatureRsmKey(feature: Feature<Geometry>, index: number): string {
+function getExplicitFeatureKey(feature: Feature<Geometry>): string | null {
   const existingKey = (
     feature as Feature<Geometry> & { rsmKey?: string | number }
   ).rsmKey;
@@ -208,7 +208,26 @@ function getFeatureRsmKey(feature: Feature<Geometry>, index: number): string {
     return String(feature.id);
   }
 
-  return `geo-${index}`;
+  return null;
+}
+
+function getUniqueFallbackRsmKey(
+  index: number,
+  unavailableKeys: Set<string>,
+): string {
+  const baseKey = `geo-${index}`;
+  if (!unavailableKeys.has(baseKey)) {
+    return baseKey;
+  }
+
+  let suffix = 1;
+  let fallbackKey = `${baseKey}-${suffix}`;
+  while (unavailableKeys.has(fallbackKey)) {
+    suffix += 1;
+    fallbackKey = `${baseKey}-${suffix}`;
+  }
+
+  return fallbackKey;
 }
 
 /**
@@ -225,7 +244,7 @@ export function prepareFeatures(
     return [];
   }
 
-  return features
+  const preparedCandidates = features
     .map((feature, index) => {
       const svgPath = path(feature);
       if (!svgPath) {
@@ -233,12 +252,31 @@ export function prepareFeatures(
       }
 
       return {
-        ...feature,
+        explicitKey: getExplicitFeatureKey(feature),
+        feature,
+        index,
         svgPath,
-        rsmKey: getFeatureRsmKey(feature, index),
-      } as PreparedFeature;
+      };
     })
-    .filter((feature): feature is PreparedFeature => feature !== null);
+    .filter((feature) => feature !== null);
+
+  const unavailableKeys = new Set(
+    preparedCandidates
+      .map((candidate) => candidate.explicitKey)
+      .filter((rsmKey): rsmKey is string => rsmKey !== null),
+  );
+
+  return preparedCandidates.map(({ explicitKey, feature, index, svgPath }) => {
+    const rsmKey =
+      explicitKey ?? getUniqueFallbackRsmKey(index, unavailableKeys);
+    unavailableKeys.add(rsmKey);
+
+    return {
+      ...feature,
+      svgPath,
+      rsmKey,
+    } as PreparedFeature;
+  });
 }
 
 /**
