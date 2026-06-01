@@ -10,21 +10,11 @@
   - Fallback `rsmKey` values keep React list keys unique when a GeoJSON `id` or existing `rsmKey` already uses the same `geo-*` shape.
   - Duplicate explicit `rsmKey` and GeoJSON `id` values are also disambiguated with stable suffixes.
 
-All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
-
-This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
-the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## 2.0.8
 
 ### Patch Changes
 
-- Hardened geography validation and cache isolation.
-  - Blocks prototype-mutation payloads during object validation and avoids inherited-value reads in projection and security config parsing.
-  - Replaces collision-prone geography cache keys with object-identity-based keys so different datasets or parsing functions do not reuse the wrong cached results.
-  - Applies the hardened geography URL validation pipeline to `generateSRIHash`.
-  - Adds safer default geography error messaging.
-  - Fails more predictably on malformed nested geography input.
+- No additional package-facing changes were documented for this patch release.
 
 ## 2.0.7
 

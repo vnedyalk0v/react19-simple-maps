@@ -12,7 +12,7 @@
 Both `dev` and `main` are protected with:
 
 - pull request required
-- required `ci` status check
+- required `ci` and `dependency-review` status checks
 - non-fast-forward updates blocked
 - branch deletion blocked
 
@@ -57,6 +57,18 @@ The CI orchestration itself lives in `.github/workflows/ci.yml`, which defines:
 
 This keeps dependency installation free of package builds while making
 `npm run ci` the explicit package validation and build contract.
+
+## Dependency Review workflow
+
+Workflow: `.github/workflows/dependency-review.yml`
+
+Runs on:
+
+- PRs to `dev`
+- PRs to `main`
+
+Both protected branches require the `dependency-review` status check, so
+dependency changes cannot merge while Dependency Review is failing.
 
 ## Release workflow
 
@@ -124,14 +136,8 @@ verified in GitHub or npm settings:
 
 - Configure npm trusted publishing for the release workflow and remove
   `NPM_TOKEN` once trusted publishing is active.
-- Require the `Dependency Review` workflow, or fold dependency review into the
-  required `ci` check.
-- Set default GitHub Actions workflow permissions to read-only.
-- Enable enforcement for SHA-pinned GitHub Actions.
-- Enable automatic branch deletion after merge.
-- Decide the required review policy for protected branches.
-- Enable GitHub Issues for the repository.
-- Enable the repository security policy and private vulnerability reporting.
+- Decide the required review and repository-role bypass policy for protected
+  branches.
 
 ## Maintenance note
 
