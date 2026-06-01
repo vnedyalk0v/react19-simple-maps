@@ -1,6 +1,6 @@
 # Release Notes Guidelines
 
-Use this guide only when a task needs a `.changeset/*.md` file or a `CHANGELOG.md` update.
+Use this guide when a task needs a `.changeset/*.md` file or explicit changelog maintenance.
 
 ## When release notes are required
 
@@ -19,7 +19,7 @@ Do not create or update release notes for changes that are only:
 
 ## Shared writing rules
 
-Apply these rules to both `.changeset/*.md` files and `CHANGELOG.md`:
+Apply these rules to `.changeset/*.md` files and any manual changelog maintenance:
 
 - Use plain English.
 - Do not use emojis.
@@ -57,24 +57,21 @@ Additional rules:
 
 ## Changelog rules
 
-Keep `CHANGELOG.md` in this structure:
+Changesets release PRs own generated `CHANGELOG.md` version sections. During
+normal feature and fix work:
 
-1. Keep `## [Unreleased]` at the top.
-2. Add entries under one of these headings only:
-   - `### Added`
-   - `### Changed`
-   - `### Deprecated`
-   - `### Removed`
-   - `### Fixed`
-   - `### Security`
-3. On release, move `Unreleased` items into a new version section:
-   - `## [x.y.z] - YYYY-MM-DD`
-4. After a release, reset `## [Unreleased]` to:
-   - `No unreleased user-facing or package-impacting changes.`
+1. Do not manually add version sections or duplicate `.changeset/*.md` entries in
+   `CHANGELOG.md`.
+2. Keep pending package release notes in `.changeset/*.md`; the release PR
+   generates the package version section.
+3. Edit `CHANGELOG.md` manually only for explicit changelog maintenance, such as
+   removing stale duplicate entries or correcting generated history.
+4. Preserve published history when cleaning the changelog, and do not invent
+   release dates.
 
 ## Relationship between changesets and the changelog
 
-- Keep the `.changeset/*.md` entry and the `CHANGELOG.md` entry aligned.
-- The changeset exists for versioning, release PRs, and GitHub release text.
-- `CHANGELOG.md` exists for human-readable project history.
+- The `.changeset/*.md` entry is the source of pending package release notes.
+- Changesets release PRs generate package version sections and release text.
+- `CHANGELOG.md` exists for published project history.
 - If a change does not need a changeset, it usually does not need a changelog entry either.

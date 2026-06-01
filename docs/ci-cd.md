@@ -26,7 +26,12 @@ Runs on:
 - PRs to `main`
 - pushes to `dev`
 
-The workflow installs dependencies and uses the canonical validation command:
+The workflow installs dependencies with lifecycle scripts disabled and uses the
+canonical validation command:
+
+```bash
+npm ci --ignore-scripts
+```
 
 ```bash
 npm run ci
@@ -46,9 +51,12 @@ npm run ci
 The CI orchestration itself lives in `.github/workflows/ci.yml`, which defines:
 
 - the `validate` job, running `npm run ci` under a Node.js matrix (`20`, `22`)
-- the `example-builds` job, which builds both examples separately to verify they work with the package
+- the `example-builds` job, which builds the root package explicitly, installs
+  each example with lifecycle scripts disabled, and builds both examples
+  separately to verify they work with the package
 
-This keeps local validation and GitHub validation aligned while keeping the command behavior and workflow job behavior distinct.
+This keeps dependency installation free of package builds while making
+`npm run ci` the explicit package validation and build contract.
 
 ## Release workflow
 
@@ -108,6 +116,22 @@ npm run release
 - Let Changesets manage release PR and version or changelog updates.
 - Do not bypass required checks on `dev` or `main`.
 - Keep pinned GitHub Action SHAs updated periodically.
+
+## Repository settings follow-ups
+
+These operational settings are tracked outside the repository and should be
+verified in GitHub or npm settings:
+
+- Configure npm trusted publishing for the release workflow and remove
+  `NPM_TOKEN` once trusted publishing is active.
+- Require the `Dependency Review` workflow, or fold dependency review into the
+  required `ci` check.
+- Set default GitHub Actions workflow permissions to read-only.
+- Enable enforcement for SHA-pinned GitHub Actions.
+- Enable automatic branch deletion after merge.
+- Decide the required review policy for protected branches.
+- Enable GitHub Issues for the repository.
+- Enable the repository security policy and private vulnerability reporting.
 
 ## Maintenance note
 
