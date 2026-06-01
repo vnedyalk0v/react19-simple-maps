@@ -81,6 +81,27 @@ describe('Geographies integration', () => {
     ]);
   });
 
+  it('disambiguates fallback keys from existing feature keys', () => {
+    const keyedFeatures = [
+      {
+        ...featureCollection.features[0],
+        rsmKey: 'geo-1',
+      },
+      featureCollection.features[0],
+      {
+        ...featureCollection.features[0],
+        id: 'geo-2',
+      },
+      featureCollection.features[0],
+    ];
+
+    const prepared = prepareFeatures(keyedFeatures, geoPath());
+    const rsmKeys = prepared.map((geo) => geo.rsmKey);
+
+    expect(rsmKeys).toEqual(['geo-1', 'geo-1-1', 'geo-2', 'geo-3']);
+    expect(new Set(rsmKeys).size).toBe(rsmKeys.length);
+  });
+
   it('recomputes prepared SVG paths when the projection changes', async () => {
     const { container, rerender } = render(
       <ComposableMap projection="geoEqualEarth">
