@@ -102,6 +102,33 @@ describe('Geographies integration', () => {
     expect(new Set(rsmKeys).size).toBe(rsmKeys.length);
   });
 
+  it('disambiguates duplicate explicit feature keys', () => {
+    const keyedFeatures = [
+      {
+        ...featureCollection.features[0],
+        rsmKey: 'same-key',
+      },
+      {
+        ...featureCollection.features[0],
+        rsmKey: 'same-key',
+      },
+      {
+        ...featureCollection.features[0],
+        id: 'same-id',
+      },
+      {
+        ...featureCollection.features[0],
+        id: 'same-id',
+      },
+    ];
+
+    const prepared = prepareFeatures(keyedFeatures, geoPath());
+    const rsmKeys = prepared.map((geo) => geo.rsmKey);
+
+    expect(rsmKeys).toEqual(['same-key', 'same-key-1', 'same-id', 'same-id-1']);
+    expect(new Set(rsmKeys).size).toBe(rsmKeys.length);
+  });
+
   it('recomputes prepared SVG paths when the projection changes', async () => {
     const { container, rerender } = render(
       <ComposableMap projection="geoEqualEarth">
