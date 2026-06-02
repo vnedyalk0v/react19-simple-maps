@@ -10,11 +10,6 @@
   - Fallback `rsmKey` values keep React list keys unique when a GeoJSON `id` or existing `rsmKey` already uses the same `geo-*` shape.
   - Duplicate explicit `rsmKey` and GeoJSON `id` values are also disambiguated with stable suffixes.
 
-All notable changes to `@vnedyalk0v/react19-simple-maps` are documented in this file.
-
-This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and
-the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## 2.0.8
 
 ### Patch Changes
