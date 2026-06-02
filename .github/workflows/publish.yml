@@ -89,13 +89,13 @@ jobs:
           echo "number=$pr_number" >> "$GITHUB_OUTPUT"
           echo "sha=$branch_sha" >> "$GITHUB_OUTPUT"
 
-      - name: Start release PR CI check
+      - name: Start release PR required checks
         if: steps.release_pr.outputs.exists == 'true'
-        id: release_pr_check
+        id: release_pr_checks
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          check_id=$(gh api repos/${{ github.repository }}/check-runs \
+          ci_check_id=$(gh api repos/${{ github.repository }}/check-runs \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -f name='ci' \
@@ -104,7 +104,17 @@ jobs:
             -f details_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
             --jq '.id')
 
-          echo "id=$check_id" >> "$GITHUB_OUTPUT"
+          dependency_review_check_id=$(gh api repos/${{ github.repository }}/check-runs \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -f name='dependency-review' \
+            -f head_sha='${{ steps.release_pr.outputs.sha }}' \
+            -f status='in_progress' \
+            -f details_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' \
+            --jq '.id')
+
+          echo "ci_id=$ci_check_id" >> "$GITHUB_OUTPUT"
+          echo "dependency_review_id=$dependency_review_check_id" >> "$GITHUB_OUTPUT"
 
       - name: Checkout release PR merge commit
         if: steps.release_pr.outputs.exists == 'true'
@@ -121,23 +131,46 @@ jobs:
           npm ci --ignore-scripts
           npm run ci
 
-      - name: Complete release PR CI check
-        if: always() && steps.release_pr.outputs.exists == 'true' && steps.release_pr_check.outputs.id != ''
+      - name: Review release PR dependencies
+        if: steps.release_pr.outputs.exists == 'true'
+        id: release_pr_dependency_review
+        continue-on-error: true
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          base-ref: main
+          head-ref: changeset-release/main
+
+      - name: Complete release PR required checks
+        if: always() && steps.release_pr.outputs.exists == 'true' && steps.release_pr_checks.outputs.ci_id != '' && steps.release_pr_checks.outputs.dependency_review_id != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          conclusion=success
+          ci_conclusion=success
           if [ "${{ steps.release_pr_validation.outcome }}" != "success" ]; then
-            conclusion=failure
+            ci_conclusion=failure
           fi
 
-          gh api repos/${{ github.repository }}/check-runs/${{ steps.release_pr_check.outputs.id }} \
+          dependency_review_conclusion=success
+          if [ "${{ steps.release_pr_dependency_review.outcome }}" != "success" ]; then
+            dependency_review_conclusion=failure
+          fi
+
+          completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          gh api repos/${{ github.repository }}/check-runs/${{ steps.release_pr_checks.outputs.ci_id }} \
             -X PATCH \
             -H "Accept: application/vnd.github+json" \
             -f status='completed' \
-            -f conclusion="$conclusion" \
-            -f completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            -f conclusion="$ci_conclusion" \
+            -f completed_at="$completed_at"
 
-      - name: Fail workflow when release PR validation fails
-        if: steps.release_pr.outputs.exists == 'true' && steps.release_pr_validation.outcome != 'success'
+          gh api repos/${{ github.repository }}/check-runs/${{ steps.release_pr_checks.outputs.dependency_review_id }} \
+            -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -f status='completed' \
+            -f conclusion="$dependency_review_conclusion" \
+            -f completed_at="$completed_at"
+
+      - name: Fail workflow when release PR checks fail
+        if: steps.release_pr.outputs.exists == 'true' && (steps.release_pr_validation.outcome != 'success' || steps.release_pr_dependency_review.outcome != 'success')
         run: exit 1

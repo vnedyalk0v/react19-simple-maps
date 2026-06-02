@@ -89,7 +89,9 @@ Because the Changesets release PR is bot-created and can skip normal PR-triggere
 
 - finds the open release PR
 - validates its merge ref
-- reports the required `ci` check directly to the release branch head commit
+- reviews its dependency changes
+- reports the required `ci` and `dependency-review` checks directly to the
+  release branch head commit
 
 This keeps release PRs compatible with branch protection. The same workflow also listens for merged release PRs so the publish step still runs even when the merge commit is authored by automation and does not trigger a follow-up `push` workflow reliably.
 
