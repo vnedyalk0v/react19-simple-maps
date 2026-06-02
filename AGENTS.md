@@ -32,6 +32,21 @@ These rules apply when editing library code in `src/` and docs/examples in `exam
 - Before claiming a fix is in `dev` or in a specific PR, verify the current git and GitHub state instead of relying on memory or prior conversation context.
 - If review feedback arrives after merge, treat it as a new task: branch from current `dev`, apply the fix, validate it, and open a new PR.
 
+## Local Workflow (Required)
+
+- Start from updated `dev`, create a fresh task branch, and keep the change scoped to the user request.
+- Run the most relevant local validation before commit. Use `npm run ci` as the default package gate; add targeted tests, example builds, `npm run analyze`, `npm pack --dry-run`, or generator checks when the touched area requires them.
+- Before committing or pushing, run CodeRabbit CLI as the final local review and wait for it to finish:
+
+```bash
+cr review --agent --type uncommitted --base dev
+```
+
+- `coderabbit review --agent --type uncommitted --base dev` is equivalent when the `cr` alias is unavailable.
+- Treat CodeRabbit findings as review input, not automatic truth. Verify each finding against the current code, fix valid issues, and rerun CodeRabbit after fixes.
+- Commit and push only after validation passes and CodeRabbit has no remaining valid recommendations.
+- If CodeRabbit cannot run because authentication, installation, or service connectivity is broken, run `cr doctor`, report the blocker, and do not push unless the user explicitly approves bypassing this gate.
+
 ## Release Notes (Required)
 
 - For every user-facing or package-impacting change, create a new `.changeset/*.md` file that follows `RELEASE_NOTES_GUIDELINES.md`.
@@ -127,4 +142,4 @@ const center = createCoordinates(0, 0);
 - Verify review findings against the current code before fixing them. Only change code for findings that are actually valid.
 - Prefer behavioral assertions over implementation-detail assertions, especially under Strict Mode.
 - For fixes involving generated files, rerun the generator and verify the output matches the checked-in artifacts.
-- When reporting branch, PR, or merge status, verify repository state directly before answering.
+- Before reporting completion, verify the relevant local commands, PR checks, and branch or merge state directly.
