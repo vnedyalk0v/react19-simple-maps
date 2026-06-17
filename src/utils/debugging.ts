@@ -41,19 +41,12 @@ interface DebugInfo {
   error?: Error;
 }
 
-interface PerformanceMetrics {
-  renderTime: number;
-  componentCount: number;
-  updateCount: number;
-}
-
 /**
  * Debug logger for React Simple Maps components
  */
 export class MapDebugger {
   private static instance: MapDebugger;
   private debugLogs: DebugInfo[] = [];
-  private performanceMetrics: Map<string, PerformanceMetrics> = new Map();
   private isEnabled: boolean = this.getDebugMode();
 
   /**
@@ -132,68 +125,6 @@ export class MapDebugger {
   }
 
   /**
-   * Log component errors with debugging context
-   */
-  logError(
-    componentName: string,
-    error: Error,
-    props?: Record<string, unknown>,
-  ): void {
-    if (!this.isEnabled) return;
-
-    const ownerStack = safeCaptureOwnerStack();
-
-    const debugInfo: DebugInfo = {
-      componentName,
-      ownerStack,
-      timestamp: Date.now(),
-      ...(props && { props: this.sanitizeProps(props) }),
-      error,
-    };
-
-    this.debugLogs.push(debugInfo);
-
-    if (this.isEnabled) {
-      // eslint-disable-next-line no-console
-      console.group(`❌ ${componentName} Error`);
-      // eslint-disable-next-line no-console
-      console.error('Error:', error);
-      // eslint-disable-next-line no-console
-      console.log('Owner Stack:', ownerStack);
-      // eslint-disable-next-line no-console
-      if (props) console.log('Props:', props);
-      // eslint-disable-next-line no-console
-      console.groupEnd();
-    }
-  }
-
-  /**
-   * Track performance metrics for components
-   */
-  trackPerformance(componentName: string, renderTime: number): void {
-    if (!this.isEnabled) return;
-
-    const existing = this.performanceMetrics.get(componentName) || {
-      renderTime: 0,
-      componentCount: 0,
-      updateCount: 0,
-    };
-
-    this.performanceMetrics.set(componentName, {
-      renderTime: (existing.renderTime + renderTime) / 2, // Moving average
-      componentCount: existing.componentCount + 1,
-      updateCount: existing.updateCount + 1,
-    });
-  }
-
-  /**
-   * Get debug logs for a specific component
-   */
-  getLogsForComponent(componentName: string): DebugInfo[] {
-    return this.debugLogs.filter((log) => log.componentName === componentName);
-  }
-
-  /**
    * Get all debug logs
    */
   getAllLogs(): DebugInfo[] {
@@ -201,40 +132,10 @@ export class MapDebugger {
   }
 
   /**
-   * Get performance metrics
-   */
-  getPerformanceMetrics(): Map<string, PerformanceMetrics> {
-    return new Map(this.performanceMetrics);
-  }
-
-  /**
    * Clear all debug data
    */
   clear(): void {
     this.debugLogs.length = 0;
-    this.performanceMetrics.clear();
-  }
-
-  /**
-   * Enable or disable debugging
-   */
-  setEnabled(enabled: boolean): void {
-    this.isEnabled = enabled;
-  }
-
-  /**
-   * Export debug data for analysis
-   */
-  exportDebugData(): {
-    logs: DebugInfo[];
-    performance: Record<string, PerformanceMetrics>;
-    timestamp: number;
-  } {
-    return {
-      logs: this.getAllLogs(),
-      performance: Object.fromEntries(this.performanceMetrics),
-      timestamp: Date.now(),
-    };
   }
 
   private sanitizeProps(
@@ -288,92 +189,13 @@ export function useMapDebugger(componentName: string, debug?: boolean) {
     [componentName, mapDebugger],
   );
 
-  const logError = useCallback(
-    (error: Error, props?: Record<string, unknown>) =>
-      mapDebugger.logError(componentName, error, props),
-    [componentName, mapDebugger],
-  );
-
-  const trackPerformance = useCallback(
-    (renderTime: number) =>
-      mapDebugger.trackPerformance(componentName, renderTime),
-    [componentName, mapDebugger],
-  );
-
-  return { logRender, logError, trackPerformance };
-}
-
-/**
- * Higher-order component for automatic debugging
- */
-export function withMapDebugging<P extends object>(
-  Component: React.ComponentType<P>,
-  componentName?: string,
-) {
-  const displayName =
-    componentName || Component.displayName || Component.name || 'Unknown';
-
-  return function DebuggedComponent(props: P) {
-    const { logRender, logError, trackPerformance } =
-      useMapDebugger(displayName);
-
-    const startTime = performance.now();
-
-    try {
-      logRender(props as Record<string, unknown>);
-
-      // Handle both function and class components
-      const result = React.createElement(Component, props);
-
-      const endTime = performance.now();
-      trackPerformance(endTime - startTime);
-
-      return result;
-    } catch (error) {
-      logError(error as Error, props as Record<string, unknown>);
-      throw error;
-    }
-  };
+  return { logRender };
 }
 
 /**
  * Development-only debugging utilities
  */
 export const devTools = {
-  /**
-   * Log component hierarchy with owner stack
-   */
-  logComponentHierarchy: (componentName: string) => {
-    if (
-      typeof process !== 'undefined' &&
-      process.env.NODE_ENV !== 'production'
-    ) {
-      const ownerStack = safeCaptureOwnerStack();
-      // eslint-disable-next-line no-console
-      console.log(`📊 Component Hierarchy for ${componentName}:`, ownerStack);
-    }
-  },
-
-  /**
-   * Measure component render time
-   */
-  measureRenderTime: <T>(componentName: string, renderFn: () => T): T => {
-    if (
-      typeof process !== 'undefined' &&
-      process.env.NODE_ENV !== 'production'
-    ) {
-      const start = performance.now();
-      const result = renderFn();
-      const end = performance.now();
-      // eslint-disable-next-line no-console
-      console.log(
-        `⏱️ ${componentName} render time: ${(end - start).toFixed(2)}ms`,
-      );
-      return result;
-    }
-    return renderFn();
-  },
-
   /**
    * Debug geography loading
    */
@@ -407,13 +229,3 @@ export const devTools = {
     }
   },
 };
-
-// Global debugger instance
-export const mapDebugger = MapDebugger.getInstance();
-
-// Export for development console access
-if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-  (
-    globalThis as typeof globalThis & { __MAP_DEBUGGER__?: MapDebugger }
-  ).__MAP_DEBUGGER__ = mapDebugger;
-}
