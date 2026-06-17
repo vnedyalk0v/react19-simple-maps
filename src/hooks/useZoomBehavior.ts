@@ -151,6 +151,12 @@ export function useZoomBehavior({
 
     zoomRef.current = zoomBehavior;
     svg.call(zoomBehavior);
+
+    return () => {
+      // Mirror setup: remove all d3-zoom listeners bound under the .zoom
+      // namespace so they don't outlive this effect run / component unmount.
+      svg.on('.zoom', null);
+    };
   }, [
     width,
     height,
