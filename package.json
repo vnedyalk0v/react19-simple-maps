@@ -90,7 +90,7 @@
     "url": "https://github.com/sponsors/vnedyalk0v"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^8.0.1",
     "@babel/preset-env": "^7.29.7",
     "@changesets/cli": "^2.31.0",
     "@rollup/plugin-babel": "^7.1.0",
