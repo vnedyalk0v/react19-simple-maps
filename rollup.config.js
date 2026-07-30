@@ -69,7 +69,9 @@ const esmTerserConfig = {
     },
   },
   format: {
-    comments: false,
+    // Keep /* @vite-ignore */ so downstream Vite builds don't warn on the
+    // guarded node:dns/promises dynamic import; strip everything else.
+    comments: /@vite-ignore/,
     beautify: false,
     ascii_only: false,
     semicolons: true,
