@@ -52,8 +52,8 @@ function ZoomableGroup(
   const { width, height } = useMapContext();
 
   // Handle both simple and complex API
-  let finalMinZoom = 1;
-  let finalMaxZoom = 8;
+  let finalMinZoom: number;
+  let finalMaxZoom: number;
   let finalTranslateExtent;
 
   if (isSimpleProps(props)) {
