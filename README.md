@@ -59,7 +59,7 @@ pnpm add @vnedyalk0v/react19-simple-maps
 
 - **React**: 19.0.0 or higher (peer dependency)
 - **React DOM**: 19.0.0 or higher (peer dependency)
-- **Node.js**: 24.15.0 or higher for development and builds — CI validates on the current Node 24 release
+- **Node.js**: 24.15.0 or higher on the Node 24 line for development and builds — the line CI validates. Node 25 is excluded by the locked test toolchain; see the [Support Policy](./docs/support.md).
 - **TypeScript**: 5.0.0 or higher (recommended)
 
 For support expectations, compatibility boundaries, and release behavior, see the [Support Policy](./docs/support.md).

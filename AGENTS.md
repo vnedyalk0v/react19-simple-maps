@@ -19,7 +19,7 @@ Prefer KISS and DRY. No app-like abstractions, no speculative architecture, no b
 - `npm run lint:fix`, `npm run format` — autofix
 - `npm run analyze` — bundle size report
 - `npm run generate-sri` — regenerate `scripts/sri-hashes.json` and `src/utils/generated-sri-hashes.ts`
-- Examples: `cd examples/<name> && npm ci --ignore-scripts && npm run build`
+- Examples: `npm run build` at the root first (they link to it via `file:../..` and resolve through `dist/`), then `cd examples/<name> && npm ci --ignore-scripts && npm run build`
 
 ## Git Workflow (Required)
 
@@ -29,7 +29,9 @@ Prefer KISS and DRY. No app-like abstractions, no speculative architecture, no b
 - Conventional Commits (`fix(build): ...`, `chore(deps): ...`).
 - Before claiming a fix is in `dev` or in a PR, verify actual git/GitHub state rather than relying on memory.
 
-## Before Pushing (Required)
+## Before Committing (Required)
+
+Run this gate while the work is still uncommitted — `--type uncommitted` inspects the working tree, so running it after a commit reviews nothing.
 
 1. Run `npm run ci`. Add targeted checks when the touched area needs them: example builds, `npm run analyze`, `npm pack --dry-run`, generator reruns.
 2. Run CodeRabbit CLI as the final local review and wait for it to finish:
@@ -41,7 +43,7 @@ Prefer KISS and DRY. No app-like abstractions, no speculative architecture, no b
    (`coderabbit review --agent --type uncommitted --base dev` if the `cr` alias is unavailable.)
 
 3. Treat findings as input, not truth. Verify each against current code, fix valid ones, rerun.
-4. Push only after validation passes and no valid recommendations remain. If CodeRabbit cannot run (auth, install, connectivity), run `cr doctor`, report the blocker, and do not push unless the user explicitly approves bypassing this gate.
+4. Commit and push only after validation passes and no valid recommendations remain. If CodeRabbit cannot run (auth, install, connectivity, rate limit), run `cr doctor`, report the blocker, and do not push unless the user explicitly approves bypassing this gate.
 
 ## Pull Request Review Gate (Required)
 
