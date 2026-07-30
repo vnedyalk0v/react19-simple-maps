@@ -285,7 +285,7 @@ npm run lint
 
 ## Publishing
 
-Changesets is configured for versioning and releases. The GitHub Actions workflow in `.github/workflows/publish.yml` runs on pushes to `main` and publishes to npm when configured with the required token.
+Changesets is configured for versioning, release pull requests, and npm publishing. The GitHub Actions workflow in `.github/workflows/publish.yml` opens or updates a release PR when unreleased changesets exist, validates the required checks for that release PR, and publishes to npm when a validated release is merged to `main` with the required token configured.
 
 ## License
 

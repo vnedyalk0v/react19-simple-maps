@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
-import react from 'eslint-plugin-react';
+import react from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
@@ -44,7 +44,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      react,
+      '@eslint-react': react,
       'react-hooks': reactHooks,
       prettier,
     },
@@ -61,12 +61,10 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'warn',
 
       // React rules
-      'react/react-in-jsx-scope': 'off', // Not needed with new JSX transform
-      'react/prop-types': 'off', // Using TypeScript for prop validation
-      'react/display-name': 'error',
-      'react/jsx-key': 'error',
-      'react/jsx-no-duplicate-props': 'error',
-      'react/jsx-uses-vars': 'error',
+      // jsx-no-duplicate-props dropped: TypeScript already errors (TS17001)
+      // jsx-uses-vars dropped: typescript-eslint tracks JSX variable usage
+      '@eslint-react/no-missing-component-display-name': 'error',
+      '@eslint-react/no-missing-key': 'error',
 
       // React Hooks rules
       'react-hooks/rules-of-hooks': 'error',
@@ -81,11 +79,6 @@ export default [
 
       // Prettier integration
       'prettier/prettier': 'error',
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
     },
   },
   {
@@ -124,7 +117,7 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      react,
+      '@eslint-react': react,
       'react-hooks': reactHooks,
       prettier,
     },
@@ -141,12 +134,8 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'warn',
 
       // React rules
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
-      'react/display-name': 'warn',
-      'react/jsx-key': 'error',
-      'react/jsx-no-duplicate-props': 'error',
-      'react/jsx-uses-vars': 'error',
+      '@eslint-react/no-missing-component-display-name': 'warn',
+      '@eslint-react/no-missing-key': 'error',
 
       // React Hooks rules
       'react-hooks/rules-of-hooks': 'error',
@@ -161,11 +150,6 @@ export default [
 
       // Prettier integration
       'prettier/prettier': 'error',
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
     },
   },
   {
