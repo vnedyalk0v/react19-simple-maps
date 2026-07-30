@@ -18,55 +18,26 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          fetch-depth: 0
-          ref: dev
-
-      - name: Create back-merge branch when main is ahead of dev
-        id: sync
-        run: |
-          set -euo pipefail
-
-          if git merge-base --is-ancestor origin/main origin/dev; then
-            echo "No sync needed: dev already contains main."
-            echo "created=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git checkout -B "$SYNC_BRANCH" origin/dev
-
-          # --no-ff is required, not stylistic. dev is normally a strict ancestor of
-          # main, so a fast-forward would leave this branch's tip identical to main's
-          # SHA. GitHub creates no pull_request workflow run for a SHA that is already
-          # another branch's tip, so the required ci / dependency-review checks would
-          # never report and the PR would be permanently unmergeable under
-          # protect-dev. A real merge commit gives CI a fresh SHA to run against.
-          if ! git merge --no-ff origin/main -m "chore: sync main into dev"; then
-            echo "::error::Merge conflict syncing main into dev; resolve manually."
-            exit 1
-          fi
-
-          git push --force-with-lease origin "$SYNC_BRANCH"
-          echo "created=true" >> "$GITHUB_OUTPUT"
-        env:
-          SYNC_BRANCH: sync/main-to-dev
-
-      - name: Open or reuse sync PR, then auto-merge
-        if: steps.sync.outputs.created == 'true'
+      - name: Create sync PR when main is ahead of dev
+        id: sync_pr
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          SYNC_BRANCH: sync/main-to-dev
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const base = "dev";
-            const head = process.env.SYNC_BRANCH;
+            const head = "main";
+
+            const compare = await github.rest.repos.compareCommitsWithBasehead({
+              owner,
+              repo,
+              basehead: `${base}...${head}`,
+            });
+
+            if (compare.data.status === "identical" || compare.data.ahead_by === 0) {
+              core.info("No sync needed: main is not ahead of dev.");
+              return;
+            }
 
             const existing = await github.rest.pulls.list({
               owner,
@@ -77,31 +48,49 @@ jobs:
               per_page: 1,
             });
 
-            let pr = existing.data[0];
+            if (existing.data.length > 0) {
+              const existingPr = existing.data[0];
+              core.info(`Sync PR already open: #${existingPr.number}`);
+              core.setOutput("pr_number", String(existingPr.number));
+              return;
+            }
 
-            if (pr) {
-              core.info(`Reusing open sync PR #${pr.number}`);
-            } else {
-              const created = await github.rest.pulls.create({
-                owner,
-                repo,
-                title: "chore: sync main into dev",
-                head,
-                base,
-                body: [
-                  "Automated back-merge to keep `dev` up to date with `main`.",
-                  "",
-                  "- Trigger: push to `main`",
-                  "- Source: `main` (merged with `--no-ff`)",
-                  "- Target: `dev`",
-                  "",
-                  "The merge commit is deliberate. A direct `main` -> `dev` PR carries a head SHA",
-                  "identical to `main`'s tip, which GitHub never generates a `pull_request` run for,",
-                  "leaving the required checks unreportable and the PR permanently blocked.",
-                ].join("\n"),
-              });
-              pr = created.data;
-              core.info(`Created PR #${pr.number}: ${pr.html_url}`);
+            const pr = await github.rest.pulls.create({
+              owner,
+              repo,
+              title: "chore: sync main into dev",
+              head,
+              base,
+              body: [
+                "Automated sync PR to keep `dev` up to date with `main`.",
+                "",
+                "- Trigger: push to `main`",
+                "- Source: `main`",
+                "- Target: `dev`",
+              ].join("\n"),
+            });
+
+            core.info(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+            core.setOutput("pr_number", String(pr.data.number));
+
+      - name: Enable auto-merge for sync PR
+        if: steps.sync_pr.outputs.pr_number != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber = Number("${{ steps.sync_pr.outputs.pr_number }}");
+
+            const pr = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            if (pr.data.state !== "open") {
+              core.info(`PR #${prNumber} is already ${pr.data.state}.`);
+              return;
             }
 
             try {
@@ -113,9 +102,11 @@ jobs:
                     }
                   }
                 }`,
-                { pullRequestId: pr.node_id }
+                {
+                  pullRequestId: pr.data.node_id,
+                }
               );
-              core.info(`Enabled auto-merge for PR #${pr.number}.`);
+              core.info(`Enabled auto-merge for PR #${prNumber}.`);
             } catch (error) {
-              core.warning(`Could not enable auto-merge for PR #${pr.number}: ${error.message}`);
+              core.warning(`Could not enable auto-merge for PR #${prNumber}: ${error.message}`);
             }
