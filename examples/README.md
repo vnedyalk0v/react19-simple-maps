@@ -25,9 +25,9 @@ npm run dev
 
 ## Requirements
 
-- Node.js 18+
-- TypeScript 5.0+
+- Node.js 24.15.0 or newer, matching the repository requirement. CI builds the examples on the current Node 24 release, in the same job that installs the root package.
 - React 19+
+- The examples pin TypeScript 6 and Vite 8 in their own `package.json`
 
 ## TypeScript Configuration
 

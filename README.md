@@ -59,7 +59,7 @@ pnpm add @vnedyalk0v/react19-simple-maps
 
 - **React**: 19.0.0 or higher (peer dependency)
 - **React DOM**: 19.0.0 or higher (peer dependency)
-- **Node.js**: 20.19.0 or higher (development/build)
+- **Node.js**: 24.15.0 or higher for development and builds — CI validates on the current Node 24 release
 - **TypeScript**: 5.0.0 or higher (recommended)
 
 For support expectations, compatibility boundaries, and release behavior, see the [Support Policy](./docs/support.md).
@@ -277,11 +277,15 @@ REACT_SIMPLE_MAPS_DEBUG=true
 ```bash
 npm install
 npm run dev
-npm run build
-npm run test
-npm run type-check
-npm run lint
 ```
+
+`npm run ci` is the full validation gate and runs build, type-check, lint, format check, tests, and build verification:
+
+```bash
+npm run ci
+```
+
+Individual steps are also available: `npm run build`, `npm run test`, `npm run type-check`, `npm run lint`.
 
 ## Publishing
 

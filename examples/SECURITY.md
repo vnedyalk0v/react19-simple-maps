@@ -8,8 +8,7 @@ Both examples include CSP meta tags in `index.html`, and the Vite dev server set
 
 - **HTML meta tags** allow `self` plus `https://unpkg.com` for geography data.
 - **Dev server headers** add `ws:`/`wss:` for Vite HMR and also set `frame-ancestors 'none'`.
-- The **interactive example** includes `frame-ancestors 'none'` in its meta tag.
-- The **basic example** does not include `frame-ancestors` in the meta tag (see the comment in `index.html`).
+- Neither example sets `frame-ancestors` in its meta tag, because browsers ignore that directive in meta-delivered CSP. It must be delivered as an HTTP response header (see the comments in each `index.html`).
 
 ### CSP Directives Used (Development)
 
@@ -34,13 +33,16 @@ The directives above are **development defaults only**. Derive your production C
 
 ## Additional Security Headers
 
-The examples also set these headers (via HTML meta tags and dev server headers):
+The Vite dev server (`vite.config.ts`) sets these HTTP response headers in both examples:
 
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `X-XSS-Protection: 0` — Disables the legacy XSS auditor. The deprecated `1; mode=block` value can introduce cross-site leak vulnerabilities in older browsers. Rely on a strong Content Security Policy instead.
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy` (disabled features list)
+
+The `index.html` files repeat `X-Content-Type-Options`, `X-XSS-Protection`, and `Referrer-Policy` as `<meta http-equiv>` tags. Treat those as local-development documentation only. Security headers are dependable only when delivered as HTTP response headers, so set all of them at the server, CDN, or edge layer in production.
+
+`Permissions-Policy` is not set by the examples. It is an HTTP response header, so configure it at that same layer if you need it.
 
 ## Development vs Production
 
