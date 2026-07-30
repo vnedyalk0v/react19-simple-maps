@@ -107,9 +107,7 @@ const App: React.FC = () => {
             onChange={(e) =>
               setProjection(
                 e.target.value as
-                  | 'geoEqualEarth'
-                  | 'geoMercator'
-                  | 'geoNaturalEarth1',
+                  'geoEqualEarth' | 'geoMercator' | 'geoNaturalEarth1',
               )
             }
             style={{ padding: '0.5rem', borderRadius: '4px' }}
