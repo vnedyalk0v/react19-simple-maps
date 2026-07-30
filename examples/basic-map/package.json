@@ -18,14 +18,14 @@
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/geojson": "^7946.0.16",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
     "@vitejs/plugin-react": "^6.0.2",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react": "^7.37.5",
+    "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.6.0",
