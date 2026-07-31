@@ -50,6 +50,8 @@ Run this gate while the work is still uncommitted — `--type uncommitted` inspe
 
 Opening a PR automatically triggers **Codex Review** and **Greptile Review**. This gate covers every PR you open, into `dev` or `main`, and never merge one before those reviews have completed. It does not cover the automated `main` -> `dev` sync PRs, which `.github/workflows/sync-main-to-dev.yml` auto-merges on required checks alone, or Changesets release PRs, which the release workflow owns. CodeRabbit does not auto-review PRs targeting `dev` — its auto-review is limited to the default branch — so the local `cr` gate above is its coverage. Comment `@coderabbitai review` to request it on a PR when that local run was skipped or blocked.
 
+Greptile runs on a credit-limited plan. When its check reports `skipping` or its review says the credits are exhausted, treat it as unavailable and gate on Codex alone — do not wait on a check that cannot report.
+
 1. Open the PR and wait for the automated reviews to post. A PR with reviews still pending is not mergeable, regardless of CI status.
 2. If reviews are clean and required checks (`ci`, `dependency-review`) pass — merge.
 3. If any issue is flagged:
