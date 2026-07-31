@@ -15,9 +15,11 @@ See [SECURITY.md](./SECURITY.md) for details.
 
 ## Running Examples
 
-Each example is a standalone TypeScript project. To run one:
+Each example is a standalone TypeScript project that links to the root package with `file:../..`, so build the root package first:
 
 ```bash
+npm install && npm run build   # from the repository root
+
 cd examples/basic-map
 npm install
 npm run dev
@@ -25,9 +27,9 @@ npm run dev
 
 ## Requirements
 
-- Node.js 18+
-- TypeScript 5.0+
+- Node.js 24.15.0 or newer on the Node 24 line, matching the repository requirement. CI builds the examples in the same job that installs and builds the root package.
 - React 19+
+- The examples pin TypeScript 6 and Vite 8 in their own `package.json`
 
 ## TypeScript Configuration
 
