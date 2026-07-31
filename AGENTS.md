@@ -25,6 +25,7 @@ Prefer KISS and DRY. No app-like abstractions, no speculative architecture, no b
 
 - `dev` is the integration branch; `main` is the release branch. Never push directly to either.
 - For every task: update `dev` from `origin/dev`, branch from it, keep work scoped to the request, open a PR into `dev`.
+- Release promotions are the one exception: they go straight from `dev` to `main` as a single PR, with no task branch and no new commits. Fix any valid review finding on a normal task branch into `dev`; the promotion PR picks it up automatically.
 - After a PR merges, do not continue on that branch. Branch fresh from updated `dev` — including for post-merge review feedback.
 - Conventional Commits (`fix(build): ...`, `chore(deps): ...`).
 - Before claiming a fix is in `dev` or in a PR, verify actual git/GitHub state rather than relying on memory.
@@ -47,18 +48,20 @@ Run this gate while the work is still uncommitted — `--type uncommitted` inspe
 
 ## Pull Request Review Gate (Required)
 
-Opening a PR automatically triggers **Codex Review** and **Greptile Review**. Never merge a PR before those reviews have completed. CodeRabbit does not auto-review PRs targeting `dev` — its auto-review is limited to the default branch — so the local `cr` gate above is its coverage. Comment `@coderabbitai review` to request it on a PR when that local run was skipped or blocked.
+Opening a PR automatically triggers **Codex Review** and **Greptile Review**. This gate covers every PR you open, into `dev` or `main`, and never merge one before those reviews have completed. It does not cover the automated `main` -> `dev` sync PRs, which `.github/workflows/sync-main-to-dev.yml` auto-merges on required checks alone, or Changesets release PRs, which the release workflow owns. CodeRabbit does not auto-review PRs targeting `dev` — its auto-review is limited to the default branch — so the local `cr` gate above is its coverage. Comment `@coderabbitai review` to request it on a PR when that local run was skipped or blocked.
 
-1. Open the PR into `dev` and wait for the automated reviews to post. A PR with reviews still pending is not mergeable, regardless of CI status.
+Greptile runs on a credit-limited plan. When its check reports `skipping` or its review says the credits are exhausted, treat it as unavailable and gate on Codex alone — do not wait on a check that cannot report.
+
+1. Open the PR and wait for the automated reviews to post. A PR with reviews still pending is not mergeable, regardless of CI status.
 2. If reviews are clean and required checks (`ci`, `dependency-review`) pass — merge.
 3. If any issue is flagged:
    - Verify each finding against the current code. Reviewers can be wrong.
-   - Fix the valid ones on the same branch and push.
+   - Fix the valid ones and push: on the PR's own branch for a task PR, or on a fresh task branch into `dev` for a promotion PR, which then picks the fix up automatically.
    - Reply to every comment: what was fixed, or why the finding does not apply.
    - Resolve the addressed threads.
    - Request a fresh review by commenting `@codex review` and `@greptile review`.
    - Wait for the new reviews to complete, then repeat from step 2.
-4. Merge only after a review round comes back with no outstanding issues and all required checks pass. Verify the merged state afterwards instead of assuming it.
+4. Merge only after a review round comes back with no outstanding issues and all required checks pass. Verify the merged state afterward instead of assuming it.
 5. Never reference review bots or IDE names (CodeRabbit, Codex, Greptile, Cursor, Copilot) outside this file and PR review threads — not in changesets, changelog entries, commit messages, code comments, README, or docs.
 
 ## Release Notes (Required)
