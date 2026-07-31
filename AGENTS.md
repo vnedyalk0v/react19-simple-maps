@@ -59,7 +59,7 @@ Opening a PR automatically triggers **Codex Review** and **Greptile Review**. Th
    - Resolve the addressed threads.
    - Request a fresh review by commenting `@codex review` and `@greptile review`.
    - Wait for the new reviews to complete, then repeat from step 2.
-4. Merge only after a review round comes back with no outstanding issues and all required checks pass. Verify the merged state afterwards instead of assuming it.
+4. Merge only after a review round comes back with no outstanding issues and all required checks pass. Verify the merged state afterward instead of assuming it.
 5. Never reference review bots or IDE names (CodeRabbit, Codex, Greptile, Cursor, Copilot) outside this file and PR review threads — not in changesets, changelog entries, commit messages, code comments, README, or docs.
 
 ## Release Notes (Required)
