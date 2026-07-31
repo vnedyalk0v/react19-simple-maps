@@ -8,8 +8,7 @@
 
 ## Development and build support
 
-- Local development, tests, and package builds require **Node.js 20.19.0 or newer**.
-- CI validates the repository on **Node.js 20** and **Node.js 22**.
+- Local development, tests, and package builds require **Node.js 24.15.0 or newer on the Node 24 line**, which is what CI runs. Engine ranges declared by the development toolchain rule out Node 20, earlier 22.x releases, Node 24.0 through 24.14, and all of Node 25.
 
 ## API and release expectations
 

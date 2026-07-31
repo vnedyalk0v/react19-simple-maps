@@ -26,18 +26,15 @@ Runs on:
 - PRs to `main`
 - pushes to `dev`
 
-The workflow installs dependencies with lifecycle scripts disabled and uses the
-canonical validation command:
+The workflow installs dependencies with lifecycle scripts disabled
+(`npm ci --ignore-scripts`) and defines three jobs:
 
-```bash
-npm ci --ignore-scripts
-```
+- `validate` — runs `npm run ci` under a Node.js matrix (currently `24`)
+- `example-builds` — builds the root package, then installs and builds both
+  examples with lifecycle scripts disabled to verify they work with the package
+- `ci` — the required status check, which fails unless both jobs above succeed
 
-```bash
-npm run ci
-```
-
-`npm run ci` runs the local validation steps:
+`npm run ci` is the canonical validation contract and runs:
 
 - build
 - type-check
@@ -45,15 +42,6 @@ npm run ci
 - formatting check
 - tests
 - build verification
-- runs validation under a Node.js matrix (20, 22) in the `validate` job
-- builds examples in a separate `example-builds` job to verify they work with the package
-
-The CI orchestration itself lives in `.github/workflows/ci.yml`, which defines:
-
-- the `validate` job, running `npm run ci` under a Node.js matrix (`20`, `22`)
-- the `example-builds` job, which builds the root package explicitly, installs
-  each example with lifecycle scripts disabled, and builds both examples
-  separately to verify they work with the package
 
 This keeps dependency installation free of package builds while making
 `npm run ci` the explicit package validation and build contract.

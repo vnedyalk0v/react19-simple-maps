@@ -31,11 +31,10 @@
 
     <!--
       DEVELOPMENT-ONLY fallbacks via meta tags.
-      Per HTML, Referrer-Policy is reliably enforceable from <meta http-equiv>.
-      X-Content-Type-Options and X-Frame-Options are not reliably honored via
-      http-equiv; deliver them (and the rest of your security headers) as HTTP
-      response headers in production (server / CDN / edge). Keep these meta tags
-      only as local-dev fallbacks.
+      X-Content-Type-Options, X-XSS-Protection, and X-Frame-Options are not
+      reliably honored via http-equiv; deliver them (and the rest of your
+      security headers) as HTTP response headers in production
+      (server / CDN / edge). Keep these meta tags only as local-dev fallbacks.
       See examples/SECURITY.md for details.
     -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
