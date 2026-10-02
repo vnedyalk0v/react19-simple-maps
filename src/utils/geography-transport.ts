@@ -22,7 +22,6 @@ export function createSecureFetchOptions(
     signal,
     headers: {
       Accept: config.ALLOWED_CONTENT_TYPES.join(', '),
-      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
     },
     // Security headers
     mode: 'cors',
@@ -45,7 +44,7 @@ export async function fetchWithRedirectValidation(
 ): Promise<Response> {
   let currentUrl = url;
 
-  for (let hop = 0; hop < MAX_REDIRECTS; hop++) {
+  for (let hop = 0; ; hop++) {
     const response = await fetch(currentUrl, options);
 
     if (response.type === 'opaqueredirect') {
@@ -68,6 +67,14 @@ export async function fetchWithRedirectValidation(
       // Ignore cancellation errors — they must not mask redirect handling
     }
 
+    if (hop === MAX_REDIRECTS) {
+      throw createGeographyFetchError(
+        'SECURITY_ERROR',
+        `Too many redirects (exceeded ${MAX_REDIRECTS} hops)`,
+        url,
+      );
+    }
+
     // Extract and validate the redirect target
     const location = response.headers.get('location');
     if (!location) {
@@ -87,12 +94,6 @@ export async function fetchWithRedirectValidation(
 
     currentUrl = redirectUrl;
   }
-
-  throw createGeographyFetchError(
-    'SECURITY_ERROR',
-    `Too many redirects (exceeded ${MAX_REDIRECTS} hops)`,
-    url,
-  );
 }
 
 /**

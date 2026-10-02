@@ -31,6 +31,83 @@ afterEach(() => {
 
 describe('validated geography transport', () => {
   it.each([fetchGeographiesCache, generateSRIHash])(
+    'allows five redirects and cancels each unused body',
+    async (request) => {
+      vi.stubGlobal('crypto', webcrypto);
+      const redirects = Array.from(
+        { length: 5 },
+        (_, index) =>
+          new Response('unused', {
+            status: 302,
+            headers: { location: `/hop-${index + 1}.json` },
+          }),
+      );
+      const cancels = redirects.map((response) =>
+        vi.spyOn(response.body!, 'cancel'),
+      );
+      const responses = [
+        ...redirects,
+        new Response(data, { headers: { 'content-type': 'application/json' } }),
+      ];
+      const fetchMock = vi.fn(async (_url: string) => responses.shift()!);
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(request(url)).resolves.toBeDefined();
+      expect(fetchMock).toHaveBeenCalledTimes(6);
+      expect(fetchMock.mock.calls[5]?.[0]).toBe('https://8.8.8.8/hop-5.json');
+      for (const cancel of cancels) expect(cancel).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([fetchGeographiesCache, generateSRIHash])(
+    'rejects a sixth redirect without a seventh fetch and cancels its body',
+    async (request) => {
+      const redirects = Array.from(
+        { length: 6 },
+        (_, index) =>
+          new Response('unused', {
+            status: 302,
+            headers: { location: `/hop-${index + 1}.json` },
+          }),
+      );
+      const cancels = redirects.map((response) =>
+        vi.spyOn(response.body!, 'cancel'),
+      );
+      const fetchMock = vi.fn(async () => redirects.shift()!);
+      vi.stubGlobal('fetch', fetchMock);
+      const result = request(url);
+      await expect(result).rejects.toThrow(/exceeded 5 hops/i);
+      await expect(result).rejects.toMatchObject({ type: 'SECURITY_ERROR' });
+      expect(fetchMock).toHaveBeenCalledTimes(6);
+      for (const cancel of cancels) expect(cancel).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([fetchGeographiesCache, generateSRIHash])(
+    'uses only CORS-safelisted request headers by default',
+    async (request) => {
+      vi.stubGlobal('crypto', webcrypto);
+      const fetchMock = vi.fn(
+        async (_url: string, _options: RequestInit) =>
+          new Response(data, {
+            headers: { 'content-type': 'application/json' },
+          }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      await request(url);
+      const options = fetchMock.mock.calls[0]![1];
+      const headers = new Headers(options.headers);
+      expect([...headers.keys()]).toEqual(['accept']);
+      expect(headers.get('accept')).toBe(
+        DEFAULT_GEOGRAPHY_FETCH_CONFIG.ALLOWED_CONTENT_TYPES.join(', '),
+      );
+      expect(options).toMatchObject({
+        mode: 'cors',
+        credentials: 'omit',
+        redirect: 'manual',
+      });
+    },
+  );
+  it.each([fetchGeographiesCache, generateSRIHash])(
     'rejects private redirect targets without following them',
     async (request) => {
       const response = new Response('x'.repeat(4096), {
