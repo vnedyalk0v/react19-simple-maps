@@ -117,6 +117,59 @@ describe('useGeographies URL state', () => {
     expect(seen.every((names) => names.join() === 'B')).toBe(true);
   });
 
+  it('shows loading, not the earlier result, when returning to a URL (A -> B -> A)', async () => {
+    const net = controlFetch();
+    const seen: Array<{ loading: boolean; names: string[] }> = [];
+    function Probe({ url }: { url: string }) {
+      const { isLoading, geographies } = useGeographies({ geography: url });
+      seen.push({
+        loading: isLoading,
+        names: geographies.map((g) => String(g.properties?.name)),
+      });
+      return null;
+    }
+    const view = (url: string) => (
+      <StrictMode>
+        <ComposableMap>
+          <Probe url={url} />
+        </ComposableMap>
+      </StrictMode>
+    );
+
+    const { rerender } = render(view(URL_A));
+    await net.resolve(URL_A, fc('A-old'));
+    rerender(view(URL_B)); // B stays pending
+
+    seen.length = 0;
+    rerender(view(URL_A));
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((s) => s.loading && s.names.length === 0)).toBe(true);
+
+    await net.resolve(URL_A, fc('A-new'));
+    expect(seen.at(-1)).toEqual({ loading: false, names: ['A-new'] });
+  });
+
+  it('does not re-report an earlier error when returning to a URL (A -> B -> A)', async () => {
+    const net = controlFetch();
+    const onError = vi.fn();
+    const view = (url: string) => (
+      <ComposableMap>
+        <Geographies geography={url} onGeographyError={onError}>
+          {() => null}
+        </Geographies>
+      </ComposableMap>
+    );
+
+    const { rerender } = render(view(URL_A));
+    await net.reject(URL_A, new Error('A failed'));
+    expect(onError).toHaveBeenCalledTimes(1);
+    rerender(view(URL_B)); // B stays pending
+
+    rerender(view(URL_A));
+    await act(async () => {});
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
   it('reports isLoading on the very first render of a URL', () => {
     controlFetch();
     const states: boolean[] = [];
