@@ -55,6 +55,7 @@ function Geography({
   onMouseUp,
   onFocus,
   onBlur,
+  onKeyDown,
   style = {},
   className = '',
   ref,
@@ -132,6 +133,20 @@ function Geography({
     [onMouseUp, geographyEventData],
   );
 
+  // Keyboard activation for clickable geographies, matching native buttons.
+  const handleKeyDown = useCallback(
+    (evt: React.KeyboardEvent<SVGPathElement>) => {
+      onKeyDown?.(evt);
+      if (!onClick || evt.defaultPrevented) return;
+      if (evt.key !== 'Enter' && evt.key !== ' ') return;
+      evt.preventDefault();
+      evt.currentTarget.dispatchEvent(
+        new MouseEvent('click', { bubbles: true }),
+      );
+    },
+    [onKeyDown, onClick],
+  );
+
   const currentState = useMemo(() => {
     if (isPressed) return 'pressed' as const;
     if (isFocused) return 'focused' as const;
@@ -153,6 +168,7 @@ function Geography({
     <path
       ref={ref}
       tabIndex={0}
+      role={onClick ? 'button' : undefined}
       className={`rsm-geography ${className}`}
       d={svgPath}
       onClick={handleClick}
@@ -162,6 +178,7 @@ function Geography({
       onBlur={handleBlur}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
+      onKeyDown={handleKeyDown}
       style={currentStyle}
       {...restProps}
     />

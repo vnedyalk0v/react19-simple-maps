@@ -42,49 +42,51 @@ export default function useGeographies({
   }, []);
 
   useEffect(() => {
+    if (!isString(geography)) return;
+
     let ignore = false;
+    setIsLoading(true);
+    setError(null);
 
-    if (isString(geography)) {
-      setIsLoading(true);
-      setError(null);
+    devTools.debugGeographyLoading(geography, 'start');
 
-      devTools.debugGeographyLoading(geography, 'start');
+    preloadGeography(geography);
 
-      preloadGeography(geography);
-
-      fetchGeographiesCache(geography)
-        .then((data) => {
-          if (!ignore) {
-            devTools.debugGeographyLoading(geography, 'success', data);
-            setLoadedData(data);
-            setIsLoading(false);
-          }
-        })
-        .catch((err) => {
-          if (!ignore) {
-            devTools.debugGeographyLoading(geography, 'error', err);
-            setError(err instanceof Error ? err : new Error(String(err)));
-            setIsLoading(false);
-          }
-        });
-    } else {
-      setLoadedData(geography);
-      setIsLoading(false);
-      setError(null);
-    }
+    fetchGeographiesCache(geography)
+      .then((result) => {
+        if (!ignore) {
+          devTools.debugGeographyLoading(geography, 'success', result);
+          setLoadedData(result);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          devTools.debugGeographyLoading(geography, 'error', err);
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setIsLoading(false);
+        }
+      });
 
     return () => {
       ignore = true;
     };
   }, [geography, retryCount]);
 
+  // Inline data is derived during render so it is available on the server and
+  // on the first client render; only URLs go through the fetch Effect above.
+  const isUrl = isString(geography);
+  const data = isUrl ? loadedData : geography;
+  const loading = isUrl && isLoading;
+  const fetchError = isUrl ? error : null;
+
   // Granular memoization for expensive operations
 
   // Memoize feature extraction with aggressive caching
   const rawFeatures = useMemo(() => {
-    if (isLoading || !loadedData) return [];
+    if (loading || !data) return [];
 
-    const cacheKey = generateFeaturesCacheKey(loadedData, parseGeographies);
+    const cacheKey = generateFeaturesCacheKey(data, parseGeographies);
     const cached = getCachedFeatures(cacheKey);
 
     if (cached) {
@@ -92,18 +94,18 @@ export default function useGeographies({
     }
 
     // Extract features
-    const features = getFeatures(loadedData, parseGeographies);
+    const features = getFeatures(data, parseGeographies);
 
     cacheFeatures(cacheKey, features);
 
     return features;
-  }, [loadedData, isLoading, parseGeographies]);
+  }, [data, loading, parseGeographies]);
 
   // Memoize mesh extraction separately
   const rawMesh = useMemo(() => {
-    if (isLoading || !loadedData) return null;
-    return getMesh(loadedData);
-  }, [loadedData, isLoading]);
+    if (loading || !data) return null;
+    return getMesh(data);
+  }, [data, loading]);
 
   // Memoize prepared features with aggressive caching (path generation is expensive)
   const preparedGeographies = useMemo(() => {
@@ -128,7 +130,7 @@ export default function useGeographies({
   const preparedMeshData = useMemo(() => {
     if (!rawMesh) return { outline: '', borders: '' };
 
-    const cacheKey = generateMeshCacheKey(loadedData, path);
+    const cacheKey = generateMeshCacheKey(data, path);
     const cached = getCachedMeshData(cacheKey);
 
     if (cached) {
@@ -148,16 +150,16 @@ export default function useGeographies({
 
     cacheMeshData(cacheKey, result);
     return result;
-  }, [rawMesh, path, loadedData]);
+  }, [rawMesh, path, data]);
 
   return useMemo(() => {
     return {
       geographies: preparedGeographies,
       outline: preparedMeshData.outline,
       borders: preparedMeshData.borders,
-      isLoading,
-      error,
+      isLoading: loading,
+      error: fetchError,
       refetch,
     };
-  }, [preparedGeographies, preparedMeshData, isLoading, error, refetch]);
+  }, [preparedGeographies, preparedMeshData, loading, fetchError, refetch]);
 }

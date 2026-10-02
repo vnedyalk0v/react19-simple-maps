@@ -177,6 +177,7 @@ Zoom and pan with both simple and advanced APIs.
 ```tsx
 import {
   ZoomableGroup,
+  createCoordinates,
   createZoomConfig,
 } from '@vnedyalk0v/react19-simple-maps';
 

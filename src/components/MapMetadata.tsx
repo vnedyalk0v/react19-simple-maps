@@ -99,15 +99,6 @@ export function MapMetadata({
       <meta name="geo.placename" content="World Map" />
       <meta name="ICBM" content="0, 0" />
 
-      {/* Preload critical resources */}
-      <link
-        rel="preload"
-        href="/fonts/map-font.woff2"
-        as="font"
-        type="font/woff2"
-        crossOrigin="anonymous"
-      />
-
       {children}
     </>
   );

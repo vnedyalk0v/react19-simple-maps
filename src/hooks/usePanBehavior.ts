@@ -55,13 +55,17 @@ export function usePanBehavior({
 
       // Use transition for smooth programmatic zoom/pan changes
       startTransition(() => {
-        if (zoomRef.current) {
-          svg.call(
-            zoomRef.current.transform,
-            d3ZoomIdentity
-              .translate(width / 2 - x, height / 2 - y)
-              .scale(newZoom),
-          );
+        try {
+          if (zoomRef.current) {
+            svg.call(
+              zoomRef.current.transform,
+              d3ZoomIdentity
+                .translate(width / 2 - x, height / 2 - y)
+                .scale(newZoom),
+            );
+          }
+        } finally {
+          bypassEvents.current = false;
         }
         const newPosition = { x: width / 2 - x, y: height / 2 - y, k: newZoom };
         if (onPositionChange) {

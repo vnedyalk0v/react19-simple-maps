@@ -5,8 +5,8 @@ import { MapMetadata, mapMetadataPresets } from './MapMetadata';
 
 // Enhanced metadata props for the wrapper component
 interface MapWithMetadataProps extends ComposableMapProps {
-  // Override metadata to make it required for this component
-  metadata: Required<NonNullable<ComposableMapProps['metadata']>>;
+  // Required for this component; omitted fields fall back to the preset
+  metadata: NonNullable<ComposableMapProps['metadata']>;
 
   // Additional metadata options
   enableSEO?: boolean;
@@ -90,14 +90,10 @@ function MapWithMetadata({
     );
   }, [processedMetadata, enableSEO]);
 
-  // Extract ref from mapProps to avoid type issues
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { ref: _ref, ...composableMapProps } = mapProps;
-
   return (
     <>
       {metadataComponent}
-      <ComposableMap {...composableMapProps}>{children}</ComposableMap>
+      <ComposableMap {...mapProps}>{children}</ComposableMap>
     </>
   );
 }

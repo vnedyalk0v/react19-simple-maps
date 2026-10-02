@@ -3,7 +3,10 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchGeographiesCache } from '../src/utils/geography-fetching';
+import {
+  clearGeographyFetchCache,
+  fetchGeographiesCache,
+} from '../src/utils/geography-fetching';
 import {
   generateSRIHash,
   configureSRI,
@@ -19,6 +22,7 @@ const url = 'https://8.8.8.8/geography.json';
 const data = JSON.stringify({ type: 'FeatureCollection', features: [] });
 
 beforeEach(() => {
+  clearGeographyFetchCache();
   configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
   configureSRI({ ...DEFAULT_SRI_CONFIG });
 });

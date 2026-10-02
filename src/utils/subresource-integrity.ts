@@ -294,14 +294,19 @@ export async function validateSRIFromArrayBuffer(
 /**
  * Canonicalize a URL for SRI lookup.
  * Strips the fragment, removes default ports, normalises the hostname to
- * lowercase, and removes trailing slashes from the path so that minor URL
- * variants resolve to the same SRI entry.
+ * lowercase, decodes percent-encoded unreserved characters and `@` in the
+ * path, and removes trailing slashes from the path so that minor URL variants
+ * resolve to the same SRI entry. With `ignoreQuery`, the query is dropped too
+ * (used for known static sources, which serve the same bytes for any query).
  */
-function canonicalizeUrlForSRI(url: string): string {
+function canonicalizeUrlForSRI(url: string, ignoreQuery = false): string {
   try {
     const parsed = new URL(url);
     // Remove fragment — it is never sent to the server
     parsed.hash = '';
+    if (ignoreQuery) {
+      parsed.search = '';
+    }
     // URL constructor already lowercases the hostname and normalises the port,
     // but we explicitly clear the default port for safety.
     if (
@@ -311,7 +316,13 @@ function canonicalizeUrlForSRI(url: string): string {
       parsed.port = '';
     }
     // Strip trailing slashes from the path (preserve root "/" and query/hash)
-    parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+    parsed.pathname =
+      parsed.pathname
+        .replace(/%[0-9a-f]{2}/gi, (encoded) => {
+          const char = String.fromCharCode(parseInt(encoded.slice(1), 16));
+          return /[\w.~@-]/.test(char) ? char : encoded;
+        })
+        .replace(/\/+$/, '') || '/';
     return parsed.href;
   } catch {
     // If URL parsing fails, return as-is — the fetch will fail with a
@@ -323,8 +334,10 @@ function canonicalizeUrlForSRI(url: string): string {
 /**
  * Check if SRI validation is required for a URL.
  * The URL is canonicalized (fragment stripped, host lowercased, default port
- * removed) before lookup so that trivial URL variants don't bypass known
- * SRI entries.
+ * removed, unreserved path characters decoded) before lookup so that trivial
+ * URL variants don't bypass known SRI entries. Known sources are matched on
+ * origin and path only. Custom entries with `enforceIntegrity: false` are not
+ * enforced.
  *
  * @param url - URL to check
  * @returns SRI configuration if validation is required, null otherwise
@@ -336,19 +349,15 @@ export function getSRIForUrl(
   const canonical = canonicalizeUrlForSRI(url);
 
   // Check custom SRI map first (canonical then raw)
-  if (config.customSRIMap[canonical]) {
-    return config.customSRIMap[canonical];
-  }
-  if (config.customSRIMap[url]) {
-    return config.customSRIMap[url];
+  const customSRI = config.customSRIMap[canonical] ?? config.customSRIMap[url];
+  if (customSRI?.enforceIntegrity) {
+    return customSRI;
   }
 
-  // Check known sources (canonical then raw)
-  if (KNOWN_GEOGRAPHY_SRI[canonical] && config.enforceForKnownSources) {
-    return KNOWN_GEOGRAPHY_SRI[canonical];
-  }
-  if (KNOWN_GEOGRAPHY_SRI[url] && config.enforceForKnownSources) {
-    return KNOWN_GEOGRAPHY_SRI[url];
+  // Check known sources by origin and path
+  const knownSRI = KNOWN_GEOGRAPHY_SRI[canonicalizeUrlForSRI(url, true)];
+  if (knownSRI && config.enforceForKnownSources) {
+    return knownSRI;
   }
 
   // If enforcing for all sources but no SRI available
