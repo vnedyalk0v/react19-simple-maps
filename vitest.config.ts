@@ -29,7 +29,7 @@ export default defineConfig({
     include: ['tests/**/*.{test,spec}.{js,ts,tsx}'],
     exclude: ['node_modules/', 'dist/', 'coverage/'],
   },
-  esbuild: {
+  oxc: {
     target: 'node24',
   },
 });

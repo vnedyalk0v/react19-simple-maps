@@ -255,6 +255,7 @@ function touch(
   event: string,
   points: [number, number][],
   ended = false,
+  changedIdentifiers?: number[],
 ) {
   const touches = points.map(([clientX, clientY], identifier) => ({
     identifier,
@@ -264,18 +265,138 @@ function touch(
     pageY: clientY,
     target: outer,
   }));
-  fireEvent(
-    outer,
-    new TouchEvent(event, {
-      bubbles: true,
-      cancelable: true,
-      touches: ended ? [] : (touches as unknown as Touch[]),
-      changedTouches: touches as unknown as Touch[],
-    }),
-  );
+  const touchEvent = new TouchEvent(event, {
+    bubbles: true,
+    cancelable: true,
+    touches: ended ? [] : (touches as unknown as Touch[]),
+    changedTouches: touches.filter(
+      ({ identifier }) =>
+        !changedIdentifiers || changedIdentifiers.includes(identifier),
+    ) as unknown as Touch[],
+  });
+  fireEvent(outer, touchEvent);
+  return touchEvent;
 }
 
 describe('zoom and pan interaction controls', () => {
+  it('leaves single-finger scrolling unconsumed without movement callbacks when pan is disabled', () => {
+    const onMoveStart = vi.fn();
+    const onMove = vi.fn();
+    const onMoveEnd = vi.fn();
+    const view = render(
+      <StrictMode>
+        <ComposableMap>
+          <ZoomableGroup
+            enablePan={false}
+            onMoveStart={onMoveStart}
+            onMove={onMove}
+            onMoveEnd={onMoveEnd}
+          />
+        </ComposableMap>
+      </StrictMode>,
+    );
+    const { outer, value } = transform(view);
+    const before = { ...value() };
+    touch(outer, 'touchstart', [[100, 100]]);
+    expect(touch(outer, 'touchmove', [[150, 130]]).defaultPrevented).toBe(
+      false,
+    );
+    touch(outer, 'touchend', [[150, 130]], true);
+    expect(value()).toMatchObject(before);
+    expect(onMoveStart).not.toHaveBeenCalled();
+    expect(onMove).not.toHaveBeenCalled();
+    expect(onMoveEnd).not.toHaveBeenCalled();
+    view.unmount();
+    touch(outer, 'touchstart', [[100, 100]]);
+    expect(touch(outer, 'touchmove', [[150, 130]]).defaultPrevented).toBe(
+      false,
+    );
+    touch(outer, 'touchend', [[150, 130]], true);
+    expect(onMoveStart).not.toHaveBeenCalled();
+    expect(onMove).not.toHaveBeenCalled();
+    expect(onMoveEnd).not.toHaveBeenCalled();
+  });
+
+  it('rebases a pinch after single-finger scrolling and emits one movement lifecycle', () => {
+    const onMoveStart = vi.fn();
+    const onMove = vi.fn();
+    const onMoveEnd = vi.fn();
+    const view = render(
+      <StrictMode>
+        <ComposableMap>
+          <ZoomableGroup
+            enablePan={false}
+            zoom={2}
+            onMoveStart={onMoveStart}
+            onMove={onMove}
+            onMoveEnd={onMoveEnd}
+          />
+        </ComposableMap>
+      </StrictMode>,
+    );
+    const { outer, value } = transform(view);
+    const before = { ...value() };
+    touch(outer, 'touchstart', [[100, 100]]);
+    expect(touch(outer, 'touchmove', [[200, 150]]).defaultPrevented).toBe(
+      false,
+    );
+    touch(
+      outer,
+      'touchstart',
+      [
+        [200, 150],
+        [300, 150],
+      ],
+      false,
+      [1],
+    );
+    touch(outer, 'touchmove', [
+      [200, 150],
+      [300, 150],
+    ]);
+    expect(value()).toMatchObject(before);
+    expect(onMoveStart).toHaveBeenCalledTimes(1);
+    expect(
+      touch(
+        outer,
+        'touchmove',
+        [
+          [200, 150],
+          [400, 150],
+        ],
+        false,
+        [1],
+      ).defaultPrevented,
+    ).toBe(true);
+    const pinched = { ...value() };
+    expect(pinched.k).toBeCloseTo(4);
+    expect((400 - pinched.x) / pinched.k).toBeCloseTo(
+      (400 - before.x) / before.k,
+    );
+    expect((300 - pinched.y) / pinched.k).toBeCloseTo(
+      (300 - before.y) / before.k,
+    );
+    // Lift the second finger while the first remains on the map.
+    const ended = new TouchEvent('touchend', {
+      bubbles: true,
+      cancelable: true,
+      touches: [
+        { identifier: 0, clientX: 200, clientY: 150 },
+      ] as unknown as Touch[],
+      changedTouches: [
+        { identifier: 1, clientX: 400, clientY: 150 },
+      ] as unknown as Touch[],
+    });
+    fireEvent(outer, ended);
+    expect(touch(outer, 'touchmove', [[220, 170]]).defaultPrevented).toBe(
+      false,
+    );
+    expect(value()).toMatchObject(pinched);
+    touch(outer, 'touchend', [[220, 170]], true);
+    expect(onMoveStart).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledTimes(2);
+    expect(onMoveEnd).toHaveBeenCalledTimes(1);
+  });
   it('permits panning but keeps wheel and pinch scale fixed when zoom is disabled', () => {
     const view = render(
       <ComposableMap>
@@ -390,10 +511,16 @@ describe('zoom and pan interaction controls', () => {
   it.each([true, false])(
     'recognizes double-tap zoom when enablePan=%s while preserving the center',
     async (enablePan) => {
+      const onMoveStart = vi.fn();
+      const onMove = vi.fn();
+      const onMoveEnd = vi.fn();
       const view = render(
         <ComposableMap>
           <ZoomableGroup
             enablePan={enablePan}
+            onMoveStart={onMoveStart}
+            onMove={onMove}
+            onMoveEnd={onMoveEnd}
             center={createCoordinates(20, 10)}
             zoom={2}
           />
@@ -411,6 +538,9 @@ describe('zoom and pan interaction controls', () => {
       const zoomed = { ...value() };
       expect(zoomed.k).toBeCloseTo(4);
       if (!enablePan) {
+        expect(onMoveStart).toHaveBeenCalledTimes(1);
+        expect(onMove).toHaveBeenCalled();
+        expect(onMoveEnd).toHaveBeenCalledTimes(1);
         expect((400 - zoomed.x) / zoomed.k).toBeCloseTo(
           (400 - before.x) / before.k,
         );

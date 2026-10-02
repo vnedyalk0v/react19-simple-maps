@@ -107,8 +107,29 @@ export function useZoomBehavior({
     if (!mapElement) return;
 
     const svg = d3Select(mapElement);
+    let suppressTouchCallbacks = false;
+    let touchGestureActive = false;
+    let pendingTouchStart = false;
+
+    function handleZoomEvent(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
+      if (suppressTouchCallbacks) return;
+      if (pendingTouchStart) {
+        pendingTouchStart = false;
+        handleZoomStart(d3Event);
+      }
+      handleZoom(d3Event);
+    }
 
     function handleZoomStart(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
+      if (suppressTouchCallbacks) return;
+      if (!enablePan && d3Event.sourceEvent?.type === 'touchstart') {
+        touchGestureActive = true;
+        if ((d3Event.sourceEvent as TouchEvent).touches.length === 1) {
+          pendingTouchStart = true;
+          return;
+        }
+      }
+      pendingTouchStart = false;
       if (!enableZoom)
         zoomBehavior.scaleExtent([d3Event.transform.k, d3Event.transform.k]);
       if (!onZoomStart || bypassEvents.current) return;
@@ -126,6 +147,12 @@ export function useZoomBehavior({
     }
 
     function handleZoomEnd(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
+      if (suppressTouchCallbacks) return;
+      touchGestureActive = false;
+      if (pendingTouchStart) {
+        pendingTouchStart = false;
+        return;
+      }
       if (bypassEvents.current) {
         bypassEvents.current = false;
         return;
@@ -169,7 +196,7 @@ export function useZoomBehavior({
         [b1, b2],
       ])
       .on('start', handleZoomStart)
-      .on('zoom', handleZoom)
+      .on('zoom', handleZoomEvent)
       .on('end', handleZoomEnd);
 
     if (!enablePan) {
@@ -192,6 +219,48 @@ export function useZoomBehavior({
 
     zoomRef.current = zoomBehavior;
     svg.call(zoomBehavior);
+
+    if (!enablePan && enableZoom) {
+      const touchMove = svg.on('touchmove.zoom');
+      if (touchMove) {
+        svg.on(
+          'touchmove.zoom',
+          function (event: TouchEvent, datum) {
+            if (event.touches.length !== 1) {
+              touchMove.call(this, event, datum);
+              return;
+            }
+            if (!touchGestureActive) return;
+            suppressTouchCallbacks = true;
+            try {
+              // Keep D3's touch positions current without consuming page scrolling.
+              touchMove.call(
+                this,
+                new Proxy(event, {
+                  get(target, key) {
+                    if (
+                      key === 'preventDefault' ||
+                      key === 'stopImmediatePropagation'
+                    )
+                      return () => {};
+                    const value = Reflect.get(target, key, target);
+                    return typeof value === 'function'
+                      ? value.bind(target)
+                      : value;
+                  },
+                }),
+                datum,
+              );
+              // Rebase the touch origin before a second finger begins a pinch.
+              zoomBehavior.transform(svg, zoomTransform(mapElement));
+            } finally {
+              suppressTouchCallbacks = false;
+            }
+          },
+          { passive: false },
+        );
+      }
+    }
 
     return () => {
       // Mirror setup: remove all d3-zoom listeners bound under the .zoom
