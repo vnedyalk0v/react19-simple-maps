@@ -6,6 +6,7 @@ import {
   MapWithMetadata,
   createCoordinates,
   createRotationAngles,
+  type LineProps,
   type MapWithMetadataProps,
   type ProjectionConfig,
   type RotationAngles,
@@ -44,6 +45,13 @@ describe('public API types', () => {
     <Line />;
     // @ts-expect-error a single endpoint is not a line
     <Line from={createCoordinates(0, 0)} />;
+  });
+
+  it('keeps LineProps an extendable interface', () => {
+    interface LabeledLineProps extends LineProps {
+      label: string;
+    }
+    expectTypeOf<LabeledLineProps['from']>().toEqualTypeOf<LineProps['from']>();
   });
 
   it('accepts partial MapWithMetadata metadata', () => {

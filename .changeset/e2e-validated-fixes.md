@@ -13,7 +13,7 @@ Fix several rendering, interaction, packaging, and geography-loading defects fou
 - `Annotation` draws its connector line again, using the `curve` prop.
 - `projectionConfig.scale` accepts any positive value, so city- and region-level maps are no longer rejected above 10000. `projectionConfig.rotate` accepts the two-element `[lambda, phi]` form, and `createRotationAngles` and the `RotationAngles` type are now exported.
 - Projection names that are not d3-geo projections (such as `geoArea`) now throw a `PROJECTION_ERROR` instead of an unrelated TypeError.
-- `Line` no longer requires `from` and `to` when `coordinates` is provided; it accepts either `coordinates` or both `from` and `to`. `LineProps` is now a type alias, so code that extends it with `interface ... extends LineProps` should use an intersection type instead.
+- `Line` no longer requires `from` and `to` when `coordinates` is provided; it accepts either `coordinates` or both `from` and `to`.
 - `getGeographyCentroid`, `getGeographyBounds`, and `getGeographyCoordinates` return `null` instead of throwing or returning out-of-range values for empty or invalid geometries, so `Geography` no longer crashes on them.
 - TopoJSON whose first object is a single geometry (not a GeometryCollection) now renders its feature instead of nothing.
 - `Geography` elements with `onClick` expose `role="button"`, activate on Enter, and activate on Space when the key is released, like native buttons.

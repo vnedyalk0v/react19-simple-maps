@@ -348,16 +348,15 @@ export interface MarkerProps extends Omit<SVGProps<SVGGElement>, 'style'> {
   children?: ReactNode;
 }
 
-interface LineBaseProps extends Omit<SVGProps<SVGPathElement>, 'from' | 'to'> {
+export interface LineProps extends Omit<
+  SVGProps<SVGPathElement>,
+  'from' | 'to'
+> {
+  from: Coordinates;
+  to: Coordinates;
+  coordinates?: Coordinates[];
   className?: string;
 }
-
-// A line needs either a coordinate list or both endpoints.
-export type LineProps = LineBaseProps &
-  (
-    | { coordinates: Coordinates[]; from?: Coordinates; to?: Coordinates }
-    | { from: Coordinates; to: Coordinates; coordinates?: undefined }
-  );
 
 export interface AnnotationProps extends SVGProps<SVGGElement> {
   subject: Coordinates;
