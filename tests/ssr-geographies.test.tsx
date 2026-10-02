@@ -47,4 +47,27 @@ describe('Geographies server rendering', () => {
       expect(html).toMatch(/<path[^>]*class="rsm-geography[^>]*d="M/);
     },
   );
+
+  it.each([true, false])(
+    'renders the loading state for a URL geography on the server (errorBoundary=%s)',
+    (errorBoundary) => {
+      const html = renderToString(
+        <ComposableMap>
+          <Geographies
+            geography="https://example.com/world.json"
+            errorBoundary={errorBoundary}
+          >
+            {({ geographies }) =>
+              geographies.map((geo) => (
+                <Geography key={geo.rsmKey} geography={geo} />
+              ))
+            }
+          </Geographies>
+        </ComposableMap>,
+      );
+
+      expect(html).toContain('rsm-loading-text');
+      expect(html).not.toContain('rsm-geography ');
+    },
+  );
 });

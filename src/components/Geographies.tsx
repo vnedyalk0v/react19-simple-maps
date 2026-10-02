@@ -122,7 +122,9 @@ function Geographies({
   return (
     <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
       {errorBoundary ? (
+        // A new dataset clears a caught error.
         <GeographyErrorBoundary
+          resetKey={geography}
           {...(onGeographyError && { onError: onGeographyError })}
           {...(fallback && { fallback })}
         >

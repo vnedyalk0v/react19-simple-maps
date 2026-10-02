@@ -1,4 +1,4 @@
-import { useState, memo, Ref, useMemo, useCallback } from 'react';
+import { useState, memo, Ref, useMemo, useCallback, useRef } from 'react';
 import { GeographyProps, PreparedFeature, GeographyEventData } from '../types';
 import {
   getGeographyCentroid,
@@ -56,6 +56,7 @@ function Geography({
   onFocus,
   onBlur,
   onKeyDown,
+  onKeyUp,
   style = {},
   className = '',
   ref,
@@ -64,6 +65,7 @@ function Geography({
   const [isPressed, setPressed] = useState(false);
   const [isHovered, setHovered] = useState(false);
   const [isFocused, setFocused] = useState(false);
+  const spacePressed = useRef(false);
 
   // Memoize geographic data calculation for performance
   const geographyEventData = useMemo((): GeographyEventData => {
@@ -111,6 +113,7 @@ function Geography({
   const handleBlur = useCallback(
     (evt: React.FocusEvent<SVGPathElement>) => {
       setFocused(false);
+      spacePressed.current = false;
       if (isPressed) setPressed(false);
       if (onBlur) onBlur(evt, geographyEventData);
     },
@@ -133,18 +136,39 @@ function Geography({
     [onMouseUp, geographyEventData],
   );
 
-  // Keyboard activation for clickable geographies, matching native buttons.
+  // Keyboard activation for clickable geographies, matching native buttons:
+  // Enter activates on press, Space on release (ignoring auto-repeat).
   const handleKeyDown = useCallback(
     (evt: React.KeyboardEvent<SVGPathElement>) => {
       onKeyDown?.(evt);
       if (!onClick || evt.defaultPrevented) return;
-      if (evt.key !== 'Enter' && evt.key !== ' ') return;
+      if (evt.key === 'Enter') {
+        evt.preventDefault();
+        evt.currentTarget.dispatchEvent(
+          new MouseEvent('click', { bubbles: true }),
+        );
+      } else if (evt.key === ' ') {
+        evt.preventDefault();
+        spacePressed.current = true;
+        setPressed(true);
+      }
+    },
+    [onKeyDown, onClick],
+  );
+
+  const handleKeyUp = useCallback(
+    (evt: React.KeyboardEvent<SVGPathElement>) => {
+      onKeyUp?.(evt);
+      if (evt.key !== ' ' || !spacePressed.current) return;
+      spacePressed.current = false;
+      setPressed(false);
+      if (!onClick || evt.defaultPrevented) return;
       evt.preventDefault();
       evt.currentTarget.dispatchEvent(
         new MouseEvent('click', { bubbles: true }),
       );
     },
-    [onKeyDown, onClick],
+    [onKeyUp, onClick],
   );
 
   const currentState = useMemo(() => {
@@ -179,6 +203,7 @@ function Geography({
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
       style={currentStyle}
       {...restProps}
     />

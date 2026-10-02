@@ -24,7 +24,7 @@ Create interactive SVG maps in React with d3-geo and topojson using a TypeScript
 - ESM-only build with tree-shaking and type definitions
 - TypeScript-first API with branded coordinate helpers
 - Core components: ComposableMap, Geographies, Geography, ZoomableGroup, Marker, Annotation, Line, Sphere, Graticule
-- Optional error boundary + Suspense fallback for geography loading
+- Optional error boundary with a custom fallback for geography loading
 - Geography fetching utilities with validation (HTTPS-only default, private IP blocking, content-type/size checks) and optional SRI helpers
 - Opt-in debug logging via `debug` prop or `REACT_SIMPLE_MAPS_DEBUG`
 
@@ -160,7 +160,7 @@ Renders geographic features from TopoJSON or GeoJSON data.
 
 - `geography` - URL string, TopoJSON object, or GeoJSON FeatureCollection
 - `parseGeographies` - Optional function to transform geography data
-- `errorBoundary` - Enable built-in error boundary and Suspense fallback
+- `errorBoundary` - Enable the built-in error boundary
 - `onGeographyError`, `fallback` - Error handling hooks when `errorBoundary` is enabled
 
 ### Geography
@@ -201,8 +201,16 @@ Use `Marker` for custom points and `Annotation` for callouts.
 - `Line` - Draw lines between coordinates
 - `Graticule` - Add coordinate grid lines
 - `Sphere` - Add map outline/background
-- `GeographyErrorBoundary` - Explicit error boundary wrapper
+- `GeographyErrorBoundary` - Explicit error boundary wrapper; pass `resetKey` to clear a caught error when that value changes
 - `MapWithMetadata` - Wrapper that renders metadata and a `ComposableMap`
+
+`MapWithMetadata` requires a `metadata` object. Omitted `title`, `description`, `keywords`, and `author` fall back to the selected `preset` (default `worldMap`); `canonicalUrl` is only rendered when provided.
+
+```tsx
+<MapWithMetadata metadata={{ title: 'Population by Country' }}>
+  {/* Map content */}
+</MapWithMetadata>
+```
 
 ## TypeScript Support
 
@@ -218,6 +226,20 @@ import {
 const lon = createLongitude(-74.006);
 const lat = createLatitude(40.7128);
 const coords = createCoordinates(-74.006, 40.7128);
+```
+
+Use `createRotationAngles(lambda, phi, gamma)` and `createParallels(a, b)` for `projectionConfig`:
+
+```tsx
+import {
+  ComposableMap,
+  createRotationAngles,
+} from '@vnedyalk0v/react19-simple-maps';
+
+<ComposableMap
+  projection="geoOrthographic"
+  projectionConfig={{ rotate: createRotationAngles(-10, -20, 0) }}
+/>;
 ```
 
 ## Geography Utilities

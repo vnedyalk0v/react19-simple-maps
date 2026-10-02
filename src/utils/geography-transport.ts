@@ -31,6 +31,30 @@ export function createSecureFetchOptions(
 }
 
 /**
+ * Rejects with an `AbortError` once `signal` aborts, so awaited work that does
+ * not accept a signal (such as DNS validation) still honours the timeout.
+ */
+export function rejectOnAbort<T>(
+  promise: Promise<T>,
+  signal: AbortSignal | null | undefined,
+): Promise<T> {
+  if (!signal) return promise;
+  let onAbort = () => {};
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => {
+      const abortError = new Error('Request aborted');
+      abortError.name = 'AbortError';
+      reject(abortError);
+    };
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  });
+  return Promise.race([promise, aborted]).finally(() =>
+    signal.removeEventListener('abort', onAbort),
+  );
+}
+
+/**
  * Follows redirects manually, validating each hop against the URL security policy.
  * Prevents redirect-based SSRF bypasses.
  * @param url - The initial URL to fetch
@@ -90,7 +114,10 @@ export async function fetchWithRedirectValidation(
 
     // Validate the redirect target against the same URL security policy
     validateGeographyUrl(redirectUrl, config);
-    await validateResolvedGeographyUrl(redirectUrl, config);
+    await rejectOnAbort(
+      validateResolvedGeographyUrl(redirectUrl, config),
+      options.signal,
+    );
 
     currentUrl = redirectUrl;
   }

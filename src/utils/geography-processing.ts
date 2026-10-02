@@ -49,9 +49,9 @@ function extractFeaturesFromTopology(
     return [];
   }
 
-  const featureCollection = feature(topology, geometryObject);
-  const features =
-    'features' in featureCollection ? featureCollection.features || [] : [];
+  // A single-geometry object yields one Feature instead of a FeatureCollection
+  const result = feature(topology, geometryObject);
+  const features = 'features' in result ? result.features || [] : [result];
   return parseGeographies ? parseGeographies(features) : features;
 }
 
@@ -312,8 +312,10 @@ export function prepareFeatures(
  * Creates a connector path between two coordinates
  * @param start - Starting coordinates [longitude, latitude]
  * @param end - Ending coordinates [longitude, latitude]
- * @param curve - D3 curve function for path interpolation
- * @returns SVG path string
+ * @param curve - Line generator factory such as d3-shape's `line` (not a curve
+ *   like `curveLinear`); it is called with no arguments and must return a
+ *   generator with `x()`/`y()` accessors
+ * @returns SVG path string, or an empty string if `curve` is not usable
  */
 export function createConnectorPath(
   start: [number, number],

@@ -7,7 +7,6 @@ import ComposableMap from '../src/components/ComposableMap';
 import ZoomableGroup from '../src/components/ZoomableGroup';
 import Annotation from '../src/components/Annotation';
 import Geography from '../src/components/Geography';
-import Geographies from '../src/components/Geographies';
 import MapWithMetadata from '../src/components/MapWithMetadata';
 import { MapDebugger } from '../src/utils/debugging';
 import {
@@ -272,38 +271,6 @@ describe('debug logging', () => {
   });
 });
 
-describe('Geographies render prop', () => {
-  it('exposes prepared features with rsmKey and svgPath', () => {
-    const keys: string[] = [];
-    render(
-      <ComposableMap>
-        <Geographies
-          geography={{
-            type: 'FeatureCollection',
-            features: [
-              {
-                type: 'Feature',
-                id: 'a',
-                properties: {},
-                geometry: { type: 'Point', coordinates: [0, 0] },
-              },
-            ],
-          }}
-        >
-          {({ geographies }) =>
-            geographies.map((geo) => {
-              // Typed access (no cast) keeps the README Quick Start pattern compiling.
-              keys.push(geo.rsmKey);
-              return <path key={geo.rsmKey} d={geo.svgPath} />;
-            })
-          }
-        </Geographies>
-      </ComposableMap>,
-    );
-    expect(keys[0]).toEqual(expect.any(String));
-  });
-});
-
 describe('Geography keyboard access', () => {
   const feature = {
     type: 'Feature',
@@ -341,6 +308,7 @@ describe('Geography keyboard access', () => {
     expect(path.getAttribute('role')).toBe('button');
     fireEvent.keyDown(path, { key: 'Enter' });
     fireEvent.keyDown(path, { key: ' ' });
+    fireEvent.keyUp(path, { key: ' ' });
     fireEvent.keyDown(path, { key: 'a' });
     expect(onKeyDown).toHaveBeenCalledTimes(3);
     expect(onClick).toHaveBeenCalledTimes(2);

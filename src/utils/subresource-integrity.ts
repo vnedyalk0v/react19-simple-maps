@@ -2,6 +2,7 @@ import {
   createSecureFetchOptions,
   fetchWithRedirectValidation,
   createTimeoutController,
+  rejectOnAbort,
 } from './geography-transport';
 import { createGeographyFetchError, isGeographyError } from './error-utils';
 import {
@@ -294,7 +295,7 @@ export async function validateSRIFromArrayBuffer(
 /**
  * Canonicalize a URL for SRI lookup.
  * Strips the fragment, removes default ports, normalises the hostname to
- * lowercase, decodes percent-encoded unreserved characters and `@` in the
+ * lowercase without a trailing dot, decodes percent-encoded unreserved characters and `@` in the
  * path, and removes trailing slashes from the path so that minor URL variants
  * resolve to the same SRI entry. With `ignoreQuery`, the query is dropped too
  * (used for known static sources, which serve the same bytes for any query).
@@ -315,6 +316,8 @@ function canonicalizeUrlForSRI(url: string, ignoreQuery = false): string {
     ) {
       parsed.port = '';
     }
+    // A fully qualified hostname ("unpkg.com.") names the same host
+    parsed.hostname = parsed.hostname.replace(/\.$/, '');
     // Strip trailing slashes from the path (preserve root "/" and query/hash)
     parsed.pathname =
       parsed.pathname
@@ -333,8 +336,8 @@ function canonicalizeUrlForSRI(url: string, ignoreQuery = false): string {
 
 /**
  * Check if SRI validation is required for a URL.
- * The URL is canonicalized (fragment stripped, host lowercased, default port
- * removed, unreserved path characters decoded) before lookup so that trivial
+ * The URL is canonicalized (fragment stripped, host lowercased and trailing
+ * dot removed, default port removed, unreserved path characters decoded) before lookup so that trivial
  * URL variants don't bypass known SRI entries. Known sources are matched on
  * origin and path only. Custom entries with `enforceIntegrity: false` are not
  * enforced.
@@ -404,13 +407,16 @@ export async function generateSRIHash(
 ): Promise<string> {
   const securityConfig = getGeographySecurityConfig();
   validateGeographyUrl(url, securityConfig);
-  await validateResolvedGeographyUrl(url, securityConfig);
 
   const { controller, cleanup } = createTimeoutController(
     securityConfig.TIMEOUT_MS,
   );
 
   try {
+    await rejectOnAbort(
+      validateResolvedGeographyUrl(url, securityConfig),
+      controller.signal,
+    );
     const response = await fetchWithRedirectValidation(
       url,
       createSecureFetchOptions(controller.signal, securityConfig),

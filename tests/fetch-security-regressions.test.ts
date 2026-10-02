@@ -14,8 +14,8 @@ import {
   DEFAULT_GEOGRAPHY_FETCH_CONFIG,
 } from '../src/utils/geography-validation';
 import {
-  addCustomSRI,
   configureSRI,
+  generateSRIHash,
   getSRIForUrl,
   DEFAULT_SRI_CONFIG,
 } from '../src/utils/subresource-integrity';
@@ -33,6 +33,21 @@ const uniqueUrl = (name: string) =>
 function publicLookup(): Promise<Array<{ address: string }>> {
   return Promise.resolve([{ address: '8.8.8.8' }]);
 }
+
+// configureSRI merges customSRIMap, so tests that add custom SRI entries use
+// fresh module instances to keep those entries from leaking into other tests.
+async function freshFetchModules() {
+  vi.resetModules();
+  const [fetching, validation, sri] = await Promise.all([
+    import('../src/utils/geography-fetching'),
+    import('../src/utils/geography-validation'),
+    import('../src/utils/subresource-integrity'),
+  ]);
+  return { ...fetching, ...validation, ...sri };
+}
+
+const okFetch = () =>
+  vi.fn(async () => new Response(featureCollection, { headers: jsonHeaders }));
 
 beforeEach(() => {
   configureGeographySecurity({ ...DEFAULT_GEOGRAPHY_FETCH_CONFIG });
@@ -97,11 +112,9 @@ describe('fetchGeographiesCache cancels unread bodies on early failures', () => 
   });
 });
 
-describe('fetchGeographiesCache deduplicates requests outside React Server Components', () => {
-  it('shares one request between concurrent and later callers', async () => {
-    const fetchMock = vi.fn(
-      async () => new Response(featureCollection, { headers: jsonHeaders }),
-    );
+describe('fetchGeographiesCache shares only in-flight requests', () => {
+  it('shares one request between concurrent callers', async () => {
+    const fetchMock = okFetch();
     vi.stubGlobal('fetch', fetchMock);
     const url = uniqueUrl('dedupe');
 
@@ -109,16 +122,24 @@ describe('fetchGeographiesCache deduplicates requests outside React Server Compo
       fetchGeographiesCache(url),
       fetchGeographiesCache(url),
     ]);
-    await fetchGeographiesCache(url);
 
     expect(first).toBe(second);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses the request started by preloadGeography', async () => {
-    const fetchMock = vi.fn(
-      async () => new Response(featureCollection, { headers: jsonHeaders }),
-    );
+  it('starts a new request after a previous one succeeded', async () => {
+    const fetchMock = okFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    const url = uniqueUrl('refetch');
+
+    await fetchGeographiesCache(url);
+    await fetchGeographiesCache(url);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reuses the in-flight request started by preloadGeography', async () => {
+    const fetchMock = okFetch();
     vi.stubGlobal('fetch', fetchMock);
     const url = uniqueUrl('preload');
 
@@ -126,6 +147,74 @@ describe('fetchGeographiesCache deduplicates requests outside React Server Compo
     await fetchGeographiesCache(url);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies custom SRI added after a successful fetch', async () => {
+    const { addCustomSRI, fetchGeographiesCache: fetchFresh } =
+      await freshFetchModules();
+    vi.stubGlobal('fetch', okFetch());
+    const url = uniqueUrl('late-sri');
+
+    await fetchFresh(url);
+    addCustomSRI(url, {
+      algorithm: 'sha256',
+      hash: 'sha256-AAAA',
+      enforceIntegrity: true,
+    });
+
+    await expect(fetchFresh(url)).rejects.toMatchObject({
+      type: 'SECURITY_ERROR',
+    });
+  });
+
+  it('applies tightened content types after a successful fetch', async () => {
+    vi.stubGlobal('fetch', okFetch());
+    const url = uniqueUrl('late-content-type');
+
+    await fetchGeographiesCache(url);
+    configureGeographySecurity({
+      ALLOWED_CONTENT_TYPES: ['application/geo+json'],
+    });
+
+    await expect(fetchGeographiesCache(url)).rejects.toThrow(
+      /Invalid content type/,
+    );
+  });
+
+  it('does not share an in-flight request across an SRI change', async () => {
+    const { addCustomSRI, fetchGeographiesCache: fetchFresh } =
+      await freshFetchModules();
+    const fetchMock = okFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    const url = uniqueUrl('in-flight-sri');
+
+    const first = fetchFresh(url);
+    addCustomSRI(url, {
+      algorithm: 'sha256',
+      hash: 'sha256-AAAA',
+      enforceIntegrity: true,
+    });
+    const second = fetchFresh(url);
+
+    await expect(first).resolves.toBeDefined();
+    await expect(second).rejects.toMatchObject({ type: 'SECURITY_ERROR' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not share an in-flight request across a security config change', async () => {
+    const fetchMock = okFetch();
+    vi.stubGlobal('fetch', fetchMock);
+    const url = uniqueUrl('in-flight-security');
+
+    const first = fetchGeographiesCache(url);
+    configureGeographySecurity({
+      ALLOWED_CONTENT_TYPES: ['application/geo+json'],
+    });
+    const second = fetchGeographiesCache(url);
+
+    await expect(first).resolves.toBeDefined();
+    await expect(second).rejects.toThrow(/Invalid content type/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('retries after a failed request', async () => {
@@ -206,13 +295,15 @@ describe('known-source SRI lookup ignores byte-identical URL variants', () => {
     'https://unpkg.com/world-atlas@2/countries-110m.json?',
     'https://unpkg.com/world-atlas@2/countries-110m.json?v=1',
     'https://unpkg.com/world-atlas%402/countries-110m.json',
+    'https://unpkg.com./world-atlas@2/countries-110m.json',
   ])('enforces known SRI for %s', (url) => {
     expect(getSRIForUrl(url)).toMatchObject({
       hash: 'sha384-yOCJ+8ShBm8UDqtAVtAvxTDDf4gXo5edxl/YG0FmVC5OTmqVLl7utuVGBDEeZWHf',
     });
   });
 
-  it('keeps the query significant for custom SRI entries', () => {
+  it('keeps the query significant for custom SRI entries', async () => {
+    const { addCustomSRI, getSRIForUrl } = await freshFetchModules();
     addCustomSRI('https://example.com/data.json?v=1', {
       algorithm: 'sha256',
       hash: 'sha256-AAAA',
@@ -247,33 +338,52 @@ describe('numeric geography security settings are validated', () => {
 });
 
 describe('fetch timeout covers DNS validation', () => {
-  it('times out a slow DNS lookup before fetching', async () => {
+  it.each([fetchGeographiesCache, generateSRIHash])(
+    'times out a slow DNS lookup before fetching',
+    async (request) => {
+      vi.spyOn(process, 'getBuiltinModule').mockReturnValue({
+        lookup: () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve([{ address: '93.184.216.34' }]), 500),
+          ),
+      });
+      const fetchMock = okFetch();
+      vi.stubGlobal('fetch', fetchMock);
+      configureGeographySecurity({ TIMEOUT_MS: 20 });
+
+      const result = request(
+        `https://slow-dns-${++urlCounter}.example.com/a.json`,
+      );
+
+      await expect(result).rejects.toMatchObject({
+        type: 'GEOGRAPHY_LOAD_ERROR',
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports the configured timeout', async () => {
     vi.spyOn(process, 'getBuiltinModule').mockReturnValue({
       lookup: () =>
         new Promise((resolve) =>
           setTimeout(() => resolve([{ address: '93.184.216.34' }]), 500),
         ),
     });
-    const fetchMock = vi.fn(
-      async () => new Response(featureCollection, { headers: jsonHeaders }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('fetch', okFetch());
     configureGeographySecurity({ TIMEOUT_MS: 20 });
 
-    const result = fetchGeographiesCache(
-      `https://slow-dns-${++urlCounter}.example.com/a.json`,
-    );
-
-    await expect(result).rejects.toThrow(/Request timeout after 20ms/);
-    await expect(result).rejects.toMatchObject({
-      type: 'GEOGRAPHY_LOAD_ERROR',
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(
+      fetchGeographiesCache(
+        `https://slow-dns-${++urlCounter}.example.com/a.json`,
+      ),
+    ).rejects.toThrow(/Request timeout after 20ms/);
   });
 });
 
 describe('custom SRI entries honour enforceIntegrity: false', () => {
   it('does not enforce a disabled custom entry', async () => {
+    const { addCustomSRI, fetchGeographiesCache, getSRIForUrl } =
+      await freshFetchModules();
     const url = uniqueUrl('custom-sri');
     addCustomSRI(url, {
       algorithm: 'sha256',
@@ -291,7 +401,8 @@ describe('custom SRI entries honour enforceIntegrity: false', () => {
     await expect(fetchGeographiesCache(url)).resolves.toBeDefined();
   });
 
-  it('keeps known-source enforcement when a custom entry is disabled', () => {
+  it('keeps known-source enforcement when a custom entry is disabled', async () => {
+    const { addCustomSRI, getSRIForUrl } = await freshFetchModules();
     const url = 'https://unpkg.com/world-atlas@2/countries-110m.json';
     addCustomSRI(url, {
       algorithm: 'sha256',

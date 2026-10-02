@@ -23,6 +23,12 @@ interface MakeProjectionParams {
   height: number;
 }
 
+// d3-geo also exports non-projection helpers (geoArea, geoGraticule, ...)
+const isProjectionLike = (value: unknown): value is GeoProjection =>
+  value != null &&
+  typeof (value as GeoProjection).scale === 'function' &&
+  typeof (value as GeoProjection).translate === 'function';
+
 const makeProjection = ({
   projectionConfig = EMPTY_PROJECTION_CONFIG,
   projection = 'geoEqualEarth',
@@ -49,7 +55,15 @@ const makeProjection = ({
   }
 
   const projectionName = trimmedProjection as keyof typeof projections;
-  if (!(projectionName in projections)) {
+  let factoryResult: unknown;
+  if (projectionName in projections) {
+    try {
+      factoryResult = (projections[projectionName] as () => unknown)();
+    } catch {
+      // Non-projection d3-geo exports (e.g. geoProjection) throw without arguments
+    }
+  }
+  if (!isProjectionLike(factoryResult)) {
     throw createGeographyError(
       'PROJECTION_ERROR',
       `Unknown projection: ${trimmedProjection}`,
@@ -58,10 +72,7 @@ const makeProjection = ({
     );
   }
 
-  let proj = (projections[projectionName] as () => GeoProjection)().translate([
-    width / 2,
-    height / 2,
-  ]);
+  let proj = factoryResult.translate([width / 2, height / 2]);
 
   // Apply validated projection configuration
   if (projectionConfig.center && proj.center) {

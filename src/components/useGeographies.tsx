@@ -30,11 +30,14 @@ export default function useGeographies({
   parseGeographies,
 }: UseGeographiesProps): GeographyData {
   const { path } = useMapContext();
-  const [loadedData, setLoadedData] = useState<
-    Topology | FeatureCollection | null
-  >(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<GeographyError | Error | null>(null);
+  // One result per settled request, tagged with its URL and attempt so a
+  // stale result is never shown for a different URL or a newer retry.
+  const [result, setResult] = useState<{
+    url: string;
+    attempt: number;
+    data?: Topology | FeatureCollection;
+    error?: GeographyError | Error;
+  } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
   const refetch = useCallback(() => {
@@ -45,40 +48,44 @@ export default function useGeographies({
     if (!isString(geography)) return;
 
     let ignore = false;
-    setIsLoading(true);
-    setError(null);
 
     devTools.debugGeographyLoading(geography, 'start');
 
     preloadGeography(geography);
 
-    fetchGeographiesCache(geography)
-      .then((result) => {
-        if (!ignore) {
-          devTools.debugGeographyLoading(geography, 'success', result);
-          setLoadedData(result);
-          setIsLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!ignore) {
-          devTools.debugGeographyLoading(geography, 'error', err);
-          setError(err instanceof Error ? err : new Error(String(err)));
-          setIsLoading(false);
-        }
-      });
+    fetchGeographiesCache(geography).then(
+      (data) => {
+        if (ignore) return;
+        devTools.debugGeographyLoading(geography, 'success', data);
+        setResult({ url: geography, attempt: retryCount, data });
+      },
+      (err: unknown) => {
+        if (ignore) return;
+        devTools.debugGeographyLoading(geography, 'error', err);
+        setResult({
+          url: geography,
+          attempt: retryCount,
+          error: err instanceof Error ? err : new Error(String(err)),
+        });
+      },
+    );
 
     return () => {
       ignore = true;
     };
   }, [geography, retryCount]);
 
-  // Inline data is derived during render so it is available on the server and
-  // on the first client render; only URLs go through the fetch Effect above.
+  // Everything below is derived during render: inline data is available on
+  // the server and first client render, and a URL is loading until a result
+  // for that exact URL and attempt arrives.
   const isUrl = isString(geography);
-  const data = isUrl ? loadedData : geography;
-  const loading = isUrl && isLoading;
-  const fetchError = isUrl ? error : null;
+  const current =
+    isUrl && result?.url === geography && result.attempt === retryCount
+      ? result
+      : null;
+  const data = isUrl ? (current?.data ?? null) : geography;
+  const loading = isUrl && !current;
+  const fetchError = current?.error ?? null;
 
   // Granular memoization for expensive operations
 

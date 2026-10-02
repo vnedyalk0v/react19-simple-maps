@@ -77,6 +77,13 @@ export class MapDebugger {
     this.isEnabled = enabled;
   }
 
+  /**
+   * Whether global debug mode is currently enabled
+   */
+  isDebugEnabled(): boolean {
+    return this.isEnabled;
+  }
+
   static getInstance(): MapDebugger {
     if (!MapDebugger.instance) {
       MapDebugger.instance = new MapDebugger();
@@ -190,7 +197,7 @@ export function useMapDebugger(componentName: string, debug?: boolean) {
 }
 
 /**
- * Development-only debugging utilities
+ * Opt-in debugging utilities
  */
 export const devTools = {
   /**
@@ -201,10 +208,9 @@ export const devTools = {
     status: 'start' | 'success' | 'error',
     data?: unknown,
   ) => {
-    if (
-      typeof process !== 'undefined' &&
-      process.env.NODE_ENV !== 'production'
-    ) {
+    // Opt-in only: follows the global debug mode
+    // (REACT_SIMPLE_MAPS_DEBUG or setDebugMode).
+    if (MapDebugger.getInstance().isDebugEnabled()) {
       try {
         const ownerStack = safeCaptureOwnerStack();
         // eslint-disable-next-line no-console

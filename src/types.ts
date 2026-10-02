@@ -352,8 +352,8 @@ export interface LineProps extends Omit<
   SVGProps<SVGPathElement>,
   'from' | 'to'
 > {
-  from: Coordinates;
-  to: Coordinates;
+  from?: Coordinates;
+  to?: Coordinates;
   coordinates?: Coordinates[];
   className?: string;
 }

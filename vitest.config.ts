@@ -27,6 +27,11 @@ export default defineConfig({
       },
     },
     include: ['tests/**/*.{test,spec}.{js,ts,tsx}'],
+    typecheck: {
+      enabled: true,
+      include: ['tests/**/*.test-d.{ts,tsx}'],
+      tsconfig: './tests/tsconfig.typecheck.json',
+    },
     exclude: ['node_modules/', 'dist/', 'coverage/'],
   },
   oxc: {

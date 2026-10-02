@@ -17,12 +17,14 @@ import {
   getSRIForUrl,
   getSRIConfig,
   validateSRIFromArrayBuffer,
+  type SRIEnforcementConfig,
 } from './subresource-integrity';
 
 import {
   createSecureFetchOptions,
   fetchWithRedirectValidation,
   createTimeoutController,
+  rejectOnAbort,
 } from './geography-transport';
 
 /**
@@ -138,10 +140,9 @@ export async function fetchGeographies(
 
 async function fetchGeographyData(
   url: string,
+  securityConfig: GeographySecurityConfig,
+  sriEnforcementConfig: SRIEnforcementConfig,
 ): Promise<Topology | FeatureCollection> {
-  const securityConfig = getGeographySecurityConfig();
-  const sriEnforcementConfig = getSRIConfig();
-
   // Validate URL before making request
   validateGeographyUrl(url, securityConfig);
 
@@ -154,16 +155,10 @@ async function fetchGeographyData(
   );
 
   try {
-    await Promise.race([
+    await rejectOnAbort(
       validateResolvedGeographyUrl(url, securityConfig),
-      new Promise<never>((_, reject) => {
-        controller.signal.addEventListener('abort', () => {
-          const abortError = new Error('Request aborted');
-          abortError.name = 'AbortError';
-          reject(abortError);
-        });
-      }),
-    ]);
+      controller.signal,
+    );
 
     // Make secure fetch request with redirect validation
     const response = await fetchWithRedirectValidation(
@@ -211,37 +206,44 @@ async function fetchGeographyData(
   }
 }
 
-// ponytail: unbounded per-URL cache; switch to an LRU if apps load many distinct URLs.
-const geographyRequests = new Map<
-  string,
-  Promise<Topology | FeatureCollection>
->();
+interface InFlightGeographyRequest {
+  promise: Promise<Topology | FeatureCollection>;
+  securityConfig: GeographySecurityConfig;
+  sriConfig: SRIEnforcementConfig;
+}
+
+const inFlightRequests = new Map<string, InFlightGeographyRequest>();
 
 /**
- * Secure, cached geography fetching with comprehensive validation.
- * In-flight and successful requests are shared per URL; failed requests are
- * evicted so later calls retry.
+ * Secure geography fetching with comprehensive validation.
+ * Concurrent calls for the same URL share one in-flight request while the
+ * security and SRI configuration are unchanged. Nothing is cached once a
+ * request settles, so later calls fetch again under the current configuration.
  */
 export function fetchGeographiesCache(
   url: string,
 ): Promise<Topology | FeatureCollection> {
-  let request = geographyRequests.get(url);
-  if (!request) {
-    const pending = fetchGeographyData(url);
-    pending.catch(() => {
-      if (geographyRequests.get(url) === pending) {
-        geographyRequests.delete(url);
-      }
-    });
-    geographyRequests.set(url, pending);
-    request = pending;
+  const securityConfig = getGeographySecurityConfig();
+  const sriConfig = getSRIConfig();
+  const inFlight = inFlightRequests.get(url);
+  if (
+    inFlight?.securityConfig === securityConfig &&
+    inFlight.sriConfig === sriConfig
+  ) {
+    return inFlight.promise;
   }
-  return request;
-}
 
-/** @internal Test helper; not part of the public API. */
-export function clearGeographyFetchCache(): void {
-  geographyRequests.clear();
+  const request: InFlightGeographyRequest = {
+    promise: fetchGeographyData(url, securityConfig, sriConfig),
+    securityConfig,
+    sriConfig,
+  };
+  const evict = () => {
+    if (inFlightRequests.get(url) === request) inFlightRequests.delete(url);
+  };
+  request.promise.then(evict, evict);
+  inFlightRequests.set(url, request);
+  return request.promise;
 }
 
 /**
