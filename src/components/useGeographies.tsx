@@ -30,25 +30,23 @@ export default function useGeographies({
   parseGeographies,
 }: UseGeographiesProps): GeographyData {
   const { path } = useMapContext();
-  // Every geography change or refetch starts a new request, and only that
-  // request's result is shown, so an earlier result (for this or another URL)
-  // never looks current while a newer request is pending.
-  const [request, setRequest] = useState({ geography, id: 0 });
-  if (request.geography !== geography) {
-    setRequest({ geography, id: request.id + 1 });
-  }
+  // One result per settled request, tagged with its URL and attempt.
   const [result, setResult] = useState<{
-    id: number;
+    url: string;
+    attempt: number;
     data?: Topology | FeatureCollection;
     error?: GeographyError | Error;
   } | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const refetch = useCallback(() => {
-    setRequest((r) => ({ ...r, id: r.id + 1 }));
+    setRetryCount((c) => c + 1);
   }, []);
 
-  const requestId = request.id;
   useEffect(() => {
+    // A new request (or inline data) supersedes any earlier result, including
+    // one for this same URL, so it can never look current again.
+    setResult(null);
     if (!isString(geography)) return;
 
     let ignore = false;
@@ -61,13 +59,14 @@ export default function useGeographies({
       (data) => {
         if (ignore) return;
         devTools.debugGeographyLoading(geography, 'success', data);
-        setResult({ id: requestId, data });
+        setResult({ url: geography, attempt: retryCount, data });
       },
       (err: unknown) => {
         if (ignore) return;
         devTools.debugGeographyLoading(geography, 'error', err);
         setResult({
-          id: requestId,
+          url: geography,
+          attempt: retryCount,
           error: err instanceof Error ? err : new Error(String(err)),
         });
       },
@@ -76,14 +75,14 @@ export default function useGeographies({
     return () => {
       ignore = true;
     };
-  }, [geography, requestId]);
+  }, [geography, retryCount]);
 
-  // Everything below is derived during render: inline data is available on
-  // the server and first client render, and a URL is loading until the
-  // current request settles.
+  // Derived during render: inline data is available on the server and first
+  // client render, and a URL is loading until a result for that exact URL
+  // and attempt arrives.
   const isUrl = isString(geography);
   const current =
-    isUrl && request.geography === geography && result?.id === requestId
+    isUrl && result?.url === geography && result.attempt === retryCount
       ? result
       : null;
   const data = isUrl ? (current?.data ?? null) : geography;

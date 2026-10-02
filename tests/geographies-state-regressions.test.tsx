@@ -170,6 +170,26 @@ describe('useGeographies URL state', () => {
     expect(onError).toHaveBeenCalledTimes(1);
   });
 
+  it('does not re-report an earlier error when returning to a URL via inline data (A -> object -> A)', async () => {
+    const net = controlFetch();
+    const onError = vi.fn();
+    const view = (geography: string | FeatureCollection) => (
+      <ComposableMap>
+        <Geographies geography={geography} onGeographyError={onError}>
+          {() => null}
+        </Geographies>
+      </ComposableMap>
+    );
+
+    const { rerender } = render(view(URL_A));
+    await net.reject(URL_A, new Error('A failed'));
+    expect(onError).toHaveBeenCalledTimes(1);
+    rerender(view(fc('inline')));
+    rerender(view(URL_A));
+    await act(async () => {});
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
   it('reports isLoading on the very first render of a URL', () => {
     controlFetch();
     const states: boolean[] = [];
