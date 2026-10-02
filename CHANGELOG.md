@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.11
+
+### Patch Changes
+
+- Preserve touch scrolling when panning is disabled and improve geography request compatibility.
+  - Allow one-finger page scrolling without movement callbacks while keeping pinch and double-tap zoom available.
+  - Accept up to five validated redirects when redirect responses are inspectable; browsers still require final resource URLs.
+  - Avoid unnecessary CORS preflight requests by sending only the geography Accept header.
+- Fix geography security enforcement and map rendering and interaction behavior.
+  - Share security and integrity configuration across the main package and utilities imports.
+  - Validate redirects when generating integrity hashes, preserve security error classifications, cancel unused redirect bodies, and enforce geography request timeouts through body completion.
+  - Refresh parsed and prepared geographies when their parser changes, and catch parser and render callback errors inside the enabled geography error boundary.
+  - Honor independent zoom and pan controls, including double-tap zoom, reject unintended mouse gestures, and preserve requested map positioning after viewport or projection changes while retaining user pan for equivalent projection settings.
+  - Apply configured parallels to supported conic projections.
+- Raise the minimum d3-geo dependency version to 3.1.1.
+
 ## 2.0.10
 
 ### Patch Changes
