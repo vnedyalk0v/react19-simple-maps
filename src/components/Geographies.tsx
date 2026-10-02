@@ -1,4 +1,4 @@
-import { Ref, ReactNode, memo, useCallback, useEffect } from 'react';
+import { Ref, memo, useEffect } from 'react';
 import { GeographiesProps, ErrorBoundaryFallback } from '../types';
 import { useMapContext } from './MapProvider';
 import useGeographies from './useGeographies';
@@ -44,17 +44,19 @@ function areGeographiesPropsEqual(
   return true;
 }
 
-function Geographies({
+function GeographiesContent({
   geography,
   children,
   parseGeographies,
-  className = '',
-  errorBoundary = false,
   onGeographyError,
   fallback,
-  ref,
-  ...restProps
-}: GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }) {
+}: Pick<
+  GeographiesProps<true>,
+  'geography' | 'children' | 'parseGeographies'
+> & {
+  onGeographyError?: (error: Error) => void;
+  fallback?: ErrorBoundaryFallback;
+}) {
   const { path, projection } = useMapContext();
 
   const geographyData = useGeographies({
@@ -71,72 +73,64 @@ function Geographies({
     }
   }, [error, onGeographyError]);
 
-  const renderChildren = useCallback(() => {
-    if (!geographies || geographies.length === 0) {
-      return null;
-    }
-    return children({ geographies, outline, borders, path, projection });
-  }, [geographies, outline, borders, children, path, projection]);
-
-  if (isLoading) {
-    return (
-      <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
-        {LOADING_FALLBACK}
-      </g>
-    );
-  }
+  if (isLoading) return LOADING_FALLBACK;
 
   if (error) {
     if (fallback && typeof fallback === 'function') {
-      return (
-        <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
-          {(fallback as ErrorBoundaryFallback)(error, refetch ?? (() => {}))}
-        </g>
-      );
+      return (fallback as ErrorBoundaryFallback)(error, refetch ?? (() => {}));
     }
     return (
-      <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
-        <text
-          className="rsm-error-text"
-          x="50%"
-          y="50%"
-          textAnchor="middle"
-          fill="currentColor"
-        >
-          Failed to load geography data
-        </text>
-      </g>
+      <text
+        className="rsm-error-text"
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        fill="currentColor"
+      >
+        Failed to load geography data
+      </text>
     );
   }
 
-  const content = renderChildren();
+  return geographies.length
+    ? children({ geographies, outline, borders, path, projection })
+    : null;
+}
 
-  if (errorBoundary) {
-    const errorBoundaryProps: {
-      onError?: (error: Error) => void;
-      fallback?: (error: Error, retry: () => void) => ReactNode;
-    } = {};
-
-    if (onGeographyError) {
-      errorBoundaryProps.onError = onGeographyError;
-    }
-
-    if (fallback) {
-      errorBoundaryProps.fallback = fallback;
-    }
-
-    return (
-      <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
-        <GeographyErrorBoundary {...errorBoundaryProps}>
-          {content}
-        </GeographyErrorBoundary>
-      </g>
-    );
-  }
+function Geographies({
+  className = '',
+  errorBoundary = false,
+  ref,
+  geography,
+  children,
+  parseGeographies,
+  onGeographyError,
+  fallback,
+  ...restProps
+}: GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }) {
+  const content = (
+    <GeographiesContent
+      geography={geography}
+      {...(parseGeographies && { parseGeographies })}
+      {...(onGeographyError && { onGeographyError })}
+      {...(fallback && { fallback })}
+    >
+      {children}
+    </GeographiesContent>
+  );
 
   return (
     <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
-      {content}
+      {errorBoundary ? (
+        <GeographyErrorBoundary
+          {...(onGeographyError && { onError: onGeographyError })}
+          {...(fallback && { fallback })}
+        >
+          {content}
+        </GeographyErrorBoundary>
+      ) : (
+        content
+      )}
     </g>
   );
 }

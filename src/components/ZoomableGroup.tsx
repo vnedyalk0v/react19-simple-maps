@@ -8,7 +8,7 @@ import {
 } from '../types';
 import { useMapContext } from './MapProvider';
 import { ZoomPanProvider } from './ZoomPanProvider';
-import useZoomPan from './useZoomPan';
+import { useZoomPanBehavior } from '../hooks/useZoomPan';
 
 // Type guard to check if props are SimpleZoomableGroupProps
 function isSimpleProps(
@@ -39,10 +39,8 @@ function ZoomableGroup(
     minZoom,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     maxZoom,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    enableZoom,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    enablePan,
+    enableZoom = true,
+    enablePan = true,
     scaleExtent,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     translateExtent,
@@ -83,16 +81,19 @@ function ZoomableGroup(
   const finalScaleExtent =
     scaleExtent ?? createScaleExtent(finalMinZoom, finalMaxZoom);
 
-  const { mapRef, transformString, position } = useZoomPan({
-    center,
-    ...(filterZoomEvent && { filterZoomEvent }),
-    ...(onMoveStart && { onMoveStart }),
-    ...(onMove && { onMove }),
-    ...(onMoveEnd && { onMoveEnd }),
-    scaleExtent: finalScaleExtent,
-    ...(finalTranslateExtent && { translateExtent: finalTranslateExtent }),
-    zoom,
-  });
+  const { mapRef, transformString, position } = useZoomPanBehavior(
+    {
+      center,
+      ...(filterZoomEvent && { filterZoomEvent }),
+      ...(onMoveStart && { onMoveStart }),
+      ...(onMove && { onMove }),
+      ...(onMoveEnd && { onMoveEnd }),
+      scaleExtent: finalScaleExtent,
+      ...(finalTranslateExtent && { translateExtent: finalTranslateExtent }),
+      zoom,
+    },
+    { enableZoom, enablePan },
+  );
 
   return (
     <ZoomPanProvider

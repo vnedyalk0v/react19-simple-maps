@@ -35,6 +35,11 @@ export function usePanBehavior({
   startTransition,
 }: UsePanBehaviorProps): UsePanBehaviorReturn {
   const lastPosition = useRef<ZoomPanState>({ x: 0, y: 0, k: 1 });
+  const appliedViewport = useRef<{
+    width: number;
+    height: number;
+    projection: GeoProjection;
+  } | null>(null);
 
   const programmaticMove = useCallback(
     (newCenter: Coordinates, newZoom: number) => {
@@ -65,6 +70,7 @@ export function usePanBehavior({
       });
 
       lastPosition.current = { x: lon, y: lat, k: newZoom };
+      appliedViewport.current = { width, height, projection };
     },
     [
       projection,
@@ -83,7 +89,10 @@ export function usePanBehavior({
     if (
       lon === lastPosition.current.x &&
       lat === lastPosition.current.y &&
-      zoom === lastPosition.current.k
+      zoom === lastPosition.current.k &&
+      width === appliedViewport.current?.width &&
+      height === appliedViewport.current?.height &&
+      projection === appliedViewport.current?.projection
     )
       return;
 

@@ -27,7 +27,10 @@ export {
   type GeographySecurityConfig,
 } from './utils/geography-validation';
 
-export { createGeographyFetchError } from './utils/error-utils';
+export {
+  createGeographyFetchError,
+  isGeographyError,
+} from './utils/error-utils';
 export {
   configureSRI,
   enableStrictSRI,
@@ -137,26 +140,6 @@ export function isGeoProjection(value: unknown): value is GeoProjection {
 export function isProjectionName(value: unknown): value is string {
   return (
     typeof value === 'string' && value.startsWith('geo') && value.length > 3
-  );
-}
-
-// Error type guards
-export function isGeographyError(error: unknown): error is GeographyError {
-  if (!(error instanceof Error)) return false;
-
-  const errorObj = error as unknown as Record<string, unknown>;
-  return (
-    'type' in errorObj &&
-    typeof errorObj.type === 'string' &&
-    [
-      'GEOGRAPHY_LOAD_ERROR',
-      'GEOGRAPHY_PARSE_ERROR',
-      'PROJECTION_ERROR',
-      'VALIDATION_ERROR',
-      'SECURITY_ERROR',
-      'CONFIGURATION_ERROR',
-      'CONTEXT_ERROR',
-    ].includes(errorObj.type)
   );
 }
 
