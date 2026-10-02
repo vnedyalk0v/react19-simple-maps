@@ -161,7 +161,7 @@ Renders geographic features from TopoJSON or GeoJSON data.
 - `geography` - URL string, TopoJSON object, or GeoJSON FeatureCollection
 - `parseGeographies` - Optional function to transform geography data
 - `errorBoundary` - Enable the built-in error boundary
-- `onGeographyError`, `fallback` - Error handling hooks when `errorBoundary` is enabled
+- `onGeographyError`, `fallback` - Error handling hooks when `errorBoundary` is enabled. A caught error clears when the `geography` URL changes; for inline data, change the `key` on `Geographies` to reset it.
 
 ### Geography
 
@@ -203,14 +203,6 @@ Use `Marker` for custom points and `Annotation` for callouts.
 - `Sphere` - Add map outline/background
 - `GeographyErrorBoundary` - Explicit error boundary wrapper; pass `resetKey` to clear a caught error when that value changes
 - `MapWithMetadata` - Wrapper that renders metadata and a `ComposableMap`
-
-`MapWithMetadata` requires a `metadata` object. Omitted `title`, `description`, `keywords`, and `author` fall back to the selected `preset` (default `worldMap`); `canonicalUrl` is only rendered when provided.
-
-```tsx
-<MapWithMetadata metadata={{ title: 'Population by Country' }}>
-  {/* Map content */}
-</MapWithMetadata>
-```
 
 ## TypeScript Support
 

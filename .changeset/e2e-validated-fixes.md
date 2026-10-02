@@ -4,10 +4,10 @@
 
 Fix several rendering, interaction, packaging, and geography-loading defects found during end-to-end validation.
 
-- `MapWithMetadata` no longer crashes when JSON-LD is enabled (the default), forwards `ref` to the map's `<svg>`, accepts partial `metadata` with preset fallbacks, and no longer preloads a nonexistent font file.
+- `MapWithMetadata` no longer crashes when JSON-LD is enabled (the default), forwards `ref` to the map's `<svg>`, and no longer preloads a nonexistent font file.
 - Inline TopoJSON or GeoJSON passed to `Geographies` now renders during server rendering and on the first client render instead of appearing only after hydration.
 - `Geographies` no longer briefly renders the previous URL's features or re-reports a previous URL's error after `geography` changes, and a URL reports `isLoading` from its first render.
-- With `errorBoundary`, a caught error now clears when `geography` changes. `GeographyErrorBoundary` accepts a new optional `resetKey` prop for the same behavior.
+- With `errorBoundary`, a caught error now clears when the `geography` URL changes. `GeographyErrorBoundary` accepts a new optional `resetKey` prop for the same behavior.
 - Geography loading no longer logs to the console unless debug mode is enabled.
 - Controlled `ZoomableGroup` maps no longer freeze or skip `onMoveEnd` when `center` or `zoom` changes during a drag or wheel gesture, and `onMoveStart`/`onMoveEnd` always use the latest callbacks.
 - `Annotation` draws its connector line again, using the `curve` prop.

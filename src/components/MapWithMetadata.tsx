@@ -5,8 +5,8 @@ import { MapMetadata, mapMetadataPresets } from './MapMetadata';
 
 // Enhanced metadata props for the wrapper component
 interface MapWithMetadataProps extends ComposableMapProps {
-  // Required for this component; omitted fields fall back to the preset
-  metadata: NonNullable<ComposableMapProps['metadata']>;
+  // Override metadata to make it required for this component
+  metadata: Required<NonNullable<ComposableMapProps['metadata']>>;
 
   // Additional metadata options
   enableSEO?: boolean;

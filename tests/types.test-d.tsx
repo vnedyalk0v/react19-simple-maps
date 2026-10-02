@@ -3,11 +3,9 @@ import {
   ComposableMap,
   Geographies,
   Line,
-  MapWithMetadata,
   createCoordinates,
   createRotationAngles,
   type LineProps,
-  type MapWithMetadataProps,
   type ProjectionConfig,
   type RotationAngles,
 } from '../src/index';
@@ -52,12 +50,5 @@ describe('public API types', () => {
       label: string;
     }
     expectTypeOf<LabeledLineProps['from']>().toEqualTypeOf<LineProps['from']>();
-  });
-
-  it('accepts partial MapWithMetadata metadata', () => {
-    expectTypeOf<{ title: string }>().toExtend<
-      MapWithMetadataProps['metadata']
-    >();
-    <MapWithMetadata metadata={{ title: 'x' }} />;
   });
 });

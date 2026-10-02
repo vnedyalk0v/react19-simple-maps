@@ -1,4 +1,4 @@
-import { StrictMode, act, useEffect } from 'react';
+import { StrictMode, act, useEffect, useState } from 'react';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
@@ -311,12 +311,49 @@ describe('Geographies error boundary reset', () => {
     </StrictMode>
   );
 
-  it('recovers when switching to a different inline geography', () => {
+  it('does not loop when inline data is recreated on every render', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { container, rerender } = render(view(fc('bad')));
+    let renders = 0;
+    function Parent() {
+      const [, setError] = useState<Error | null>(null);
+      renders += 1;
+      return (
+        <ComposableMap>
+          <Geographies
+            geography={fc('bad')}
+            errorBoundary
+            onGeographyError={setError}
+            fallback={fallback}
+          >
+            {throwingChildren as never}
+          </Geographies>
+        </ComposableMap>
+      );
+    }
+
+    const { container } = render(<Parent />);
+    expect(container.querySelector('[data-testid=fallback]')).not.toBeNull();
+    expect(renders).toBeLessThan(5);
+  });
+
+  it('recovers inline data when the caller changes the key', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const keyed = (id: string, geography: FeatureCollection) => (
+      <ComposableMap>
+        <Geographies
+          key={id}
+          geography={geography}
+          errorBoundary
+          fallback={fallback}
+        >
+          {throwingChildren as never}
+        </Geographies>
+      </ComposableMap>
+    );
+    const { container, rerender } = render(keyed('a', fc('bad')));
     expect(container.querySelector('[data-testid=fallback]')).not.toBeNull();
 
-    rerender(view(fc('good', 20)));
+    rerender(keyed('b', fc('good', 20)));
     expect(container.querySelector('[data-testid=fallback]')).toBeNull();
     expect(container.querySelectorAll('path.rsm-geography')).toHaveLength(1);
   });
