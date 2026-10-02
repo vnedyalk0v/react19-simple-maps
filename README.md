@@ -189,6 +189,8 @@ import {
 </ZoomableGroup>;
 ```
 
+Set `enableZoom={false}` to keep the current scale while allowing pan gestures, or `enablePan={false}` to reject pan gestures and zoom around the viewport center. Setting both to `false` disables user gestures. Explicit `center` and `zoom` updates still reposition the map. These controls also apply when a custom `filterZoomEvent` is provided.
+
 ### Marker & Annotation
 
 Use `Marker` for custom points and `Annotation` for callouts.
@@ -241,6 +243,10 @@ import {
 The `./utils` subpath includes helpers for safer geography fetching. When you use URL-based geography data in `Geographies`, the internal fetch path applies URL validation, HTTPS-only defaults, resolved-hostname checks in server environments, response size checks, and optional SRI validation.
 
 Prefer `fetchGeographiesCache` for direct utility-based loading. `fetchGeographies` remains available for compatibility but is deprecated.
+
+Configuration set through `configureGeographySecurity`, `configureSRI`, or `enableStrictSRI` from `./utils` also applies to map components imported from the main package. Geography request timeouts cover redirects and reading the response body.
+
+`generateSRIHash` validates redirect targets against the same URL and resolved-hostname policy as geography loading, omits credentials, and enforces the configured timeout and response size limit. Browsers cannot inspect manual cross-origin redirects; use the final resource URL directly when a source redirects.
 
 ```tsx
 import {

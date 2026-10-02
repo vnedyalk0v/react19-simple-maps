@@ -1,6 +1,6 @@
 import React, { createContext, useMemo, useContext, ReactNode } from 'react';
 import * as d3Geo from 'd3-geo';
-import { GeoProjection } from 'd3-geo';
+import { GeoProjection, GeoConicProjection } from 'd3-geo';
 import { MapContextType, ProjectionConfig } from '../types';
 import { createGeographyError } from '../utils';
 import { validateProjectionConfig } from '../utils/input-validation';
@@ -69,6 +69,14 @@ const makeProjection = ({
   }
   if (validatedConfig.scale && proj.scale) {
     proj = proj.scale(validatedConfig.scale);
+  }
+
+  if (
+    validatedConfig.parallels &&
+    'parallels' in proj &&
+    typeof proj.parallels === 'function'
+  ) {
+    (proj as GeoConicProjection).parallels(validatedConfig.parallels);
   }
 
   return proj;

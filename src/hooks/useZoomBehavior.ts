@@ -1,5 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { zoom as d3Zoom, ZoomBehavior, D3ZoomEvent } from 'd3-zoom';
+import {
+  zoom as d3Zoom,
+  zoomTransform,
+  zoomIdentity,
+  ZoomBehavior,
+  D3ZoomEvent,
+} from 'd3-zoom';
 import { select as d3Select } from 'd3-selection';
 import { GeoProjection } from 'd3-geo';
 import { ScaleExtent, TranslateExtent } from '../types';
@@ -14,6 +20,8 @@ const createCoordinates = (lon: number, lat: number): Coordinates => [
 
 interface UseZoomBehaviorProps {
   mapRef: React.RefObject<SVGGElement | null>;
+  enableZoom?: boolean;
+  enablePan?: boolean;
   width: number;
   height: number;
   projection: GeoProjection;
@@ -37,6 +45,8 @@ interface UseZoomBehaviorReturn {
 
 export function useZoomBehavior({
   mapRef,
+  enableZoom = true,
+  enablePan = true,
   width,
   height,
   projection,
@@ -93,11 +103,14 @@ export function useZoomBehavior({
   );
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    const mapElement = mapRef.current;
+    if (!mapElement) return;
 
-    const svg = d3Select(mapRef.current);
+    const svg = d3Select(mapElement);
 
     function handleZoomStart(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
+      if (!enableZoom)
+        zoomBehavior.scaleExtent([d3Event.transform.k, d3Event.transform.k]);
       if (!onZoomStart || bypassEvents.current) return;
       const coords = getCoords(width, height, d3Event.transform);
       const inverted = projection.invert?.(coords);
@@ -129,16 +142,28 @@ export function useZoomBehavior({
       }
     }
 
-    function filterFunc(d3Event: D3ZoomEvent<SVGGElement, unknown> | null) {
-      if (filterZoomEvent && d3Event) {
-        return filterZoomEvent(d3Event.sourceEvent || d3Event);
-      }
-      return d3Event
-        ? !d3Event.sourceEvent?.ctrlKey && !d3Event.sourceEvent?.button
-        : false;
+    function filterFunc(event: Event) {
+      if (!enableZoom && !enablePan) return false;
+      const isScaling = event.type === 'wheel' || event.type === 'dblclick';
+      if (isScaling && !enableZoom) return false;
+      if (
+        !enablePan &&
+        !isScaling &&
+        (!('touches' in event) || (event as TouchEvent).touches.length < 2)
+      )
+        return false;
+      if (filterZoomEvent) return filterZoomEvent(event);
+      const mouseEvent = event as MouseEvent;
+      return (
+        (!mouseEvent.ctrlKey || event.type === 'wheel') && !mouseEvent.button
+      );
     }
 
     const zoomBehavior = d3Zoom<SVGGElement, unknown>()
+      .extent([
+        [0, 0],
+        [width, height],
+      ])
       .filter(filterFunc)
       .scaleExtent([minZoom, maxZoom])
       .translateExtent([
@@ -149,6 +174,24 @@ export function useZoomBehavior({
       .on('zoom', handleZoom)
       .on('end', handleZoomEnd);
 
+    if (!enablePan) {
+      zoomBehavior.constrain((transform) => {
+        const previous = zoomTransform(mapElement);
+        const ratio = transform.k / previous.k;
+        return zoomIdentity
+          .translate(
+            width / 2 - (width / 2 - previous.x) * ratio,
+            height / 2 - (height / 2 - previous.y) * ratio,
+          )
+          .scale(transform.k);
+      });
+    }
+
+    if (!enableZoom) {
+      const currentScale = zoomTransform(mapElement).k;
+      zoomBehavior.scaleExtent([currentScale, currentScale]);
+    }
+
     zoomRef.current = zoomBehavior;
     svg.call(zoomBehavior);
 
@@ -158,6 +201,8 @@ export function useZoomBehavior({
       svg.on('.zoom', null);
     };
   }, [
+    enableZoom,
+    enablePan,
     width,
     height,
     a1,

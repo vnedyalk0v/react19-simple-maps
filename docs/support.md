@@ -28,6 +28,9 @@
 
 - URL-based geography loading keeps HTTPS-only defaults.
 - Geography validation and fetch hardening are part of the supported package behavior, not example-only helpers.
+- Geography security and integrity settings configured through `./utils` apply to main-entry map components too.
+- Geography fetch and integrity-hash generation timeouts cover redirects and response body consumption. Redirect targets retain URL and server-side resolved-hostname validation, and unused redirect bodies are cancelled.
+- Browser fetch cannot inspect opaque redirects. Redirecting sources must use their final resource URL directly in browsers.
 - Security-sensitive changes should ship with matching tests and documentation updates.
 
 ## Examples and documentation

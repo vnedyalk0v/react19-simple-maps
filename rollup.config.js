@@ -81,7 +81,7 @@ const esmTerserConfig = {
 export default [
   // ESM build (main entry)
   {
-    input: 'src/index.ts',
+    input: { index: 'src/index.ts', utils: 'src/utils/index.ts' },
     external,
     treeshake: {
       moduleSideEffects: false,
@@ -89,45 +89,11 @@ export default [
       tryCatchDeoptimization: false,
     },
     output: {
-      file: 'dist/index.js',
+      dir: 'dist',
+      entryFileNames: '[name].js',
+      chunkFileNames: 'shared-[name].js',
       format: 'es',
       sourcemap: true,
-    },
-    plugins: [
-      resolve({
-        preferBuiltins: false,
-        exportConditions: ['import', 'module', 'default'],
-        mainFields: ['module', 'main'],
-      }),
-      commonjs({
-        ignoreDynamicRequires: true,
-      }),
-      typescript({
-        tsconfig: './tsconfig.json',
-        compilerOptions: {
-          declaration: false,
-          declarationMap: false,
-          sourceMap: true,
-          noEmit: false,
-        },
-      }),
-      ...(isProduction ? [terser(esmTerserConfig)] : []),
-    ],
-  },
-  // ESM build for utils subpath export
-  {
-    input: 'src/utils/index.ts',
-    external,
-    treeshake: {
-      moduleSideEffects: false,
-      propertyReadSideEffects: false,
-      tryCatchDeoptimization: false,
-    },
-    output: {
-      file: 'dist/utils.js',
-      format: 'es',
-      sourcemap: true,
-      inlineDynamicImports: true,
     },
     plugins: [
       resolve({

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { readBundleFiles } from './bundle-files.js';
+
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -38,9 +40,12 @@ function analyzeFile(filePath) {
     };
   }
 
-  const content = readFileSync(fullPath);
-  const rawSize = content.length;
-  const gzipSize = gzipSync(content).length;
+  const files = readBundleFiles(fullPath);
+  const rawSize = files.reduce((size, content) => size + content.length, 0);
+  const gzipSize = files.reduce(
+    (size, content) => size + gzipSync(content).length,
+    0,
+  );
 
   const threshold = SIZE_THRESHOLDS[filePath];
 
@@ -63,6 +68,11 @@ function analyzeFile(filePath) {
 function generateReport() {
   const files = Object.keys(SIZE_THRESHOLDS);
   const results = files.map(analyzeFile);
+  const uniqueFiles = new Map();
+  for (const file of results.filter((result) => result.exists)) {
+    readBundleFiles(join(projectRoot, file.path), uniqueFiles);
+  }
+  const contents = [...uniqueFiles.values()];
 
   const report = {
     timestamp: new Date().toISOString(),
@@ -73,12 +83,14 @@ function generateReport() {
       filesWithinThreshold: results.filter(
         (r) => r.exists && r.rawWithinThreshold && r.gzipWithinThreshold,
       ).length,
-      totalRawSize: results
-        .filter((r) => r.exists)
-        .reduce((sum, r) => sum + r.rawSize, 0),
-      totalGzipSize: results
-        .filter((r) => r.exists)
-        .reduce((sum, r) => sum + r.gzipSize, 0),
+      totalRawSize: contents.reduce(
+        (size, content) => size + content.length,
+        0,
+      ),
+      totalGzipSize: contents.reduce(
+        (size, content) => size + gzipSync(content).length,
+        0,
+      ),
     },
   };
 

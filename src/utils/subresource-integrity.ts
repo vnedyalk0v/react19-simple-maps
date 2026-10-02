@@ -1,3 +1,8 @@
+import {
+  createSecureFetchOptions,
+  fetchWithRedirectValidation,
+  createTimeoutController,
+} from './geography-transport';
 import { createGeographyFetchError } from './error-utils';
 import {
   getGeographySecurityConfig,
@@ -392,13 +397,16 @@ export async function generateSRIHash(
   validateGeographyUrl(url, securityConfig);
   await validateResolvedGeographyUrl(url, securityConfig);
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, securityConfig.TIMEOUT_MS);
+  const { controller, cleanup } = createTimeoutController(
+    securityConfig.TIMEOUT_MS,
+  );
 
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetchWithRedirectValidation(
+      url,
+      createSecureFetchOptions(controller.signal, securityConfig),
+      securityConfig,
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
     }
@@ -423,7 +431,7 @@ export async function generateSRIHash(
       error instanceof Error ? error : new Error(String(error)),
     );
   } finally {
-    clearTimeout(timeoutId);
+    cleanup();
   }
 }
 

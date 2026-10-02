@@ -31,19 +31,29 @@ interface UseZoomPanReturn {
   isPending: boolean;
 }
 
-export function useZoomPan({
-  center,
-  filterZoomEvent,
-  onMoveStart,
-  onMoveEnd,
-  onMove,
-  translateExtent = createTranslateExtent(
-    createCoordinates(-Infinity, -Infinity),
-    createCoordinates(Infinity, Infinity),
-  ),
-  scaleExtent = createScaleExtent(1, 8),
-  zoom = 1,
-}: UseZoomPanHookProps): UseZoomPanReturn {
+export function useZoomPan(props: UseZoomPanHookProps): UseZoomPanReturn {
+  return useZoomPanBehavior(props);
+}
+
+export function useZoomPanBehavior(
+  {
+    center,
+    filterZoomEvent,
+    onMoveStart,
+    onMoveEnd,
+    onMove,
+    translateExtent = createTranslateExtent(
+      createCoordinates(-Infinity, -Infinity),
+      createCoordinates(Infinity, Infinity),
+    ),
+    scaleExtent = createScaleExtent(1, 8),
+    zoom = 1,
+  }: UseZoomPanHookProps,
+  {
+    enableZoom = true,
+    enablePan = true,
+  }: { enableZoom?: boolean; enablePan?: boolean } = {},
+): UseZoomPanReturn {
   const { width, height, projection } = useMapContext();
 
   // Defer expensive calculations for smooth rendering with initialValue for better UX
@@ -65,6 +75,8 @@ export function useZoomPan({
 
   const zoomBehaviorProps = {
     mapRef,
+    enableZoom,
+    enablePan,
     width,
     height,
     projection,
