@@ -1,7 +1,13 @@
 import React, { createContext, useMemo, useContext, ReactNode } from 'react';
 import * as d3Geo from 'd3-geo';
 import { GeoProjection, GeoConicProjection } from 'd3-geo';
-import { MapContextType, ProjectionConfig } from '../types';
+import {
+  MapContextType,
+  ProjectionConfig,
+  createCoordinates,
+  createRotationAngles,
+  createParallels,
+} from '../types';
 import { createGeographyError } from '../utils';
 import { validateProjectionConfig } from '../utils/input-validation';
 
@@ -42,9 +48,6 @@ const makeProjection = ({
     );
   }
 
-  // Validate projection configuration
-  const validatedConfig = validateProjectionConfig(projectionConfig);
-
   const projectionName = trimmedProjection as keyof typeof projections;
   if (!(projectionName in projections)) {
     throw createGeographyError(
@@ -61,22 +64,22 @@ const makeProjection = ({
   ]);
 
   // Apply validated projection configuration
-  if (validatedConfig.center && proj.center) {
-    proj = proj.center(validatedConfig.center);
+  if (projectionConfig.center && proj.center) {
+    proj = proj.center(projectionConfig.center);
   }
-  if (validatedConfig.rotate && proj.rotate) {
-    proj = proj.rotate(validatedConfig.rotate);
+  if (projectionConfig.rotate && proj.rotate) {
+    proj = proj.rotate(projectionConfig.rotate);
   }
-  if (validatedConfig.scale && proj.scale) {
-    proj = proj.scale(validatedConfig.scale);
+  if (projectionConfig.scale && proj.scale) {
+    proj = proj.scale(projectionConfig.scale);
   }
 
   if (
-    validatedConfig.parallels &&
+    projectionConfig.parallels &&
     'parallels' in proj &&
     typeof proj.parallels === 'function'
   ) {
-    (proj as GeoConicProjection).parallels(validatedConfig.parallels);
+    (proj as GeoConicProjection).parallels(projectionConfig.parallels);
   }
 
   return proj;
@@ -97,14 +100,43 @@ const MapProvider: React.FC<MapProviderProps> = ({
   projectionConfig = EMPTY_PROJECTION_CONFIG,
   children,
 }) => {
+  const config =
+    typeof projection === 'function'
+      ? EMPTY_PROJECTION_CONFIG
+      : validateProjectionConfig(projectionConfig);
+  const [centerLon, centerLat] = config.center ?? [];
+  const [rotateX, rotateY, rotateZ] = config.rotate ?? [];
+  const [parallelA, parallelB] = config.parallels ?? [];
+  const { scale } = config;
+
   const projMemo = useMemo(() => {
+    const stableConfig: ProjectionConfig = {};
+    if (centerLon !== undefined && centerLat !== undefined)
+      stableConfig.center = createCoordinates(centerLon, centerLat);
+    if (rotateX !== undefined && rotateY !== undefined && rotateZ !== undefined)
+      stableConfig.rotate = createRotationAngles(rotateX, rotateY, rotateZ);
+    if (parallelA !== undefined && parallelB !== undefined)
+      stableConfig.parallels = createParallels(parallelA, parallelB);
+    if (scale !== undefined) stableConfig.scale = scale;
     return makeProjection({
-      projectionConfig,
+      projectionConfig: stableConfig,
       projection: projection || 'geoEqualEarth',
       width,
       height,
     });
-  }, [width, height, projection, projectionConfig]);
+  }, [
+    width,
+    height,
+    projection,
+    centerLon,
+    centerLat,
+    rotateX,
+    rotateY,
+    rotateZ,
+    parallelA,
+    parallelB,
+    scale,
+  ]);
 
   const value = useMemo((): MapContextType => {
     return {

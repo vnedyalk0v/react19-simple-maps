@@ -73,3 +73,23 @@ export function createSecurityError(
 
   return error;
 }
+
+// Error type guards
+export function isGeographyError(error: unknown): error is GeographyError {
+  if (!(error instanceof Error)) return false;
+
+  const errorObj = error as unknown as Record<string, unknown>;
+  return (
+    'type' in errorObj &&
+    typeof errorObj.type === 'string' &&
+    [
+      'GEOGRAPHY_LOAD_ERROR',
+      'GEOGRAPHY_PARSE_ERROR',
+      'PROJECTION_ERROR',
+      'VALIDATION_ERROR',
+      'SECURITY_ERROR',
+      'CONFIGURATION_ERROR',
+      'CONTEXT_ERROR',
+    ].includes(errorObj.type)
+  );
+}

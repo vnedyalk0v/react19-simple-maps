@@ -10,7 +10,7 @@ export function readBundleFiles(entryPath, files = new Map()) {
   if (path.endsWith('.js')) {
     const imports = content
       .toString()
-      .matchAll(/(?:from\s*|import\s*\()\s*["'](\.[^"']+)["']/g);
+      .matchAll(/(?:from\s*|import\s*(?:\(\s*)?)\s*["'](\.[^"']+)["']/g);
     for (const [, specifier] of imports) {
       readBundleFiles(resolve(dirname(path), specifier), files);
     }

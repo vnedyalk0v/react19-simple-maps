@@ -1,4 +1,4 @@
-import { StrictMode, createRef } from 'react';
+import { StrictMode, createRef, act } from 'react';
 import { cleanup, render, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -12,7 +12,12 @@ import ComposableMap from '../src/components/ComposableMap';
 import Geographies from '../src/components/Geographies';
 import ZoomableGroup from '../src/components/ZoomableGroup';
 import { useMapContext } from '../src/components/MapProvider';
-import { createCoordinates, createParallels } from '../src/types';
+import {
+  createCoordinates,
+  createParallels,
+  createRotationAngles,
+  type ProjectionConfig,
+} from '../src/types';
 
 const data: FeatureCollection = {
   type: 'FeatureCollection',
@@ -382,6 +387,62 @@ describe('zoom and pan interaction controls', () => {
     );
   });
 
+  it.each([true, false])(
+    'recognizes double-tap zoom when enablePan=%s while preserving the center',
+    async (enablePan) => {
+      const view = render(
+        <ComposableMap>
+          <ZoomableGroup
+            enablePan={enablePan}
+            center={createCoordinates(20, 10)}
+            zoom={2}
+          />
+        </ComposableMap>,
+      );
+      const { outer, value } = transform(view);
+      const before = { ...value() };
+      touch(outer, 'touchstart', [[100, 100]]);
+      touch(outer, 'touchend', [[100, 100]], true);
+      touch(outer, 'touchstart', [[100, 100]]);
+      touch(outer, 'touchend', [[100, 100]], true);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      });
+      const zoomed = { ...value() };
+      expect(zoomed.k).toBeCloseTo(4);
+      if (!enablePan) {
+        expect((400 - zoomed.x) / zoomed.k).toBeCloseTo(
+          (400 - before.x) / before.k,
+        );
+        expect((300 - zoomed.y) / zoomed.k).toBeCloseTo(
+          (300 - before.y) / before.k,
+        );
+      }
+    },
+  );
+
+  it('blocks double-tap zoom while retaining single-touch pan when zoom is disabled', async () => {
+    const view = render(
+      <ComposableMap>
+        <ZoomableGroup enableZoom={false} />
+      </ComposableMap>,
+    );
+    const { outer, value } = transform(view);
+    touch(outer, 'touchstart', [[100, 100]]);
+    touch(outer, 'touchend', [[100, 100]], true);
+    touch(outer, 'touchstart', [[100, 100]]);
+    touch(outer, 'touchend', [[100, 100]], true);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+    expect(value().k).toBe(1);
+    touch(outer, 'touchstart', [[100, 100]]);
+    touch(outer, 'touchmove', [[150, 125]]);
+    expect(value().x).toBe(50);
+    expect(value().y).toBe(25);
+    touch(outer, 'touchend', [[150, 125]], true);
+  });
+
   it('blocks both controls even with a permissive custom filter, while allowing programmatic position', () => {
     const filter = () => true;
     const view = render(
@@ -502,6 +563,88 @@ describe('zoom and pan interaction controls', () => {
 });
 
 describe('requested position synchronization', () => {
+  it.each(['scale', 'rotate', 'center', 'parallels', 'width', 'height'])(
+    'preserves interactive pan for equivalent inline config and reapplies positioning on %s changes',
+    (changed) => {
+      const center = createCoordinates(20, 10);
+      let currentProjection: GeoProjection = geoConicEqualArea();
+      const renderMap = (modify = false) => {
+        const config: ProjectionConfig = {
+          scale: modify && changed === 'scale' ? 180 : 147,
+          center: createCoordinates(modify && changed === 'center' ? 10 : 0, 0),
+          rotate: createRotationAngles(
+            modify && changed === 'rotate' ? 20 : 0,
+            0,
+            0,
+          ),
+          parallels: createParallels(
+            modify && changed === 'parallels' ? 30 : 20,
+            60,
+          ),
+        };
+        return (
+          <ComposableMap
+            projection="geoConicEqualArea"
+            width={modify && changed === 'width' ? 1000 : 800}
+            height={modify && changed === 'height' ? 700 : 600}
+            projectionConfig={config}
+          >
+            <ProjectionProbe
+              observe={(projection) => {
+                currentProjection = projection;
+              }}
+            />
+            <ZoomableGroup center={center} zoom={2} />
+          </ComposableMap>
+        );
+      };
+      const view = render(renderMap());
+      const { outer, value } = transform(view);
+      const originalProjection = currentProjection;
+      drag(outer);
+      const panned = { ...value() };
+      view.rerender(renderMap());
+      expect(currentProjection).toBe(originalProjection);
+      expect(value()).toMatchObject(panned);
+      view.rerender(renderMap(true));
+      expect(currentProjection).not.toBe(originalProjection);
+      const projected = currentProjection(center)!;
+      expect(value().x + projected[0] * 2).toBeCloseTo(
+        changed === 'width' ? 500 : 400,
+      );
+      expect(value().y + projected[1] * 2).toBeCloseTo(
+        changed === 'height' ? 350 : 300,
+      );
+      if (changed === 'scale') expect(currentProjection.scale()).toBe(180);
+      if (changed === 'center')
+        expect(currentProjection.center()[0]).toBeCloseTo(10);
+      if (changed === 'rotate')
+        expect(currentProjection.rotate()[0]).toBeCloseTo(20);
+      if (changed === 'parallels')
+        expect(
+          (currentProjection as GeoConicProjection).parallels()[0],
+        ).toBeCloseTo(30);
+    },
+  );
+
+  it('validates malformed config on rerender even when its extracted scalars match absent config', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const view = render(
+      <ComposableMap>
+        <ZoomableGroup />
+      </ComposableMap>,
+    );
+    expect(() =>
+      view.rerender(
+        <ComposableMap
+          projectionConfig={{ center: [] } as unknown as ProjectionConfig}
+        >
+          <ZoomableGroup />
+        </ComposableMap>,
+      ),
+    ).toThrow(/Coordinates must be an array of exactly 2 numbers/);
+  });
+
   it('reapplies the center on resize and projection changes, while preserving pan on ordinary rerenders', () => {
     const center = createCoordinates(20, 10);
     const projectionA = geoMercator().translate([400, 300]);

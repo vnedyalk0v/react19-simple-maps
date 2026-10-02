@@ -144,14 +144,12 @@ export function useZoomBehavior({
 
     function filterFunc(event: Event) {
       if (!enableZoom && !enablePan) return false;
-      const isScaling = event.type === 'wheel' || event.type === 'dblclick';
+      const isScaling =
+        event.type === 'wheel' ||
+        event.type === 'dblclick' ||
+        event.type === 'touchend';
       if (isScaling && !enableZoom) return false;
-      if (
-        !enablePan &&
-        !isScaling &&
-        (!('touches' in event) || (event as TouchEvent).touches.length < 2)
-      )
-        return false;
+      if (!enablePan && !isScaling && event.type !== 'touchstart') return false;
       if (filterZoomEvent) return filterZoomEvent(event);
       const mouseEvent = event as MouseEvent;
       return (

@@ -3,7 +3,7 @@ import {
   fetchWithRedirectValidation,
   createTimeoutController,
 } from './geography-transport';
-import { createGeographyFetchError } from './error-utils';
+import { createGeographyFetchError, isGeographyError } from './error-utils';
 import {
   getGeographySecurityConfig,
   readResponseWithSizeLimit,
@@ -424,6 +424,7 @@ export async function generateSRIHash(
     const hash = await calculateHash(data, algorithmMap[algorithm]);
     return `${algorithm}-${hash}`;
   } catch (error) {
+    if (isGeographyError(error)) throw error;
     throw createGeographyFetchError(
       'GEOGRAPHY_LOAD_ERROR',
       `Failed to generate SRI hash for ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`,

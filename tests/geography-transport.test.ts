@@ -42,7 +42,9 @@ describe('validated geography transport', () => {
       const fetchMock = vi.fn().mockResolvedValue(response);
       vi.stubGlobal('fetch', fetchMock);
       configureGeographySecurity({ MAX_RESPONSE_SIZE: 64 });
-      await expect(request(url)).rejects.toThrow(/private|not allowed/i);
+      const result = request(url);
+      await expect(result).rejects.toThrow(/private|not allowed/i);
+      await expect(result).rejects.toMatchObject({ type: 'SECURITY_ERROR' });
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock.mock.calls[0][1]).toMatchObject({
         redirect: 'manual',
@@ -70,7 +72,9 @@ describe('validated geography transport', () => {
         }),
       );
       vi.stubGlobal('fetch', fetchMock);
-      await expect(request(url)).rejects.toThrow(/resolves to a private IP/i);
+      const result = request(url);
+      await expect(result).rejects.toThrow(/resolves to a private IP/i);
+      await expect(result).rejects.toMatchObject({ type: 'SECURITY_ERROR' });
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(lookup).toHaveBeenCalledWith('redirect.example.test', {
         all: true,
@@ -127,11 +131,22 @@ describe('validated geography transport', () => {
       const response = new Response(null);
       Object.defineProperty(response, 'type', { value: 'opaqueredirect' });
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
-      await expect(request(url)).rejects.toThrow(
+      const result = request(url);
+      await expect(result).rejects.toThrow(
         /opaque redirect.*final resource URL/i,
       );
+      await expect(result).rejects.toMatchObject({ type: 'SECURITY_ERROR' });
     },
   );
+
+  it('classifies ordinary hash-generation network failures as load errors', async () => {
+    const failure = new TypeError('fetch failed');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(failure));
+    await expect(generateSRIHash(url)).rejects.toMatchObject({
+      type: 'GEOGRAPHY_LOAD_ERROR',
+      cause: failure,
+    });
+  });
 
   it('hashes a validated public redirect using the existing body size limit', async () => {
     vi.stubGlobal('crypto', webcrypto);
