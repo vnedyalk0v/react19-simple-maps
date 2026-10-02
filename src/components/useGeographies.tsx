@@ -21,11 +21,6 @@ import {
   generateFeaturesCacheKey,
   generatePreparedFeaturesCacheKey,
   generateMeshCacheKey,
-  getCachedGeographyData,
-  getPathFunctionCacheToken,
-  cacheGeographyData,
-  getCachedPreparedFeaturesWeakMap,
-  cachePreparedFeaturesWeakMap,
 } from '../utils/geography-cache';
 import { preloadGeography } from '../utils/preloading';
 import { devTools } from '../utils/debugging';
@@ -89,19 +84,6 @@ export default function useGeographies({
   const rawFeatures = useMemo(() => {
     if (isLoading || !loadedData) return [];
 
-    // Try WeakMap cache first for object-based geography data
-    if (
-      loadedData &&
-      typeof loadedData === 'object' &&
-      !Array.isArray(loadedData)
-    ) {
-      const weakMapCached = getCachedGeographyData(loadedData);
-      if (weakMapCached) {
-        return weakMapCached.features;
-      }
-    }
-
-    // Fall back to LRU cache
     const cacheKey = generateFeaturesCacheKey(loadedData, parseGeographies);
     const cached = getCachedFeatures(cacheKey);
 
@@ -112,16 +94,7 @@ export default function useGeographies({
     // Extract features
     const features = getFeatures(loadedData, parseGeographies);
 
-    // Cache in both systems
     cacheFeatures(cacheKey, features);
-    if (
-      loadedData &&
-      typeof loadedData === 'object' &&
-      !Array.isArray(loadedData)
-    ) {
-      const mesh = getMesh(loadedData);
-      cacheGeographyData(loadedData, features, mesh);
-    }
 
     return features;
   }, [loadedData, isLoading, parseGeographies]);
@@ -136,24 +109,6 @@ export default function useGeographies({
   const preparedGeographies = useMemo(() => {
     if (rawFeatures.length === 0) return [];
 
-    const pathFunctionToken = getPathFunctionCacheToken(path);
-
-    // Try WeakMap cache first if we have the original geography object
-    if (
-      loadedData &&
-      typeof loadedData === 'object' &&
-      !Array.isArray(loadedData)
-    ) {
-      const weakMapCached = getCachedPreparedFeaturesWeakMap(
-        loadedData,
-        pathFunctionToken,
-      );
-      if (weakMapCached) {
-        return weakMapCached;
-      }
-    }
-
-    // Fall back to LRU cache
     const cacheKey = generatePreparedFeaturesCacheKey(rawFeatures, path);
     const cached = getCachedPreparedFeatures(cacheKey);
 
@@ -164,18 +119,10 @@ export default function useGeographies({
     // Generate prepared features
     const prepared = prepareFeatures(rawFeatures, path);
 
-    // Cache in both systems
     cachePreparedFeatures(cacheKey, prepared);
-    if (
-      loadedData &&
-      typeof loadedData === 'object' &&
-      !Array.isArray(loadedData)
-    ) {
-      cachePreparedFeaturesWeakMap(loadedData, prepared, pathFunctionToken);
-    }
 
     return prepared;
-  }, [rawFeatures, path, loadedData]);
+  }, [rawFeatures, path]);
 
   // Memoize prepared mesh with caching (path generation for borders/outline)
   const preparedMeshData = useMemo(() => {

@@ -11,8 +11,8 @@ vi.mock('../src/components/useGeographies', () => ({
   default: mockUseGeographies,
 }));
 
-vi.mock('../src/components/useZoomPan', () => ({
-  default: mockUseZoomPan,
+vi.mock('../src/hooks/useZoomPan', () => ({
+  useZoomPanBehavior: mockUseZoomPan,
 }));
 
 import ComposableMap from '../src/components/ComposableMap';

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { readBundleFiles } from './bundle-files.js';
+
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -91,11 +93,15 @@ function analyzeBundle(filePath) {
   }
 
   try {
-    const content = readFileSync(fullPath);
+    const files = readBundleFiles(fullPath);
+    const content = Buffer.concat(files);
     const rawSize = content.length;
-    const gzipSize = gzipSync(content).length;
+    const gzipSize = files.reduce(
+      (size, file) => size + gzipSync(file).length,
+      0,
+    );
     const brotliSize = brotliCompressSync
-      ? brotliCompressSync(content).length
+      ? files.reduce((size, file) => size + brotliCompressSync(file).length, 0)
       : null;
 
     // Analyze content for React 19 optimizations
@@ -231,13 +237,21 @@ function generateEnhancedReport() {
   }
 
   const existingBundles = analyses.filter((a) => a.exists);
-  const totalRawSize = existingBundles.reduce((sum, a) => sum + a.sizes.raw, 0);
-  const totalGzipSize = existingBundles.reduce(
-    (sum, a) => sum + a.sizes.gzip,
+  const uniqueFiles = new Map();
+  for (const bundle of existingBundles) {
+    readBundleFiles(join(projectRoot, bundle.path), uniqueFiles);
+  }
+  const contents = [...uniqueFiles.values()];
+  const totalRawSize = contents.reduce(
+    (size, content) => size + content.length,
     0,
   );
-  const totalBrotliSize = existingBundles.reduce(
-    (sum, a) => sum + (a.sizes.brotli || 0),
+  const totalGzipSize = contents.reduce(
+    (size, content) => size + gzipSync(content).length,
+    0,
+  );
+  const totalBrotliSize = contents.reduce(
+    (size, content) => size + brotliCompressSync(content).length,
     0,
   );
 

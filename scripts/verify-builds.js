@@ -11,7 +11,13 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, relative, sep } from 'path';
+import assert from 'node:assert/strict';
+import { createElement, act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { JSDOM } from 'jsdom';
+import { execFileSync } from 'node:child_process';
+import { readBundleFiles } from './bundle-files.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -94,6 +100,7 @@ class BuildVerifier {
       // Dynamic import of ES module using file:// URL for better CI compatibility
       const fileUrl = `file://${fullPath}`;
       const esModule = await import(fileUrl);
+      this.esModule = esModule;
       const exports = Object.keys(esModule);
 
       this.results.es.exports = exports;
@@ -114,6 +121,8 @@ class BuildVerifier {
 
       const fileUrl = `file://${fullPath}`;
       const utilsModule = await import(fileUrl);
+      await this.verifySharedConfiguration(utilsModule);
+      this.verifyPackagedChunks();
       const exports = Object.keys(utilsModule);
 
       this.results.utils.exports = exports;
@@ -128,6 +137,141 @@ class BuildVerifier {
       this.results.utils.errors.push(error.message);
       this.log(`✗ Utils ESM verification failed: ${error.message}`, 'error');
     }
+  }
+
+  async verifySharedConfiguration(utils) {
+    assert.ok(
+      this.esModule,
+      'Main ESM entry must import successfully before checking shared configuration',
+    );
+    const dom = new JSDOM('<div id="map"></div>');
+    const globals = [
+      'window',
+      'document',
+      'navigator',
+      'fetch',
+      'IS_REACT_ACT_ENVIRONMENT',
+    ];
+    const originalGlobals = new Map(
+      globals.map((key) => [
+        key,
+        Object.getOwnPropertyDescriptor(globalThis, key),
+      ]),
+    );
+    const security = utils.DEFAULT_GEOGRAPHY_FETCH_CONFIG;
+    const integrity = utils.DEFAULT_SRI_CONFIG;
+    let requests = 0;
+    let root;
+    try {
+      for (const [key, value] of Object.entries({
+        window: dom.window,
+        document: dom.window.document,
+        navigator: dom.window.navigator,
+        IS_REACT_ACT_ENVIRONMENT: true,
+        fetch: async () => {
+          requests++;
+          return new Response(
+            JSON.stringify({ type: 'FeatureCollection', features: [] }),
+            { headers: { 'content-type': 'application/json' } },
+          );
+        },
+      }))
+        Object.defineProperty(globalThis, key, {
+          value,
+          configurable: true,
+          writable: true,
+        });
+
+      const url = 'https://8.8.8.8/cross-entry.json';
+      const renderGeographies = async () => {
+        let caught;
+        root = createRoot(dom.window.document.getElementById('map'));
+        await act(async () => {
+          root.render(
+            createElement(
+              this.esModule.ComposableMap,
+              null,
+              createElement(
+                this.esModule.Geographies,
+                {
+                  geography: url,
+                  onGeographyError: (error) => {
+                    caught = error;
+                  },
+                },
+                () => null,
+              ),
+            ),
+          );
+        });
+        await act(async () => root.unmount());
+        root = undefined;
+        return caught;
+      };
+
+      utils.enableStrictSRI();
+      await assert.rejects(utils.fetchGeographiesCache(url), /integrity|SRI/i);
+      assert.match(
+        (await renderGeographies())?.message ?? '',
+        /integrity|SRI/i,
+        'Main entry must honor strict integrity configuration set through utils',
+      );
+      assert.equal(
+        requests,
+        0,
+        'Strict integrity must reject unknown sources before fetching',
+      );
+
+      utils.configureSRI(integrity);
+      utils.configureGeographySecurity({ MAX_RESPONSE_SIZE: 1 });
+      await assert.rejects(utils.fetchGeographiesCache(url), /too large/i);
+      assert.match(
+        (await renderGeographies())?.message ?? '',
+        /too large/i,
+        'Main entry must honor geography security configuration set through utils',
+      );
+      this.log(
+        '✓ Shared integrity and geography security configuration enforced across entrypoints',
+        'success',
+      );
+    } finally {
+      if (root) await act(async () => root.unmount());
+      utils.configureSRI(integrity);
+      utils.configureGeographySecurity(security);
+      dom.window.close();
+      for (const [key, descriptor] of originalGlobals) {
+        if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+        else delete globalThis[key];
+      }
+    }
+  }
+
+  verifyPackagedChunks() {
+    const [pack] = JSON.parse(
+      execFileSync(
+        process.platform === 'win32' ? 'npm.cmd' : 'npm',
+        ['pack', '--dry-run', '--ignore-scripts', '--json'],
+        {
+          encoding: 'utf8',
+          shell: process.platform === 'win32',
+        },
+      ),
+    );
+    const packaged = new Set(pack.files.map((file) => file.path));
+    for (const entry of [BUILD_FILES.es, BUILD_FILES.utils]) {
+      const reachable = new Map();
+      readBundleFiles(join(process.cwd(), entry), reachable);
+      for (const path of reachable.keys()) {
+        assert.ok(
+          packaged.has(relative(process.cwd(), path).split(sep).join('/')),
+          `Missing published chunk: ${path}`,
+        );
+      }
+    }
+    this.log(
+      '✓ Published package includes every entrypoint dependency',
+      'success',
+    );
   }
 
   verifyTypeDefinitions(resultKey, filePath, label) {

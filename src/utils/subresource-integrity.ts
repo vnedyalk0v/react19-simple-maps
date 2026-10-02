@@ -1,4 +1,9 @@
-import { createGeographyFetchError } from './error-utils';
+import {
+  createSecureFetchOptions,
+  fetchWithRedirectValidation,
+  createTimeoutController,
+} from './geography-transport';
+import { createGeographyFetchError, isGeographyError } from './error-utils';
 import {
   getGeographySecurityConfig,
   readResponseWithSizeLimit,
@@ -392,13 +397,16 @@ export async function generateSRIHash(
   validateGeographyUrl(url, securityConfig);
   await validateResolvedGeographyUrl(url, securityConfig);
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, securityConfig.TIMEOUT_MS);
+  const { controller, cleanup } = createTimeoutController(
+    securityConfig.TIMEOUT_MS,
+  );
 
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetchWithRedirectValidation(
+      url,
+      createSecureFetchOptions(controller.signal, securityConfig),
+      securityConfig,
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
     }
@@ -416,6 +424,7 @@ export async function generateSRIHash(
     const hash = await calculateHash(data, algorithmMap[algorithm]);
     return `${algorithm}-${hash}`;
   } catch (error) {
+    if (isGeographyError(error)) throw error;
     throw createGeographyFetchError(
       'GEOGRAPHY_LOAD_ERROR',
       `Failed to generate SRI hash for ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -423,7 +432,7 @@ export async function generateSRIHash(
       error instanceof Error ? error : new Error(String(error)),
     );
   } finally {
-    clearTimeout(timeoutId);
+    cleanup();
   }
 }
 
