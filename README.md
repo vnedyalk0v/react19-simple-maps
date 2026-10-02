@@ -198,7 +198,7 @@ Use `Marker` for custom points and `Annotation` for callouts.
 
 ### Additional Components
 
-- `Line` - Draw lines between coordinates
+- `Line` - Draw lines between coordinates; pass `coordinates`, or both `from` and `to`
 - `Graticule` - Add coordinate grid lines
 - `Sphere` - Add map outline/background
 - `GeographyErrorBoundary` - Explicit error boundary wrapper; pass `resetKey` to clear a caught error when that value changes

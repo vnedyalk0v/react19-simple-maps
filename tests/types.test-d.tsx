@@ -37,9 +37,13 @@ describe('public API types', () => {
     />;
   });
 
-  it('allows Line with only coordinates', () => {
+  it('requires either coordinates or both from and to on Line', () => {
     <Line coordinates={[createCoordinates(0, 0), createCoordinates(10, 10)]} />;
     <Line from={createCoordinates(0, 0)} to={createCoordinates(10, 10)} />;
+    // @ts-expect-error a line needs coordinates or both endpoints
+    <Line />;
+    // @ts-expect-error a single endpoint is not a line
+    <Line from={createCoordinates(0, 0)} />;
   });
 
   it('accepts partial MapWithMetadata metadata', () => {

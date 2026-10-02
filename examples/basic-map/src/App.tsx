@@ -5,6 +5,7 @@ import {
   Geography,
   Marker,
   createCoordinates,
+  createRotationAngles,
 } from '@vnedyalk0v/react19-simple-maps';
 import type { Feature, Geometry } from 'geojson';
 
@@ -70,6 +71,7 @@ const App: React.FC = () => {
         <ComposableMap
           projection="geoEqualEarth"
           projectionConfig={{
+            rotate: createRotationAngles(-10, 0, 0),
             scale: 147,
             center: createCoordinates(0, 0),
           }}
