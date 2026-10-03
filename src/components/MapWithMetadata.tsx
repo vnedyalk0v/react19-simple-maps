@@ -1,10 +1,26 @@
-import { memo, useMemo } from 'react';
+import { ReactNode, Ref, memo, useMemo } from 'react';
 import { ComposableMapProps } from '../types';
 import ComposableMap from './ComposableMap';
 import { MapMetadata, mapMetadataPresets } from './MapMetadata';
 
+type MetadataPresets = typeof mapMetadataPresets;
+type MetadataPresetName = keyof MetadataPresets;
+
+type PresetContent = Partial<
+  Omit<MetadataPresets['worldMap'], 'jsonLd'> & { jsonLd: object }
+>;
+
+/** Arguments of a function preset (e.g. `[countryName]` for `countryMap`). */
+type MetadataPresetArgs<P> = P extends MetadataPresetName
+  ? MetadataPresets[P] extends (...args: infer A) => unknown
+    ? A
+    : never
+  : never;
+
 // Enhanced metadata props for the wrapper component
-interface MapWithMetadataProps extends ComposableMapProps {
+interface MapWithMetadataProps<
+  P extends MetadataPresetName = MetadataPresetName,
+> extends ComposableMapProps {
   // Override metadata to make it required for this component
   metadata: Required<NonNullable<ComposableMapProps['metadata']>>;
 
@@ -15,7 +31,12 @@ interface MapWithMetadataProps extends ComposableMapProps {
   enableJsonLd?: boolean;
 
   // Custom metadata presets
-  preset?: keyof typeof mapMetadataPresets;
+  preset?: P;
+  /**
+   * Arguments for function presets, e.g. `['France']` for `countryMap`.
+   * Without them a function preset contributes no content.
+   */
+  presetArgs?: MetadataPresetArgs<P>;
 }
 
 function MapWithMetadata({
@@ -25,6 +46,7 @@ function MapWithMetadata({
   enableTwitterCards = true,
   enableJsonLd = true,
   preset = 'worldMap',
+  presetArgs,
   children,
   ...mapProps
 }: MapWithMetadataProps) {
@@ -32,15 +54,18 @@ function MapWithMetadata({
   const processedMetadata = useMemo(() => {
     const presetData = mapMetadataPresets[preset];
 
-    // Handle function presets (like countryMap)
-    const resolvedPresetData =
-      typeof presetData === 'function'
-        ? presetData('Default') // Provide a default parameter for function presets
-        : presetData;
+    // Function presets (like countryMap) need their arguments; without them
+    // they contribute nothing rather than placeholder content.
+    const resolvedPresetData: PresetContent =
+      typeof presetData !== 'function'
+        ? presetData
+        : presetArgs?.length
+          ? (presetData as (...args: unknown[]) => PresetContent)(...presetArgs)
+          : {};
 
     return {
-      title: metadata.title || resolvedPresetData.title,
-      description: metadata.description || resolvedPresetData.description,
+      title: metadata.title || resolvedPresetData.title || '',
+      description: metadata.description || resolvedPresetData.description || '',
       keywords: metadata.keywords || resolvedPresetData.keywords,
       author: metadata.author || resolvedPresetData.author || '',
       canonicalUrl: metadata.canonicalUrl || '',
@@ -58,7 +83,14 @@ function MapWithMetadata({
         : undefined,
       jsonLd: enableJsonLd ? resolvedPresetData.jsonLd : undefined,
     };
-  }, [metadata, preset, enableOpenGraph, enableTwitterCards, enableJsonLd]);
+  }, [
+    metadata,
+    preset,
+    presetArgs,
+    enableOpenGraph,
+    enableTwitterCards,
+    enableJsonLd,
+  ]);
 
   // Memoize the metadata component to prevent unnecessary re-renders
   const metadataComponent = useMemo(() => {
@@ -100,7 +132,12 @@ function MapWithMetadata({
 
 MapWithMetadata.displayName = 'MapWithMetadata';
 
-export default memo(MapWithMetadata);
+// Generic over the preset so `presetArgs` is typed for the chosen preset.
+export default memo(MapWithMetadata) as unknown as <
+  P extends MetadataPresetName = 'worldMap',
+>(
+  props: MapWithMetadataProps<P> & { ref?: Ref<SVGSVGElement> | undefined },
+) => ReactNode;
 
 // Export the props type for external use
 export type { MapWithMetadataProps };

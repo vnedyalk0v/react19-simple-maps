@@ -1,11 +1,14 @@
 import { describe, expectTypeOf, it } from 'vitest';
+import { createRef } from 'react';
 import {
   ComposableMap,
   Geographies,
   Line,
+  MapWithMetadata,
   createCoordinates,
   createRotationAngles,
   type LineProps,
+  type MapWithMetadataProps,
   type ProjectionConfig,
   type RotationAngles,
 } from '../src/index';
@@ -50,5 +53,61 @@ describe('public API types', () => {
       label: string;
     }
     expectTypeOf<LabeledLineProps['from']>().toEqualTypeOf<LineProps['from']>();
+  });
+
+  it('types presetArgs for the selected MapWithMetadata preset', () => {
+    const metadata = {
+      title: 't',
+      description: 'd',
+      keywords: [],
+      author: '',
+      canonicalUrl: '',
+    };
+    <MapWithMetadata metadata={metadata} />;
+    <MapWithMetadata
+      metadata={metadata}
+      preset="countryMap"
+      presetArgs={['France']}
+    />;
+    <MapWithMetadata
+      metadata={metadata}
+      preset="cityMap"
+      presetArgs={['Paris']}
+    />;
+    <MapWithMetadata
+      metadata={metadata}
+      preset="cityMap"
+      presetArgs={['Paris', 'France']}
+    />;
+    <MapWithMetadata metadata={metadata} ref={createRef<SVGSVGElement>()} />;
+    // @ts-expect-error worldMap takes no arguments
+    <MapWithMetadata metadata={metadata} presetArgs={['France']} />;
+    const invalidArgs = () => [
+      MapWithMetadata({
+        metadata,
+        preset: 'countryMap',
+        // @ts-expect-error countryMap takes a country name
+        presetArgs: [1],
+      }),
+      MapWithMetadata({
+        metadata,
+        preset: 'dataVisualization',
+        // @ts-expect-error dataVisualization takes one argument
+        presetArgs: ['a', 'b'],
+      }),
+    ];
+    expectTypeOf(invalidArgs).toBeFunction();
+
+    const props: MapWithMetadataProps = { metadata, preset: 'countryMap' };
+    <MapWithMetadata {...props} />;
+  });
+
+  it('keeps MapWithMetadataProps an extendable interface', () => {
+    interface BrandedMapProps extends MapWithMetadataProps {
+      brand: string;
+    }
+    expectTypeOf<BrandedMapProps['preset']>().toEqualTypeOf<
+      MapWithMetadataProps['preset']
+    >();
   });
 });

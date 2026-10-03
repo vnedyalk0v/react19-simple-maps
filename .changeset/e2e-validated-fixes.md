@@ -5,6 +5,7 @@
 Fix several rendering, interaction, packaging, and geography-loading defects found during end-to-end validation.
 
 - `MapWithMetadata` no longer crashes when JSON-LD is enabled (the default), forwards `ref` to the map's `<svg>`, and no longer preloads a nonexistent font file.
+- `MapWithMetadata` accepts a new optional `presetArgs` prop, typed for the selected preset, so `countryMap`, `cityMap`, and `dataVisualization` describe the given subject (for example `preset="countryMap" presetArgs={['France']}`). Without `presetArgs`, these presets no longer emit placeholder JSON-LD and text about "Default".
 - Inline TopoJSON or GeoJSON passed to `Geographies` now renders during server rendering and on the first client render instead of appearing only after hydration.
 - `Geographies` no longer briefly renders the previous URL's features or re-reports a previous URL's error after `geography` changes, and a URL reports `isLoading` from its first render.
 - With `errorBoundary`, a caught error now clears when the `geography` URL changes. `GeographyErrorBoundary` accepts a new optional `resetKey` prop for the same behavior.

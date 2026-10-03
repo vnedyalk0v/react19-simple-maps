@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  ComposableMap,
   Geographies,
   Geography,
+  MapWithMetadata,
   Marker,
   createCoordinates,
   createRotationAngles,
@@ -68,7 +68,21 @@ const App: React.FC = () => {
       </div>
 
       <div className="map-container">
-        <ComposableMap
+        {/* Page metadata and JSON-LD follow the selected country */}
+        <MapWithMetadata
+          metadata={{
+            title: selectedCountry
+              ? `${selectedCountry} - Basic Map`
+              : 'Basic World Map',
+            description: selectedCountry
+              ? `${selectedCountry} on a world map built with react19-simple-maps`
+              : 'A simple example using react19-simple-maps',
+            keywords: ['map', 'react'],
+            author: '',
+            canonicalUrl: '',
+          }}
+          preset={selectedCountry ? 'countryMap' : 'worldMap'}
+          presetArgs={selectedCountry ? [selectedCountry] : undefined}
           projection="geoEqualEarth"
           projectionConfig={{
             rotate: createRotationAngles(-10, 0, 0),
@@ -200,7 +214,7 @@ const App: React.FC = () => {
               </text>
             </Marker>
           ))}
-        </ComposableMap>
+        </MapWithMetadata>
       </div>
 
       <div className="info">

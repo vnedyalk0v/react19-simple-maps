@@ -204,6 +204,24 @@ Use `Marker` for custom points and `Annotation` for callouts.
 - `GeographyErrorBoundary` - Explicit error boundary wrapper; pass `resetKey` to clear a caught error when that value changes
 - `MapWithMetadata` - Wrapper that renders metadata and a `ComposableMap`
 
+`MapWithMetadata` renders page metadata and JSON-LD for a `ComposableMap`. Choose a `preset` (`worldMap` by default) for the structured data. The `countryMap`, `cityMap`, and `dataVisualization` presets take their subject through `presetArgs`; without it they add no content.
+
+```tsx
+<MapWithMetadata
+  metadata={{
+    title: 'France',
+    description: 'Regions of France',
+    keywords: ['france', 'map'],
+    author: '',
+    canonicalUrl: '',
+  }}
+  preset="countryMap"
+  presetArgs={['France']}
+>
+  {/* Map content */}
+</MapWithMetadata>
+```
+
 ## TypeScript Support
 
 Branded types help prevent coordinate mistakes:
