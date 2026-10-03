@@ -122,7 +122,12 @@ function Geographies({
   return (
     <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
       {errorBoundary ? (
+        // A new URL clears a caught error. Inline objects are not used as the
+        // reset signal: a parent that recreates its data on every render
+        // would otherwise reset, re-throw and loop. Give inline data a
+        // `key` to reset it explicitly.
         <GeographyErrorBoundary
+          resetKey={typeof geography === 'string' ? geography : undefined}
           {...(onGeographyError && { onError: onGeographyError })}
           {...(fallback && { fallback })}
         >

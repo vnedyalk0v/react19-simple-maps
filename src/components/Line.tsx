@@ -1,6 +1,15 @@
 import { Ref } from 'react';
-import { LineProps, Longitude, Latitude } from '../types';
+import { Coordinates, LineProps, Longitude, Latitude } from '../types';
 import { useMapContext } from './MapProvider';
+
+// Accepts LineProps (both endpoints) or a coordinate list without endpoints.
+type LineComponentProps =
+  | LineProps
+  | (Omit<LineProps, 'from' | 'to' | 'coordinates'> & {
+      coordinates: Coordinates[];
+      from?: Coordinates;
+      to?: Coordinates;
+    });
 
 function Line({
   from = [0 as Longitude, 0 as Latitude],
@@ -12,7 +21,7 @@ function Line({
   className = '',
   ref,
   ...restProps
-}: LineProps & { ref?: Ref<SVGPathElement> }) {
+}: LineComponentProps & { ref?: Ref<SVGPathElement> }) {
   const { path } = useMapContext();
 
   const lineData = {

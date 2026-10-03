@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 
 // React 19 debugging utilities
 
@@ -13,6 +13,7 @@ function safeCaptureOwnerStack(): string | null {
   // captureOwnerStack is only available in development builds of React 19
   // It's not a stable export - must be accessed conditionally
   if (
+    typeof process !== 'undefined' &&
     process.env.NODE_ENV !== 'production' &&
     typeof React === 'object' &&
     React !== null &&
@@ -50,8 +51,8 @@ export class MapDebugger {
   private isEnabled: boolean = this.getDebugMode();
 
   /**
-   * Determine if debug mode should be enabled
-   * Priority: Environment variable > explicit prop > default (false)
+   * Determine the global default debug mode.
+   * An explicit per-component `debug` prop overrides it for that component.
    */
   private getDebugMode(): boolean {
     // Check environment variable first
@@ -76,6 +77,13 @@ export class MapDebugger {
     this.isEnabled = enabled;
   }
 
+  /**
+   * Whether global debug mode is currently enabled
+   */
+  isDebugEnabled(): boolean {
+    return this.isEnabled;
+  }
+
   static getInstance(): MapDebugger {
     if (!MapDebugger.instance) {
       MapDebugger.instance = new MapDebugger();
@@ -84,14 +92,16 @@ export class MapDebugger {
   }
 
   /**
-   * Log component render with owner stack information
+   * Log component render with owner stack information.
+   * `enabled` overrides the global debug mode for this call.
    */
   logRender(
     componentName: string,
     props?: Record<string, unknown>,
     state?: Record<string, unknown>,
+    enabled: boolean = this.isEnabled,
   ): void {
-    if (!this.isEnabled) return;
+    if (!enabled) return;
 
     const ownerStack = safeCaptureOwnerStack();
 
@@ -110,18 +120,16 @@ export class MapDebugger {
       this.debugLogs.shift();
     }
 
-    if (this.isEnabled) {
-      // eslint-disable-next-line no-console
-      console.group(`🗺️ ${componentName} Render`);
-      // eslint-disable-next-line no-console
-      console.log('Owner Stack:', ownerStack);
-      // eslint-disable-next-line no-console
-      if (props) console.log('Props:', props);
-      // eslint-disable-next-line no-console
-      if (state) console.log('State:', state);
-      // eslint-disable-next-line no-console
-      console.groupEnd();
-    }
+    // eslint-disable-next-line no-console
+    console.group(`🗺️ ${componentName} Render`);
+    // eslint-disable-next-line no-console
+    console.log('Owner Stack:', ownerStack);
+    // eslint-disable-next-line no-console
+    if (props) console.log('Props:', props);
+    // eslint-disable-next-line no-console
+    if (state) console.log('State:', state);
+    // eslint-disable-next-line no-console
+    console.groupEnd();
   }
 
   /**
@@ -172,28 +180,24 @@ export class MapDebugger {
 }
 
 /**
- * Hook for component debugging with opt-in support
+ * Hook for component debugging with opt-in support.
+ * An explicit `debug` applies to this component only; when omitted, the
+ * global mode (REACT_SIMPLE_MAPS_DEBUG or setDebugMode) decides.
  */
 export function useMapDebugger(componentName: string, debug?: boolean) {
   const mapDebugger = MapDebugger.getInstance();
 
-  useEffect(() => {
-    if (debug !== undefined) {
-      mapDebugger.setDebugMode(debug);
-    }
-  }, [debug, mapDebugger]);
-
   const logRender = useCallback(
     (props?: Record<string, unknown>, state?: Record<string, unknown>) =>
-      mapDebugger.logRender(componentName, props, state),
-    [componentName, mapDebugger],
+      mapDebugger.logRender(componentName, props, state, debug),
+    [componentName, mapDebugger, debug],
   );
 
   return { logRender };
 }
 
 /**
- * Development-only debugging utilities
+ * Opt-in debugging utilities
  */
 export const devTools = {
   /**
@@ -204,10 +208,9 @@ export const devTools = {
     status: 'start' | 'success' | 'error',
     data?: unknown,
   ) => {
-    if (
-      typeof process !== 'undefined' &&
-      process.env.NODE_ENV !== 'production'
-    ) {
+    // Opt-in only: follows the global debug mode
+    // (REACT_SIMPLE_MAPS_DEBUG or setDebugMode).
+    if (MapDebugger.getInstance().isDebugEnabled()) {
       try {
         const ownerStack = safeCaptureOwnerStack();
         // eslint-disable-next-line no-console

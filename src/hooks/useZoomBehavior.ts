@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   zoom as d3Zoom,
   zoomTransform,
@@ -105,6 +105,11 @@ export function useZoomBehavior({
     [onZoom, onMove, width, height, projection, bypassEvents],
   );
 
+  const latest = useRef({ handleZoom, onZoomStart, onZoomEnd });
+  useLayoutEffect(() => {
+    latest.current = { handleZoom, onZoomStart, onZoomEnd };
+  });
+
   useEffect(() => {
     if (enablePan || !enableZoom) mapTouchIds.current.clear();
     const currentMapElement = mapRef.current;
@@ -126,7 +131,7 @@ export function useZoomBehavior({
         pendingTouchStart = undefined;
         notifyZoomStart(startEvent);
       }
-      handleZoom(restoreSourceEvent(d3Event));
+      latest.current.handleZoom(restoreSourceEvent(d3Event));
     }
 
     function handleZoomStart(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
@@ -145,6 +150,7 @@ export function useZoomBehavior({
       d3Event = restoreSourceEvent(d3Event);
       if (!enableZoom)
         zoomBehavior.scaleExtent([d3Event.transform.k, d3Event.transform.k]);
+      const onZoomStart = latest.current.onZoomStart;
       if (!onZoomStart || bypassEvents.current) return;
       const coords = getCoords(width, height, d3Event.transform);
       const inverted = projection.invert?.(coords);
@@ -165,15 +171,13 @@ export function useZoomBehavior({
         pendingTouchStart = undefined;
         return;
       }
-      if (bypassEvents.current) {
-        bypassEvents.current = false;
-        return;
-      }
+      if (bypassEvents.current) return;
       d3Event = restoreSourceEvent(d3Event);
       const coords = getCoords(width, height, d3Event.transform);
       const inverted = projection.invert?.(coords);
       if (inverted) {
         const [x, y] = inverted;
+        const onZoomEnd = latest.current.onZoomEnd;
         if (!onZoomEnd) return;
         onZoomEnd(
           { coordinates: createCoordinates(x, y), zoom: d3Event.transform.k },
@@ -323,11 +327,7 @@ export function useZoomBehavior({
     minZoom,
     maxZoom,
     projection,
-    onZoomStart,
-    onMove,
-    onZoomEnd,
     filterZoomEvent,
-    handleZoom,
     mapRef,
     bypassEvents,
   ]);

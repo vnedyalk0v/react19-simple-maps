@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // The package is linked via file:../.., so its dist/ would otherwise resolve
+  // the repo root's React and load a second copy.
+  resolve: { dedupe: ['react', 'react-dom'] },
   server: {
     port: 3001, // Different port from basic-map example
     open: true,

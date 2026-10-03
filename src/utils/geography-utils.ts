@@ -15,8 +15,13 @@ export function getGeographyCentroid(
     return null;
   }
 
-  // Use d3-geo's robust centroid calculation
-  const centroid = geoCentroid(geography);
+  // d3-geo throws on malformed or empty geometries
+  let centroid: [number, number];
+  try {
+    centroid = geoCentroid(geography);
+  } catch {
+    return null;
+  }
 
   // Validate centroid coordinates
   if (
@@ -45,8 +50,13 @@ export function getGeographyBounds(
     return null;
   }
 
-  // Use d3-geo's robust bounds calculation
-  const bounds = geoBounds(geography);
+  // d3-geo throws on malformed or empty geometries
+  let bounds: [[number, number], [number, number]];
+  try {
+    bounds = geoBounds(geography);
+  } catch {
+    return null;
+  }
 
   // Validate bounds structure
   if (
@@ -229,7 +239,8 @@ function getGeographyCoordinatesInternal(
 export function getGeographyCoordinates(
   geography: Feature<Geometry>,
 ): Coordinates | null {
-  return getGeographyCoordinatesInternal(geography, 0);
+  const coordinates = getGeographyCoordinatesInternal(geography, 0);
+  return isValidCoordinates(coordinates) ? coordinates : null;
 }
 
 /**

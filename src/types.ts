@@ -195,8 +195,9 @@ export interface ComposableMapProps<
   className?: string;
   children?: ReactNode;
 
-  // Modern React patterns
+  /** @deprecated Ignored by ComposableMap; use the `Geographies` error-handling props instead. */
   onGeographyError?: (error: Error) => void;
+  /** @deprecated Ignored by ComposableMap; use the `Geographies` error-handling props instead. */
   fallback?: ReactNode;
 
   // Debug mode - opt-in debugging (quiet by default)
@@ -227,7 +228,7 @@ export type GeographiesProps<E extends boolean = false> = Omit<
   GeographyPropsWithErrorHandling<E> & {
     geography: string | Topology | FeatureCollection;
     children: (props: {
-      geographies: Feature<Geometry>[];
+      geographies: PreparedFeature[];
       outline: string;
       borders: string;
       path: GeoPath;

@@ -31,6 +31,7 @@ export {
   createCoordinates,
   createScaleExtent,
   createTranslateExtent,
+  createRotationAngles,
   createParallels,
   createGraticuleStep,
   createZoomConfig,
@@ -72,6 +73,7 @@ export type {
   Coordinates,
   Longitude,
   Latitude,
+  RotationAngles,
 } from './types';
 
 // Export MapWithMetadata types

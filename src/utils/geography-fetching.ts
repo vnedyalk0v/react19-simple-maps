@@ -1,4 +1,3 @@
-import { cache } from 'react';
 import { FeatureCollection } from 'geojson';
 import { Topology } from 'topojson-specification';
 import { GeographyError } from '../types';
@@ -12,17 +11,20 @@ import {
   getGeographySecurityConfig,
   type GeographySecurityConfig,
 } from './geography-validation';
-import { createGeographyFetchError } from './error-utils';
+import { createGeographyFetchError, isGeographyError } from './error-utils';
+import { preloadGeography as preloadGeographyHints } from './preloading';
 import {
   getSRIForUrl,
   getSRIConfig,
   validateSRIFromArrayBuffer,
+  type SRIEnforcementConfig,
 } from './subresource-integrity';
 
 import {
   createSecureFetchOptions,
   fetchWithRedirectValidation,
   createTimeoutController,
+  rejectOnAbort,
 } from './geography-transport';
 
 /**
@@ -36,6 +38,11 @@ function handleFetchError(
   url: string,
   config: GeographySecurityConfig,
 ): GeographyError {
+  if (isGeographyError(error)) {
+    error.geography ??= url;
+    return error;
+  }
+
   if (error instanceof Error) {
     if (error.name === 'AbortError') {
       return createGeographyFetchError(
@@ -53,19 +60,6 @@ function handleFetchError(
         error,
       );
     }
-    if (error.message.includes('Invalid geography data')) {
-      return createGeographyFetchError(
-        'GEOGRAPHY_PARSE_ERROR',
-        error.message,
-        url,
-        error,
-      );
-    }
-  }
-
-  // Re-throw if it's already a GeographyError
-  if (error instanceof Error && 'type' in error) {
-    return error as GeographyError;
   }
 
   // Default error
@@ -144,34 +138,36 @@ export async function fetchGeographies(
   }
 }
 
-/**
- * Secure, cached geography fetching with comprehensive validation
- * This function is cached using React's cache() for optimal performance
- */
-export const fetchGeographiesCache = cache(
-  async (url: string): Promise<Topology | FeatureCollection> => {
-    const securityConfig = getGeographySecurityConfig();
-    const sriEnforcementConfig = getSRIConfig();
+async function fetchGeographyData(
+  url: string,
+  securityConfig: GeographySecurityConfig,
+  sriEnforcementConfig: SRIEnforcementConfig,
+): Promise<Topology | FeatureCollection> {
+  // Validate URL before making request
+  validateGeographyUrl(url, securityConfig);
 
-    // Validate URL before making request
-    validateGeographyUrl(url, securityConfig);
-    await validateResolvedGeographyUrl(url, securityConfig);
+  // Check if SRI validation is required
+  const sriConfig = getSRIForUrl(url, sriEnforcementConfig);
 
-    // Check if SRI validation is required
-    const sriConfig = getSRIForUrl(url, sriEnforcementConfig);
+  // Create timeout controller before DNS validation so the timeout covers it
+  const { controller, cleanup } = createTimeoutController(
+    securityConfig.TIMEOUT_MS,
+  );
 
-    // Create timeout controller
-    const { controller, cleanup } = createTimeoutController(
-      securityConfig.TIMEOUT_MS,
+  try {
+    await rejectOnAbort(
+      validateResolvedGeographyUrl(url, securityConfig),
+      controller.signal,
+    );
+
+    // Make secure fetch request with redirect validation
+    const response = await fetchWithRedirectValidation(
+      url,
+      createSecureFetchOptions(controller.signal, securityConfig),
+      securityConfig,
     );
 
     try {
-      // Make secure fetch request with redirect validation
-      const response = await fetchWithRedirectValidation(
-        url,
-        createSecureFetchOptions(controller.signal, securityConfig),
-        securityConfig,
-      );
       // Validate response
       if (!response.ok) {
         throw createGeographyFetchError(
@@ -184,41 +180,78 @@ export const fetchGeographiesCache = cache(
       // Validate content type and fast pre-check of Content-Length
       validateContentType(response, securityConfig);
       await validateResponseSize(response, securityConfig);
-
-      // Read body with hard streaming size limit (guards against falsified Content-Length)
-      const arrayBuffer = await readResponseWithSizeLimit(
-        response,
-        securityConfig.MAX_RESPONSE_SIZE,
-      );
-
-      // Handle SRI validation if required
-      if (sriConfig) {
-        await validateSRIFromArrayBuffer(arrayBuffer, url, sriConfig);
-      }
-
-      // Parse JSON from the already-read ArrayBuffer
-      return await parseGeographyFromArrayBuffer(arrayBuffer, url);
     } catch (error) {
-      throw handleFetchError(error, url, securityConfig);
-    } finally {
-      cleanup();
+      // Release the connection held by the unread body
+      await response.body?.cancel().catch(() => {});
+      throw error;
     }
-  },
-);
+
+    // Read body with hard streaming size limit (guards against falsified Content-Length)
+    const arrayBuffer = await readResponseWithSizeLimit(
+      response,
+      securityConfig.MAX_RESPONSE_SIZE,
+    );
+
+    // Handle SRI validation if required
+    if (sriConfig) {
+      await validateSRIFromArrayBuffer(arrayBuffer, url, sriConfig);
+    }
+
+    // Parse JSON from the already-read ArrayBuffer
+    return await parseGeographyFromArrayBuffer(arrayBuffer, url);
+  } catch (error) {
+    throw handleFetchError(error, url, securityConfig);
+  } finally {
+    cleanup();
+  }
+}
+
+interface InFlightGeographyRequest {
+  promise: Promise<Topology | FeatureCollection>;
+  securityConfig: GeographySecurityConfig;
+  sriConfig: SRIEnforcementConfig;
+}
+
+const inFlightRequests = new Map<string, InFlightGeographyRequest>();
+
+/**
+ * Secure geography fetching with comprehensive validation.
+ * Concurrent calls for the same URL share one in-flight request while the
+ * security and SRI configuration are unchanged. Nothing is cached once a
+ * request settles, so later calls fetch again under the current configuration.
+ */
+export function fetchGeographiesCache(
+  url: string,
+): Promise<Topology | FeatureCollection> {
+  const securityConfig = getGeographySecurityConfig();
+  const sriConfig = getSRIConfig();
+  const inFlight = inFlightRequests.get(url);
+  if (
+    inFlight?.securityConfig === securityConfig &&
+    inFlight.sriConfig === sriConfig
+  ) {
+    return inFlight.promise;
+  }
+
+  const request: InFlightGeographyRequest = {
+    promise: fetchGeographyData(url, securityConfig, sriConfig),
+    securityConfig,
+    sriConfig,
+  };
+  const evict = () => {
+    if (inFlightRequests.get(url) === request) inFlightRequests.delete(url);
+  };
+  request.promise.then(evict, evict);
+  inFlightRequests.set(url, request);
+  return request.promise;
+}
 
 /**
  * Preloads geography data for better performance
  * @param url - The URL to preload
  */
 export function preloadGeography(url: string): void {
-  // Import and use the preload utility with immediate flag
-  import('./preloading')
-    .then(({ preloadGeography: preloadUtil }) => {
-      preloadUtil(url, true); // immediate = true
-    })
-    .catch(() => {
-      // Silently handle import errors
-    });
+  preloadGeographyHints(url, true); // immediate = true
 
   // Also preload the actual data
   fetchGeographiesCache(url).catch(() => {
