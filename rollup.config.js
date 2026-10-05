@@ -17,28 +17,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Shared terser config for production ESM builds
 const esmTerserConfig = {
   compress: {
-    drop_console: true,
+    // Keep console: debug logging is opt-in at runtime and security
+    // warnings must reach production consumers.
     drop_debugger: true,
-    pure_funcs: [
-      'console.log',
-      'console.warn',
-      'console.info',
-      'console.debug',
-      'console.trace',
-      'console.group',
-      'console.groupEnd',
-      'console.groupCollapsed',
-      'console.time',
-      'console.timeEnd',
-      'console.timeLog',
-      'console.count',
-      'console.countReset',
-      'console.clear',
-      'console.table',
-      'console.dir',
-      'console.dirxml',
-      'console.assert',
-    ],
     dead_code: true,
     unused: true,
     side_effects: false,
@@ -64,9 +45,6 @@ const esmTerserConfig = {
   mangle: {
     toplevel: true,
     module: true,
-    properties: {
-      regex: /^_/,
-    },
   },
   format: {
     // Keep /* @vite-ignore */ so downstream Vite builds don't warn on the
@@ -90,8 +68,11 @@ export default [
     },
     output: {
       dir: 'dist',
+      // One file per module so consumer bundlers can drop unused modules
+      // (package.json declares sideEffects: false).
+      preserveModules: true,
+      preserveModulesRoot: 'src',
       entryFileNames: '[name].js',
-      chunkFileNames: 'shared-[name].js',
       format: 'es',
       sourcemap: true,
     },
@@ -110,6 +91,8 @@ export default [
           declaration: false,
           declarationMap: false,
           sourceMap: true,
+          // Ship sources inside the maps; src/ is not published.
+          inlineSources: true,
           noEmit: false,
         },
       }),

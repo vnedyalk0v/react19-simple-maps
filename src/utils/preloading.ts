@@ -47,7 +47,7 @@ export function validatePreloadUrl(url: string): boolean {
   }
 }
 
-// Track preloaded URLs to avoid duplicate preloads
+// Track browser preloads; server requests have independent resource hints.
 const preloadedUrls = new Set<string>();
 
 /**
@@ -60,8 +60,9 @@ export function preloadGeography(url: string, immediate = false): void {
     return;
   }
 
-  // Avoid duplicate preloads
-  if (preloadedUrls.has(url)) {
+  // React scopes server hints to each render; browser hints share a document.
+  const deduplicate = typeof window !== 'undefined';
+  if (deduplicate && preloadedUrls.has(url)) {
     return;
   }
 
@@ -77,7 +78,7 @@ export function preloadGeography(url: string, immediate = false): void {
 
     // Record URL after hints so dev-mode calls without preload() do not
     // re-issue prefetchDNS/preconnect on every render.
-    preloadedUrls.add(url);
+    if (deduplicate) preloadedUrls.add(url);
 
     // Only preload the actual resource if immediate or in production
     const shouldPreloadResource =
@@ -207,9 +208,10 @@ export function preloadGeographyAssets(
  *    {@link immediate}.  It is used to skip duplicate requests within the
  *    instance and to power {@link getStats}.
  *
- * 2. *Module-level (global)* – the module-scoped `preloadedUrls` set inside
+ * 2. *Browser module-level* – the module-scoped `preloadedUrls` set inside
  *    {@link preloadGeography} performs the **actual** network-level
- *    deduplication.  Because both {@link queue} and {@link immediate} delegate
+ *    deduplication in browsers. Server renders rely on React's per-render
+ *    resource hint deduplication. Because both {@link queue} and {@link immediate} delegate
  *    to `preloadGeography`, a URL that was already preloaded by *any* caller
  *    (another `GeographyPreloader` instance, a direct `preloadGeography`
  *    call, etc.) will be silently skipped at the network layer even if this

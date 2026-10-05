@@ -2,8 +2,12 @@ import { useState, Ref, memo, useMemo, useCallback } from 'react';
 import { MarkerProps } from '../types';
 import { useMapContext } from './MapProvider';
 
-function Marker({
-  coordinates,
+type MarkerComponentProps = MarkerProps & {
+  ref?: Ref<SVGGElement> | undefined;
+};
+
+function MarkerContent({
+  projectedCoords,
   children,
   onMouseEnter,
   onMouseLeave,
@@ -15,8 +19,9 @@ function Marker({
   className = '',
   ref,
   ...restProps
-}: MarkerProps & { ref?: Ref<SVGGElement> }) {
-  const { projection } = useMapContext();
+}: Omit<MarkerComponentProps, 'coordinates'> & {
+  projectedCoords: [number, number];
+}) {
   const [isPressed, setPressed] = useState(false);
   const [isHovered, setHovered] = useState(false);
   const [isFocused, setFocused] = useState(false);
@@ -71,11 +76,6 @@ function Marker({
     [onMouseUp],
   );
 
-  // Memoize projection calculation to prevent unnecessary recalculations
-  const projectedCoords = useMemo(() => {
-    return projection(coordinates);
-  }, [projection, coordinates]);
-
   const currentState = useMemo(() => {
     if (isPressed) return 'pressed' as const;
     if (isFocused) return 'focused' as const;
@@ -90,14 +90,9 @@ function Marker({
 
   // Memoize transform string (only if coordinates exist)
   const transform = useMemo(() => {
-    if (!projectedCoords) return '';
     const [x, y] = projectedCoords;
     return `translate(${x}, ${y})`;
   }, [projectedCoords]);
-
-  if (!projectedCoords) {
-    return null;
-  }
 
   return (
     <g
@@ -116,6 +111,18 @@ function Marker({
       {children}
     </g>
   );
+}
+
+function Marker({ coordinates, ...props }: MarkerComponentProps) {
+  const { projection } = useMapContext();
+  const projectedCoords = useMemo(() => {
+    const projected = projection(coordinates);
+    return projected?.every(Number.isFinite) ? projected : null;
+  }, [projection, coordinates]);
+
+  return projectedCoords ? (
+    <MarkerContent {...props} projectedCoords={projectedCoords} />
+  ) : null;
 }
 
 Marker.displayName = 'Marker';

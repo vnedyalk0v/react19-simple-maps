@@ -15,8 +15,13 @@ export function getGeographyCentroid(
     return null;
   }
 
-  // Use d3-geo's robust centroid calculation
-  const centroid = geoCentroid(geography);
+  // d3-geo throws on malformed or empty geometries
+  let centroid: [number, number];
+  try {
+    centroid = geoCentroid(geography);
+  } catch {
+    return null;
+  }
 
   // Validate centroid coordinates
   if (
@@ -45,8 +50,13 @@ export function getGeographyBounds(
     return null;
   }
 
-  // Use d3-geo's robust bounds calculation
-  const bounds = geoBounds(geography);
+  // d3-geo throws on malformed or empty geometries
+  let bounds: [[number, number], [number, number]];
+  try {
+    bounds = geoBounds(geography);
+  } catch {
+    return null;
+  }
 
   // Validate bounds structure
   if (
@@ -88,16 +98,9 @@ export function getGeographyBounds(
  * @param geography - GeoJSON feature
  * @returns First available coordinate or null
  */
-const MAX_GEOMETRY_COLLECTION_DEPTH = 10;
-
 function getGeographyCoordinatesInternal(
   geography: Feature<Geometry>,
-  depth: number,
 ): Coordinates | null {
-  if (depth > MAX_GEOMETRY_COLLECTION_DEPTH) {
-    return null;
-  }
-
   if (!geography?.geometry) {
     return null;
   }
@@ -166,56 +169,26 @@ function getGeographyCoordinatesInternal(
       break;
 
     case 'MultiLineString':
-      if (
-        geometry.coordinates &&
-        Array.isArray(geometry.coordinates) &&
-        geometry.coordinates.length > 0 &&
-        Array.isArray(geometry.coordinates[0]) &&
-        geometry.coordinates[0].length > 0 &&
-        Array.isArray(geometry.coordinates[0][0]) &&
-        geometry.coordinates[0][0].length >= 2 &&
-        typeof geometry.coordinates[0][0][0] === 'number' &&
-        typeof geometry.coordinates[0][0][1] === 'number'
-      ) {
-        const [lon, lat] = geometry.coordinates[0][0];
-        return createCoordinates(lon, lat);
+      if (Array.isArray(geometry.coordinates)) {
+        for (const coordinates of geometry.coordinates) {
+          if (Array.isArray(coordinates) && coordinates.length === 0) continue;
+          return getGeographyCoordinatesInternal({
+            ...geography,
+            geometry: { type: 'LineString', coordinates },
+          });
+        }
       }
       break;
 
     case 'MultiPolygon':
-      if (
-        geometry.coordinates &&
-        Array.isArray(geometry.coordinates) &&
-        geometry.coordinates.length > 0 &&
-        Array.isArray(geometry.coordinates[0]) &&
-        geometry.coordinates[0].length > 0 &&
-        Array.isArray(geometry.coordinates[0][0]) &&
-        geometry.coordinates[0][0].length > 0 &&
-        Array.isArray(geometry.coordinates[0][0][0]) &&
-        geometry.coordinates[0][0][0].length >= 2 &&
-        typeof geometry.coordinates[0][0][0][0] === 'number' &&
-        typeof geometry.coordinates[0][0][0][1] === 'number'
-      ) {
-        const [lon, lat] = geometry.coordinates[0][0][0];
-        return createCoordinates(lon, lat);
-      }
-      break;
-
-    case 'GeometryCollection':
-      if (
-        geometry.geometries &&
-        Array.isArray(geometry.geometries) &&
-        geometry.geometries.length > 0 &&
-        geometry.geometries[0]
-      ) {
-        // Recursively try to get coordinates from first geometry
-        return getGeographyCoordinatesInternal(
-          {
+      if (Array.isArray(geometry.coordinates)) {
+        for (const coordinates of geometry.coordinates) {
+          if (Array.isArray(coordinates) && coordinates.length === 0) continue;
+          return getGeographyCoordinatesInternal({
             ...geography,
-            geometry: geometry.geometries[0],
-          },
-          depth + 1,
-        );
+            geometry: { type: 'Polygon', coordinates },
+          });
+        }
       }
       break;
 
@@ -229,7 +202,32 @@ function getGeographyCoordinatesInternal(
 export function getGeographyCoordinates(
   geography: Feature<Geometry>,
 ): Coordinates | null {
-  return getGeographyCoordinatesInternal(geography, 0);
+  if (!geography?.geometry) return null;
+
+  const stack: Geometry[] = [geography.geometry];
+  const visited = new Set<Geometry>();
+  while (stack.length > 0) {
+    const geometry = stack.pop();
+    if (!geometry) continue;
+
+    if (geometry.type === 'GeometryCollection') {
+      if (visited.has(geometry) || !Array.isArray(geometry.geometries))
+        continue;
+      visited.add(geometry);
+      for (let index = geometry.geometries.length - 1; index >= 0; index -= 1) {
+        const child = geometry.geometries[index];
+        if (child) stack.push(child);
+      }
+    } else {
+      const coordinates = getGeographyCoordinatesInternal({
+        ...geography,
+        geometry,
+      });
+      if (isValidCoordinates(coordinates)) return coordinates;
+    }
+  }
+
+  return null;
 }
 
 /**

@@ -4,6 +4,7 @@ import { once } from 'node:events';
 import { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchGeographiesCache } from '../src/utils/geography-fetching';
+import { rejectOnAbort } from '../src/utils/geography-transport';
 import {
   generateSRIHash,
   configureSRI,
@@ -160,6 +161,40 @@ describe('validated geography transport', () => {
     },
   );
 
+  it.each([fetchGeographiesCache, generateSRIHash])(
+    'times out a slow DNS lookup on a redirect target',
+    async (request) => {
+      vi.spyOn(process, 'getBuiltinModule').mockReturnValue({
+        lookup: (hostname: string) =>
+          new Promise((resolve) =>
+            setTimeout(
+              () => resolve([{ address: '8.8.8.8' }]),
+              hostname === 'slow.example.test' ? 200 : 0,
+            ),
+          ),
+      });
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 302,
+            headers: { location: 'https://slow.example.test/final.json' },
+          }),
+        )
+        .mockResolvedValue(
+          new Response(data, {
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
+      vi.stubGlobal('fetch', fetchMock);
+      configureGeographySecurity({ TIMEOUT_MS: 20 });
+      await expect(request(url)).rejects.toMatchObject({
+        type: 'GEOGRAPHY_LOAD_ERROR',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('enforces the body size limit while generating a hash', async () => {
     configureGeographySecurity({ MAX_RESPONSE_SIZE: 64 });
     vi.stubGlobal(
@@ -302,5 +337,37 @@ describe('validated geography transport', () => {
     await vi.advanceTimersByTimeAsync(10001);
     expect(signal?.aborted).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('rejectOnAbort', () => {
+  it('removes its abort listener once the work settles', async () => {
+    const controller = new AbortController();
+    const remove = vi.spyOn(controller.signal, 'removeEventListener');
+    await expect(
+      rejectOnAbort(Promise.resolve(1), controller.signal),
+    ).resolves.toBe(1);
+    await expect(
+      rejectOnAbort(Promise.reject(new Error('dns failed')), controller.signal),
+    ).rejects.toThrow('dns failed');
+    expect(remove.mock.calls.filter(([type]) => type === 'abort')).toHaveLength(
+      2,
+    );
+  });
+
+  it('rejects with an AbortError when the signal aborts first', async () => {
+    const controller = new AbortController();
+    const pending = rejectOnAbort(
+      new Promise<never>(() => {}),
+      controller.signal,
+    );
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+
+    const aborted = new AbortController();
+    aborted.abort();
+    await expect(
+      rejectOnAbort(new Promise<never>(() => {}), aborted.signal),
+    ).rejects.toMatchObject({ name: 'AbortError' });
   });
 });

@@ -10,7 +10,7 @@ function Graticule({
   className = '',
   ref,
   ...restProps
-}: GraticuleProps & { ref?: Ref<SVGPathElement> }) {
+}: GraticuleProps & { ref?: Ref<SVGPathElement> | undefined }) {
   const { path } = useMapContext();
   const graticule = geoGraticule().step(step)();
 

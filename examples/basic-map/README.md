@@ -48,6 +48,27 @@ const handleGeographyClick = (
 };
 ```
 
+## Raw Fetched GeoJSON
+
+Direct fetches preserve valid GeoJSON features with a `null` geometry. Use optional access or a null check for raw features, or `getFeatures` to obtain features with non-null geometries:
+
+```tsx
+import {
+  fetchGeographiesCache,
+  getFeatures,
+} from '@vnedyalk0v/react19-simple-maps/utils';
+
+export async function loadGeometryTypes(url: string) {
+  const data = await fetchGeographiesCache(url);
+  if (data.type !== 'FeatureCollection') return { raw: [], drawable: [] };
+
+  return {
+    raw: data.features.map((feature) => feature.geometry?.type ?? 'unlocated'),
+    drawable: getFeatures(data).map((feature) => feature.geometry.type),
+  };
+}
+```
+
 ## Learn More
 
 - [Project README](../../README.md)

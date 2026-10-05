@@ -31,18 +31,43 @@ export function createSecureFetchOptions(
 }
 
 /**
+ * Rejects with an `AbortError` once `signal` aborts, so awaited work that does
+ * not accept a signal (such as DNS validation) still honours the timeout.
+ */
+export function rejectOnAbort<T>(
+  promise: Promise<T>,
+  signal: AbortSignal | null | undefined,
+): Promise<T> {
+  if (!signal) return promise;
+  let onAbort = () => {};
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => {
+      const abortError = new Error('Request aborted');
+      abortError.name = 'AbortError';
+      reject(abortError);
+    };
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  });
+  return Promise.race([promise, aborted]).finally(() =>
+    signal.removeEventListener('abort', onAbort),
+  );
+}
+
+/**
  * Follows redirects manually, validating each hop against the URL security policy.
  * Prevents redirect-based SSRF bypasses.
  * @param url - The initial URL to fetch
  * @param options - Fetch options (must have redirect: 'manual')
- * @returns The final non-redirect response
+ * @returns The final response and the manually validated request URL chain
  */
 export async function fetchWithRedirectValidation(
   url: string,
   options: RequestInit,
   config: GeographySecurityConfig,
-): Promise<Response> {
+): Promise<{ response: Response; urls: string[] }> {
   let currentUrl = url;
+  const urls = [url];
 
   for (let hop = 0; ; hop++) {
     const response = await fetch(currentUrl, options);
@@ -55,9 +80,9 @@ export async function fetchWithRedirectValidation(
       );
     }
 
-    // Not a redirect — return directly
+    // Retain the URLs we validated, rather than trusting Response.url.
     if (response.status < 300 || response.status >= 400) {
-      return response;
+      return { response, urls };
     }
 
     // Cancel the unused redirect response body to release connection resources
@@ -90,9 +115,13 @@ export async function fetchWithRedirectValidation(
 
     // Validate the redirect target against the same URL security policy
     validateGeographyUrl(redirectUrl, config);
-    await validateResolvedGeographyUrl(redirectUrl, config);
+    await rejectOnAbort(
+      validateResolvedGeographyUrl(redirectUrl, config),
+      options.signal,
+    );
 
     currentUrl = redirectUrl;
+    urls.push(redirectUrl);
   }
 }
 

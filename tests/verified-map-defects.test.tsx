@@ -40,10 +40,12 @@ const selectA = (features: Feature<Geometry>[]) =>
   features.filter((feature) => feature.id === 'a');
 const selectB = (features: Feature<Geometry>[]) =>
   features.filter((feature) => feature.id === 'b');
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   vi.restoreAllMocks();
   vi.useRealTimers();
+  // Let D3 remove its one-tick post-drag click suppression before the next test.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
 });
 
 function GeographyList({

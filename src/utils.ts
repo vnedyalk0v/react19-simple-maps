@@ -55,60 +55,18 @@ import {
   Latitude,
   Coordinates,
 } from './types';
-import { Feature, FeatureCollection, Geometry } from 'geojson';
-import { Topology } from 'topojson-specification';
 
-// Type guards and validation utilities remain in this file
+// Type guards and validation utilities
 
 // Advanced type guards for runtime type checking
 
-// Geography data type guards
-export function isTopology(value: unknown): value is Topology {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  return (
-    obj.type === 'Topology' &&
-    typeof obj.objects === 'object' &&
-    obj.objects !== null &&
-    Array.isArray(obj.arcs)
-  );
-}
-
-export function isFeatureCollection(
-  value: unknown,
-): value is FeatureCollection {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  return obj.type === 'FeatureCollection' && Array.isArray(obj.features);
-}
-
-export function isFeature(value: unknown): value is Feature<Geometry> {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  return obj.type === 'Feature' && 'geometry' in obj && 'properties' in obj;
-}
-
-export function isValidGeometry(value: unknown): value is Geometry {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  if (!('type' in obj)) return false;
-
-  const validTypes = [
-    'Point',
-    'LineString',
-    'Polygon',
-    'MultiPoint',
-    'MultiLineString',
-    'MultiPolygon',
-    'GeometryCollection',
-  ];
-
-  return validTypes.includes(obj.type as string);
-}
+export {
+  isTopology,
+  isFeatureCollection,
+  isFeature,
+  isValidGeometry,
+  isValidGeographyData,
+} from './utils/geography-data-guards';
 
 // Coordinate type guards
 export function isValidLongitude(value: unknown): value is Longitude {
@@ -130,10 +88,13 @@ export function isValidCoordinates(value: unknown): value is Coordinates {
 
 // Projection type guards
 export function isGeoProjection(value: unknown): value is GeoProjection {
+  if (typeof value !== 'function') return false;
+  const projection = value as unknown as Record<string, unknown>;
   return (
-    typeof value === 'function' &&
-    'invert' in value &&
-    typeof (value as Record<string, unknown>).invert === 'function'
+    typeof projection.stream === 'function' &&
+    typeof projection.scale === 'function' &&
+    typeof projection.translate === 'function' &&
+    (projection.invert === undefined || typeof projection.invert === 'function')
   );
 }
 
@@ -159,12 +120,6 @@ export function isValidGeographyUrl(value: unknown): value is string {
 }
 
 // Complex validation type guards
-export function isValidGeographyData(
-  value: unknown,
-): value is Topology | FeatureCollection {
-  return isTopology(value) || isFeatureCollection(value);
-}
-
 export function isValidMapDimensions(width: unknown, height: unknown): boolean {
   return (
     typeof width === 'number' &&

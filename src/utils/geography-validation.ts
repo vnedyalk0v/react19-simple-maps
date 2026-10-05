@@ -1,5 +1,6 @@
 import { createGeographyFetchError } from './error-utils';
 import { validateURL } from './input-validation';
+import { isValidFetchedGeographyData } from './geography-data-guards';
 
 // Security configuration for geography fetching
 export interface GeographySecurityConfig {
@@ -49,6 +50,19 @@ function createGeographyFetchConfig(
       ...(config.ALLOWED_PROTOCOLS ?? baseConfig.ALLOWED_PROTOCOLS),
     ],
   };
+
+  for (const [key, max] of [
+    ['TIMEOUT_MS', 2147483647], // setTimeout overflows above 2^31-1
+    ['MAX_RESPONSE_SIZE', Number.MAX_SAFE_INTEGER],
+  ] as const) {
+    const value = nextConfig[key];
+    if (!Number.isInteger(value) || value <= 0 || value > max) {
+      throw createGeographyFetchError(
+        'CONFIGURATION_ERROR',
+        `Invalid ${key}: ${value}. Expected a positive integer no greater than ${max}.`,
+      );
+    }
+  }
 
   if (isProductionEnvironment()) {
     nextConfig.STRICT_HTTPS_ONLY = true;
@@ -142,6 +156,20 @@ function stripIPv6Brackets(hostname: string): string {
 }
 
 /**
+ * Checks for loopback hostnames: `localhost`, `*.localhost` (RFC 6761), with an
+ * optional trailing dot, plus the `127.0.0.1` and `::1` literals.
+ */
+function isLoopbackHostname(hostname: string): boolean {
+  const host = stripIPv6Brackets(hostname).toLowerCase().replace(/\.$/, '');
+  return (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '127.0.0.1' ||
+    host === '::1'
+  );
+}
+
+/**
  * Checks if a hostname is a private/reserved IP address.
  *
  * Handles both IPv4 and IPv6 (including IPv4-mapped IPv6 like `::ffff:127.0.0.1`).
@@ -159,7 +187,9 @@ export function isPrivateIPAddress(hostname: string): boolean {
   // Normalise: strip IPv6 brackets so regexes can match
   const normalised = stripIPv6Brackets(hostname);
 
-  // --- IPv4 private / reserved ranges ---
+  // --- IPv4 private / reserved ranges (dotted-quad literals only, so DNS
+  // names such as `10.example.com` are not mistaken for private IPs) ---
+  const isIPv4Literal = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(normalised);
   const ipv4PrivateRanges = [
     /^10\./, // 10.0.0.0/8
     /^172\.(1[6-9]|2[0-9]|3[01])\./, // 172.16.0.0/12
@@ -177,7 +207,7 @@ export function isPrivateIPAddress(hostname: string): boolean {
   ];
 
   for (const range of ipv4PrivateRanges) {
-    if (range.test(normalised)) {
+    if (isIPv4Literal && range.test(normalised)) {
       return true;
     }
   }
@@ -354,12 +384,7 @@ export function validateGeographyUrl(
         }
 
         // If HTTP localhost is allowed, validate hostname (including IPv6 loopback)
-        const httpHost = stripIPv6Brackets(parsedUrl.hostname);
-        if (
-          httpHost !== 'localhost' &&
-          httpHost !== '127.0.0.1' &&
-          httpHost !== '::1'
-        ) {
+        if (!isLoopbackHostname(parsedUrl.hostname)) {
           throw createGeographyFetchError(
             'SECURITY_ERROR',
             'HTTP protocol is only allowed for localhost. Use HTTPS for remote URLs.',
@@ -385,12 +410,7 @@ export function validateGeographyUrl(
     }
 
     // Additional security checks for localhost access (including IPv6 loopback)
-    const bareHostname = stripIPv6Brackets(parsedUrl.hostname);
-    if (
-      bareHostname === 'localhost' ||
-      bareHostname === '127.0.0.1' ||
-      bareHostname === '::1'
-    ) {
+    if (isLoopbackHostname(parsedUrl.hostname)) {
       if (isProductionEnvironment()) {
         throw createGeographyFetchError(
           'SECURITY_ERROR',
@@ -439,7 +459,7 @@ export async function validateResolvedGeographyUrl(
   const bareHostname = stripIPv6Brackets(hostname);
   if (
     !bareHostname ||
-    bareHostname === 'localhost' ||
+    isLoopbackHostname(hostname) ||
     isPrivateIPAddress(hostname)
   ) {
     return;
@@ -608,6 +628,13 @@ export function validateGeographyData(data: unknown): void {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
       'Invalid feature collection data: expected a features array',
+    );
+  }
+
+  if (!isValidFetchedGeographyData(data)) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      `Invalid geography data: malformed ${obj.type} geometry or coordinates`,
     );
   }
 }

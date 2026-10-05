@@ -22,7 +22,7 @@ function isSimpleProps(
 }
 
 function ZoomableGroup(
-  props: ZoomableGroupPropsUnion & { ref?: Ref<SVGGElement> },
+  props: ZoomableGroupPropsUnion & { ref?: Ref<SVGGElement> | undefined },
 ) {
   const {
     center = createCoordinates(0, 0),

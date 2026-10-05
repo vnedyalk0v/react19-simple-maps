@@ -24,7 +24,7 @@ Create interactive SVG maps in React with d3-geo and topojson using a TypeScript
 - ESM-only build with tree-shaking and type definitions
 - TypeScript-first API with branded coordinate helpers
 - Core components: ComposableMap, Geographies, Geography, ZoomableGroup, Marker, Annotation, Line, Sphere, Graticule
-- Optional error boundary + Suspense fallback for geography loading
+- Optional error boundary with a custom fallback for geography loading
 - Geography fetching utilities with validation (HTTPS-only default, private IP blocking, content-type/size checks) and optional SRI helpers
 - Opt-in debug logging via `debug` prop or `REACT_SIMPLE_MAPS_DEBUG`
 
@@ -160,8 +160,8 @@ Renders geographic features from TopoJSON or GeoJSON data.
 
 - `geography` - URL string, TopoJSON object, or GeoJSON FeatureCollection
 - `parseGeographies` - Optional function to transform geography data
-- `errorBoundary` - Enable built-in error boundary and Suspense fallback
-- `onGeographyError`, `fallback` - Error handling hooks when `errorBoundary` is enabled
+- `errorBoundary` - Enable the built-in error boundary
+- `onGeographyError`, `fallback` - Error handling hooks when `errorBoundary` is enabled. A caught error clears when the `geography` URL changes; for inline data, change the `key` on `Geographies` to reset it.
 
 ### Geography
 
@@ -177,6 +177,7 @@ Zoom and pan with both simple and advanced APIs.
 ```tsx
 import {
   ZoomableGroup,
+  createCoordinates,
   createZoomConfig,
 } from '@vnedyalk0v/react19-simple-maps';
 
@@ -197,11 +198,29 @@ Use `Marker` for custom points and `Annotation` for callouts.
 
 ### Additional Components
 
-- `Line` - Draw lines between coordinates
+- `Line` - Draw lines between coordinates; pass `coordinates`, or both `from` and `to`
 - `Graticule` - Add coordinate grid lines
 - `Sphere` - Add map outline/background
-- `GeographyErrorBoundary` - Explicit error boundary wrapper
+- `GeographyErrorBoundary` - Explicit error boundary wrapper; pass `resetKey` to clear a caught error when that value changes
 - `MapWithMetadata` - Wrapper that renders metadata and a `ComposableMap`
+
+`MapWithMetadata` renders page metadata and JSON-LD for a `ComposableMap`. Choose a `preset` (`worldMap` by default) for the structured data. The `countryMap`, `cityMap`, and `dataVisualization` presets take their subject through `presetArgs`; without it they add no content.
+
+```tsx
+<MapWithMetadata
+  metadata={{
+    title: 'France',
+    description: 'Regions of France',
+    keywords: ['france', 'map'],
+    author: '',
+    canonicalUrl: '',
+  }}
+  preset="countryMap"
+  presetArgs={['France']}
+>
+  {/* Map content */}
+</MapWithMetadata>
+```
 
 ## TypeScript Support
 
@@ -217,6 +236,20 @@ import {
 const lon = createLongitude(-74.006);
 const lat = createLatitude(40.7128);
 const coords = createCoordinates(-74.006, 40.7128);
+```
+
+Use `createRotationAngles(lambda, phi, gamma)` and `createParallels(a, b)` for `projectionConfig`:
+
+```tsx
+import {
+  ComposableMap,
+  createRotationAngles,
+} from '@vnedyalk0v/react19-simple-maps';
+
+<ComposableMap
+  projection="geoOrthographic"
+  projectionConfig={{ rotate: createRotationAngles(-10, -20, 0) }}
+/>;
 ```
 
 ## Geography Utilities
@@ -243,6 +276,8 @@ import {
 The `./utils` subpath includes helpers for safer geography fetching. When you use URL-based geography data in `Geographies`, the internal fetch path applies URL validation, HTTPS-only defaults, resolved-hostname checks in server environments, response size checks, and optional SRI validation.
 
 Prefer `fetchGeographiesCache` for direct utility-based loading. `fetchGeographies` remains available for compatibility but is deprecated.
+
+Fetched GeoJSON preserves features whose `geometry` is `null`. Both fetch helpers declare this nullable output; check `feature.geometry !== null` before accessing its fields. `getFeatures(data)` omits those unlocated features and passes non-null geometries to `parseGeographies`. Inline GeoJSON component props and public data guards continue to require non-null geometries. See the [raw-data example](./examples/basic-map/README.md#raw-fetched-geojson) for both forms.
 
 Configuration set through `configureGeographySecurity`, `configureSRI`, or `enableStrictSRI` from `./utils` also applies to map components imported from the main package. Geography request timeouts cover redirects and reading the response body.
 

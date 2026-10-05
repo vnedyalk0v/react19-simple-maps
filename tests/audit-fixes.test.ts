@@ -282,8 +282,8 @@ describe('security hardening regressions', () => {
     );
   });
 
-  it('returns null instead of overflowing the stack for deeply nested GeometryCollections', () => {
-    const nestedGeometry = Array.from({ length: 12 }).reduce<Geometry>(
+  it('finds coordinates without overflowing the stack for deeply nested GeometryCollections', () => {
+    const nestedGeometry = Array.from({ length: 1000 }).reduce<Geometry>(
       (geometry) => ({
         type: 'GeometryCollection',
         geometries: [geometry],
@@ -297,7 +297,7 @@ describe('security hardening regressions', () => {
       geometry: nestedGeometry,
     };
 
-    expect(getGeographyCoordinates(feature)).toBeNull();
+    expect(getGeographyCoordinates(feature)).toEqual([10, 20]);
   });
 
   it('rejects malformed topology and feature collection shapes', () => {

@@ -1,7 +1,6 @@
 import { Ref, SVGProps } from 'react';
 import { AnnotationProps } from '../types';
 import { useMapContext } from './MapProvider';
-import { createConnectorPath } from '../utils';
 
 function Annotation({
   subject,
@@ -13,16 +12,17 @@ function Annotation({
   className = '',
   ref,
   ...restProps
-}: AnnotationProps & { ref?: Ref<SVGGElement> }) {
+}: AnnotationProps & { ref?: Ref<SVGGElement> | undefined }) {
   const { projection } = useMapContext();
   const projectedCoords = projection(subject);
 
-  if (!projectedCoords) {
+  if (!projectedCoords || !projectedCoords.every(Number.isFinite)) {
     return null;
   }
 
   const [x, y] = projectedCoords;
-  const connectorPath = createConnectorPath([x, y], [x + dx, y + dy], curve);
+  // Connector from the label origin back to the subject, in the group's local coordinates
+  const connectorPath = `M0,0 Q${-dx / 2 - (dx / 2) * curve},${-dy / 2 + (dy / 2) * curve} ${-dx},${-dy}`;
 
   return (
     <g

@@ -11,11 +11,16 @@ function ComposableMap({
   projection = 'geoEqualEarth',
   projectionConfig = EMPTY_PROJECTION_CONFIG,
   className = '',
-  debug = false,
+  debug,
   children,
   ref,
+  // Not SVG attributes; keep them off the <svg> element.
+  onGeographyError: _onGeographyError,
+  fallback: _fallback,
   ...restProps
-}: Omit<ComposableMapProps, 'metadata'> & { ref?: Ref<SVGSVGElement> }) {
+}: Omit<ComposableMapProps, 'metadata'> & {
+  ref?: Ref<SVGSVGElement> | undefined;
+}) {
   const { logRender } = useMapDebugger('ComposableMap', debug);
 
   useEffect(() => {

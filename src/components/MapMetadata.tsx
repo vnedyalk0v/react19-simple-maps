@@ -15,6 +15,8 @@ function safeJsonLdSerialize(data: object): string {
 }
 
 interface MapMetadataProps {
+  enableOpenGraph?: boolean;
+  enableTwitterCards?: boolean;
   title?: string;
   description?: string;
   keywords?: string[];
@@ -38,6 +40,8 @@ interface MapMetadataProps {
  * Provides SEO and social media optimization for map components
  */
 export function MapMetadata({
+  enableOpenGraph = true,
+  enableTwitterCards = true,
   title,
   description,
   keywords = [],
@@ -70,21 +74,29 @@ export function MapMetadata({
       {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
       {/* Open Graph metadata */}
-      {ogTitle && <meta property="og:title" content={ogTitle} />}
-      {ogDescription && (
-        <meta property="og:description" content={ogDescription} />
+      {enableOpenGraph && (
+        <>
+          {ogTitle && <meta property="og:title" content={ogTitle} />}
+          {ogDescription && (
+            <meta property="og:description" content={ogDescription} />
+          )}
+          {ogImage && <meta property="og:image" content={ogImage} />}
+          {ogUrl && <meta property="og:url" content={ogUrl} />}
+          <meta property="og:type" content="website" />
+        </>
       )}
-      {ogImage && <meta property="og:image" content={ogImage} />}
-      {ogUrl && <meta property="og:url" content={ogUrl} />}
-      <meta property="og:type" content="website" />
 
       {/* Twitter Card metadata */}
-      <meta name="twitter:card" content={twitterCard} />
-      {twitterTitle && <meta name="twitter:title" content={twitterTitle} />}
-      {twitterDescription && (
-        <meta name="twitter:description" content={twitterDescription} />
+      {enableTwitterCards && (
+        <>
+          <meta name="twitter:card" content={twitterCard} />
+          {twitterTitle && <meta name="twitter:title" content={twitterTitle} />}
+          {twitterDescription && (
+            <meta name="twitter:description" content={twitterDescription} />
+          )}
+          {twitterImage && <meta name="twitter:image" content={twitterImage} />}
+        </>
       )}
-      {twitterImage && <meta name="twitter:image" content={twitterImage} />}
 
       {/* JSON-LD structured data (safely escaped to prevent script-breakout XSS) */}
       {jsonLd && (
@@ -93,20 +105,6 @@ export function MapMetadata({
           dangerouslySetInnerHTML={{ __html: safeJsonLdSerialize(jsonLd) }}
         />
       )}
-
-      {/* Map-specific metadata */}
-      <meta name="geo.region" content="world" />
-      <meta name="geo.placename" content="World Map" />
-      <meta name="ICBM" content="0, 0" />
-
-      {/* Preload critical resources */}
-      <link
-        rel="preload"
-        href="/fonts/map-font.woff2"
-        as="font"
-        type="font/woff2"
-        crossOrigin="anonymous"
-      />
 
       {children}
     </>
