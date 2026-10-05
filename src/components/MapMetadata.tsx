@@ -106,11 +106,6 @@ export function MapMetadata({
         />
       )}
 
-      {/* Map-specific metadata */}
-      <meta name="geo.region" content="world" />
-      <meta name="geo.placename" content="World Map" />
-      <meta name="ICBM" content="0, 0" />
-
       {children}
     </>
   );
