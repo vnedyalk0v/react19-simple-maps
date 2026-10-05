@@ -17,7 +17,7 @@ function isArrayOf(
   return true;
 }
 
-function isPosition(value: unknown): boolean {
+function isPosition(value: unknown): value is number[] {
   return (
     Array.isArray(value) &&
     value.length >= 2 &&
@@ -25,6 +25,27 @@ function isPosition(value: unknown): boolean {
       value,
       (item) => typeof item === 'number' && Number.isFinite(item),
     )
+  );
+}
+
+function isLineStringCoordinates(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    (value.length === 0 || value.length >= 2) &&
+    isArrayOf(value, isPosition)
+  );
+}
+
+function isLinearRing(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length < 4) return false;
+  const first: unknown = value[0];
+  const last: unknown = value[value.length - 1];
+  return (
+    isPosition(first) &&
+    isPosition(last) &&
+    first.length === last.length &&
+    first.every((coordinate, index) => coordinate === last[index]) &&
+    isArrayOf(value, isPosition)
   );
 }
 
@@ -114,15 +135,9 @@ function isLeafGeometry(
 
   if (topologyArcs === undefined) {
     if (value.type === 'Polygon' || value.type === 'MultiPolygon') {
-      // D3 drops the closing coordinate, so a ring needs a position left.
-      return isNestedArray(
-        value.coordinates,
-        depth - 1,
-        (ring) =>
-          Array.isArray(ring) && ring.length > 1 && isArrayOf(ring, isPosition),
-      );
+      return isNestedArray(value.coordinates, depth - 1, isLinearRing);
     }
-    return isNestedArray(value.coordinates, depth, isPosition);
+    return isNestedArray(value.coordinates, depth - 1, isLineStringCoordinates);
   }
   return isNestedArray(
     value.arcs,
