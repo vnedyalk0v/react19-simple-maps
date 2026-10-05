@@ -63,51 +63,170 @@ import { Topology } from 'topojson-specification';
 // Advanced type guards for runtime type checking
 
 // Geography data type guards
-export function isTopology(value: unknown): value is Topology {
-  if (typeof value !== 'object' || value === null) return false;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  const obj = value as Record<string, unknown>;
+function isArrayOf(
+  value: unknown,
+  predicate: (item: unknown) => boolean,
+): boolean {
+  if (!Array.isArray(value)) return false;
+  for (const item of value) {
+    if (!predicate(item)) return false;
+  }
+  return true;
+}
+
+function isPosition(value: unknown): boolean {
   return (
-    obj.type === 'Topology' &&
-    typeof obj.objects === 'object' &&
-    obj.objects !== null &&
-    Array.isArray(obj.arcs)
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    isArrayOf(
+      value,
+      (item) => typeof item === 'number' && Number.isFinite(item),
+    )
+  );
+}
+
+function isNestedArray(
+  value: unknown,
+  depth: number,
+  predicate: (item: unknown) => boolean,
+): boolean {
+  return depth === 0
+    ? predicate(value)
+    : isArrayOf(value, (item) => isNestedArray(item, depth - 1, predicate));
+}
+
+function hasValidProperties(value: Record<string, unknown>): boolean {
+  return (
+    (value.properties === null || isRecord(value.properties)) &&
+    (value.id === undefined ||
+      typeof value.id === 'string' ||
+      typeof value.id === 'number')
+  );
+}
+
+function isGeometry(
+  value: unknown,
+  topologyArcs?: readonly unknown[][],
+): boolean {
+  const ancestors = new Set<object>();
+  const stack: Array<{ geometry: unknown; exit?: boolean }> = [
+    { geometry: value },
+  ];
+  while (stack.length > 0) {
+    const frame = stack.pop();
+    if (!frame || !isRecord(frame.geometry)) return false;
+    const geometry = frame.geometry;
+    if (frame.exit) {
+      ancestors.delete(geometry);
+      continue;
+    }
+    if (ancestors.has(geometry)) return false;
+    if (geometry.type === 'GeometryCollection') {
+      if (!Array.isArray(geometry.geometries)) return false;
+      ancestors.add(geometry);
+      stack.push({ geometry, exit: true });
+      for (const child of geometry.geometries) {
+        stack.push({ geometry: child });
+      }
+    } else if (!isLeafGeometry(geometry, topologyArcs)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isLeafGeometry(
+  value: Record<string, unknown>,
+  topologyArcs?: readonly unknown[][],
+): boolean {
+  if (topologyArcs !== undefined && value.type === null) return true;
+
+  let depth: number;
+  switch (value.type) {
+    case 'Point':
+      return isPosition(value.coordinates);
+    case 'MultiPoint':
+      return isArrayOf(value.coordinates, isPosition);
+    case 'LineString':
+      depth = 1;
+      break;
+    case 'Polygon':
+    case 'MultiLineString':
+      depth = 2;
+      break;
+    case 'MultiPolygon':
+      depth = 3;
+      break;
+    default:
+      return false;
+  }
+
+  if (topologyArcs === undefined) {
+    return isNestedArray(value.coordinates, depth, isPosition);
+  }
+  return isNestedArray(
+    value.arcs,
+    depth - 1,
+    (indexes) =>
+      Array.isArray(indexes) &&
+      indexes.length > 0 &&
+      isArrayOf(indexes, (index) => {
+        if (typeof index !== 'number' || !Number.isInteger(index)) return false;
+        const arcIndex = index < 0 ? -index - 1 : index;
+        return (topologyArcs[arcIndex]?.length ?? 0) > 0;
+      }),
+  );
+}
+
+export function isTopology(value: unknown): value is Topology {
+  if (!isRecord(value) || value.type !== 'Topology') return false;
+  if (
+    !isRecord(value.objects) ||
+    !isArrayOf(value.arcs, (arc) => isArrayOf(arc, isPosition))
+  ) {
+    return false;
+  }
+  const topologyArcs = value.arcs as unknown[][];
+  if (
+    value.transform !== undefined &&
+    (!isRecord(value.transform) ||
+      !isPosition(value.transform.scale) ||
+      (value.transform.scale as unknown[]).length !== 2 ||
+      !isPosition(value.transform.translate) ||
+      (value.transform.translate as unknown[]).length !== 2)
+  ) {
+    return false;
+  }
+  return Object.values(value.objects).every((geometry) =>
+    isGeometry(geometry, topologyArcs),
   );
 }
 
 export function isFeatureCollection(
   value: unknown,
 ): value is FeatureCollection {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  return obj.type === 'FeatureCollection' && Array.isArray(obj.features);
+  return (
+    isRecord(value) &&
+    value.type === 'FeatureCollection' &&
+    isArrayOf(value.features, isFeature)
+  );
 }
 
 export function isFeature(value: unknown): value is Feature<Geometry> {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  return obj.type === 'Feature' && 'geometry' in obj && 'properties' in obj;
+  return (
+    isRecord(value) &&
+    value.type === 'Feature' &&
+    hasValidProperties(value) &&
+    isValidGeometry(value.geometry)
+  );
 }
 
 export function isValidGeometry(value: unknown): value is Geometry {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-  if (!('type' in obj)) return false;
-
-  const validTypes = [
-    'Point',
-    'LineString',
-    'Polygon',
-    'MultiPoint',
-    'MultiLineString',
-    'MultiPolygon',
-    'GeometryCollection',
-  ];
-
-  return validTypes.includes(obj.type as string);
+  return isGeometry(value);
 }
 
 // Coordinate type guards
@@ -130,10 +249,13 @@ export function isValidCoordinates(value: unknown): value is Coordinates {
 
 // Projection type guards
 export function isGeoProjection(value: unknown): value is GeoProjection {
+  if (typeof value !== 'function') return false;
+  const projection = value as unknown as Record<string, unknown>;
   return (
-    typeof value === 'function' &&
-    'invert' in value &&
-    typeof (value as Record<string, unknown>).invert === 'function'
+    typeof projection.stream === 'function' &&
+    typeof projection.scale === 'function' &&
+    typeof projection.translate === 'function' &&
+    (projection.invert === undefined || typeof projection.invert === 'function')
   );
 }
 

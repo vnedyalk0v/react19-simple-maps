@@ -23,6 +23,16 @@ export function isString(
   return typeof geo === 'string';
 }
 
+function removeNullCollectionGeometries(geometry: Geometry): Geometry {
+  if (geometry.type !== 'GeometryCollection') return geometry;
+  return {
+    ...geometry,
+    geometries: geometry.geometries
+      .filter((child) => child !== null)
+      .map(removeNullCollectionGeometries),
+  };
+}
+
 /**
  * Extracts features from topology data
  * @param topology - Topology object
@@ -51,7 +61,15 @@ function extractFeaturesFromTopology(
 
   // A single-geometry object yields one Feature instead of a FeatureCollection
   const result = feature(topology, geometryObject);
-  const features = 'features' in result ? result.features || [] : [result];
+  const extracted = 'features' in result ? result.features || [] : [result];
+  // Null TopoJSON objects cannot satisfy the public Feature<Geometry> type.
+  const features = extracted
+    .filter((item) => item.geometry !== null)
+    .map((item) =>
+      item.geometry.type === 'GeometryCollection'
+        ? { ...item, geometry: removeNullCollectionGeometries(item.geometry) }
+        : item,
+    );
   return parseGeographies ? parseGeographies(features) : features;
 }
 

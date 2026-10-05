@@ -141,6 +141,38 @@ describe('geography utilities with empty or invalid geometries', () => {
     },
   );
 
+  it('finds coordinates after empty members of a GeometryCollection', () => {
+    const collection = feature({
+      type: 'GeometryCollection',
+      geometries: [
+        { type: 'GeometryCollection', geometries: [] },
+        { type: 'LineString', coordinates: [] },
+        {
+          type: 'GeometryCollection',
+          geometries: [
+            { type: 'Polygon', coordinates: [] },
+            { type: 'Point', coordinates: [10, 5] },
+          ],
+        },
+      ],
+    });
+
+    expect(getGeographyCoordinates(collection)).toEqual([10, 5]);
+  });
+
+  it('skips invalid coordinates in a GeometryCollection', () => {
+    const collection = feature({
+      type: 'GeometryCollection',
+      geometries: [
+        { type: 'Point', coordinates: [0, Number.NaN] },
+        { type: 'Point', coordinates: [500, 5] },
+        { type: 'Point', coordinates: [10, 5] },
+      ],
+    });
+
+    expect(getGeographyCoordinates(collection)).toEqual([10, 5]);
+  });
+
   it('returns null instead of out-of-range or non-finite coordinates', () => {
     const outOfRange = feature({ type: 'Point', coordinates: [500, 5] });
     const notFinite = feature({ type: 'Point', coordinates: [0, Number.NaN] });

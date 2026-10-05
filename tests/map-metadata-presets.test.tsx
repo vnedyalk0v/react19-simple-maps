@@ -19,6 +19,24 @@ function jsonLd(html: string): unknown {
 }
 
 describe('MapWithMetadata presets', () => {
+  it('omits all Open Graph tags when disabled while preserving Twitter cards', () => {
+    const html = renderToString(
+      <MapWithMetadata metadata={metadata} enableOpenGraph={false} />,
+    );
+    expect(html).not.toContain('property="og:');
+    expect(html).toContain('name="twitter:card"');
+    expect(html).toContain('<title>My map</title>');
+  });
+
+  it('omits all Twitter tags when disabled while preserving Open Graph', () => {
+    const html = renderToString(
+      <MapWithMetadata metadata={metadata} enableTwitterCards={false} />,
+    );
+    expect(html).not.toContain('name="twitter:');
+    expect(html).toContain('property="og:type"');
+    expect(jsonLd(html)).not.toBeNull();
+  });
+
   it('builds countryMap structured data from presetArgs', () => {
     const html = renderToString(
       <MapWithMetadata

@@ -59,14 +59,15 @@ export function rejectOnAbort<T>(
  * Prevents redirect-based SSRF bypasses.
  * @param url - The initial URL to fetch
  * @param options - Fetch options (must have redirect: 'manual')
- * @returns The final non-redirect response
+ * @returns The final response and the manually validated request URL chain
  */
 export async function fetchWithRedirectValidation(
   url: string,
   options: RequestInit,
   config: GeographySecurityConfig,
-): Promise<Response> {
+): Promise<{ response: Response; urls: string[] }> {
   let currentUrl = url;
+  const urls = [url];
 
   for (let hop = 0; ; hop++) {
     const response = await fetch(currentUrl, options);
@@ -79,9 +80,9 @@ export async function fetchWithRedirectValidation(
       );
     }
 
-    // Not a redirect — return directly
+    // Retain the URLs we validated, rather than trusting Response.url.
     if (response.status < 300 || response.status >= 400) {
-      return response;
+      return { response, urls };
     }
 
     // Cancel the unused redirect response body to release connection resources
@@ -120,6 +121,7 @@ export async function fetchWithRedirectValidation(
     );
 
     currentUrl = redirectUrl;
+    urls.push(redirectUrl);
   }
 }
 

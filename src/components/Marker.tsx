@@ -73,7 +73,8 @@ function Marker({
 
   // Memoize projection calculation to prevent unnecessary recalculations
   const projectedCoords = useMemo(() => {
-    return projection(coordinates);
+    const projected = projection(coordinates);
+    return projected?.every(Number.isFinite) ? projected : null;
   }, [projection, coordinates]);
 
   const currentState = useMemo(() => {

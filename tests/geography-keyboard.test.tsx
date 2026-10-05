@@ -1,5 +1,5 @@
-import { fireEvent, render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Geography from '../src/components/Geography';
 import type { PreparedFeature } from '../src/types';
 
@@ -21,7 +21,41 @@ function renderClickable(props: Partial<Parameters<typeof Geography>[0]>) {
   return { onClick, path: view.container.querySelector('path')! };
 }
 
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  window.history.replaceState(null, '', window.location.pathname);
+});
+
 describe('Geography keyboard activation', () => {
+  it.each(['Enter', ' '])(
+    'lets onClick prevent hyperlink navigation activated with %s',
+    (key) => {
+      vi.useFakeTimers();
+      const onClick = vi.fn((event: React.MouseEvent<SVGPathElement>) => {
+        event.preventDefault();
+      });
+      const { container } = render(
+        <a href="#unwanted">
+          <svg>
+            <Geography geography={feature} onClick={onClick} />
+          </svg>
+        </a>,
+      );
+      const path = container.querySelector('path')!;
+
+      fireEvent.click(path);
+      act(() => vi.runOnlyPendingTimers());
+      expect(window.location.hash).toBe('');
+
+      fireEvent.keyDown(path, { key });
+      fireEvent.keyUp(path, { key });
+      act(() => vi.runOnlyPendingTimers());
+      expect(onClick).toHaveBeenCalledTimes(2);
+      expect(window.location.hash).toBe('');
+    },
+  );
+
   it('activates Space once on key release, like a native button', () => {
     const { onClick, path } = renderClickable({
       style: { pressed: { fill: 'red' } },

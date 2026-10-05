@@ -160,6 +160,7 @@ export class MapDebugger {
       } else if (
         value &&
         typeof value === 'object' &&
+        typeof value.constructor === 'function' &&
         value.constructor !== Object &&
         value.constructor !== Array
       ) {

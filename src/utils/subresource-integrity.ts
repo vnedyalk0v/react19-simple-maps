@@ -115,7 +115,14 @@ function createSRIEnforcementConfig(
 
   return Object.freeze({
     ...nextConfig,
-    customSRIMap: Object.freeze({ ...nextConfig.customSRIMap }),
+    customSRIMap: Object.freeze(
+      Object.fromEntries(
+        Object.entries(nextConfig.customSRIMap).map(([url, sri]) => [
+          canonicalizeUrlForSRI(url),
+          Object.freeze({ ...sri }),
+        ]),
+      ),
+    ),
   });
 }
 
@@ -189,17 +196,16 @@ async function calculateHash(
     const chars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
     let result = '';
-    let i = 0;
-    while (i < hashArray.length) {
-      const a = hashArray[i++] || 0;
-      const b = i < hashArray.length ? hashArray[i++] || 0 : 0;
-      const c = i < hashArray.length ? hashArray[i++] || 0 : 0;
+    for (let i = 0; i < hashArray.length; i += 3) {
+      const a = hashArray[i] || 0;
+      const b = hashArray[i + 1] || 0;
+      const c = hashArray[i + 2] || 0;
       const bitmap = (a << 16) | (b << 8) | c;
       result += chars.charAt((bitmap >> 18) & 63);
       result += chars.charAt((bitmap >> 12) & 63);
       result +=
-        i - 2 < hashArray.length ? chars.charAt((bitmap >> 6) & 63) : '=';
-      result += i - 1 < hashArray.length ? chars.charAt(bitmap & 63) : '=';
+        i + 1 < hashArray.length ? chars.charAt((bitmap >> 6) & 63) : '=';
+      result += i + 2 < hashArray.length ? chars.charAt(bitmap & 63) : '=';
     }
     hashBase64 = result;
   }
@@ -292,13 +298,24 @@ export async function validateSRIFromArrayBuffer(
   }
 }
 
+function normalizePercentEncoding(value: string, decodeAt = false): string {
+  return value.replace(/%[0-9a-f]{2}/gi, (encoded) => {
+    const char = String.fromCharCode(parseInt(encoded.slice(1), 16));
+    return /[\w.~-]/.test(char) || (decodeAt && char === '@')
+      ? char
+      : encoded.toUpperCase();
+  });
+}
+
 /**
  * Canonicalize a URL for SRI lookup.
  * Strips the fragment, removes default ports, normalises the hostname to
- * lowercase without a trailing dot, decodes percent-encoded unreserved characters and `@` in the
- * path, and removes trailing slashes from the path so that minor URL variants
- * resolve to the same SRI entry. With `ignoreQuery`, the query is dropped too
- * (used for known static sources, which serve the same bytes for any query).
+ * lowercase without a trailing dot, decodes percent-encoded unreserved characters in the
+ * path and query so that byte-equivalent URL variants resolve to the same SRI entry.
+ * With `ignoreQuery`, the query and trailing path slashes are dropped too
+ * (used only for known static sources, along with decoding `@`). Custom paths
+ * retain reserved character encoding and trailing slashes. Percent escape
+ * hex digits are normalised to uppercase in paths and queries.
  */
 function canonicalizeUrlForSRI(url: string, ignoreQuery = false): string {
   try {
@@ -307,6 +324,8 @@ function canonicalizeUrlForSRI(url: string, ignoreQuery = false): string {
     parsed.hash = '';
     if (ignoreQuery) {
       parsed.search = '';
+    } else {
+      parsed.search = normalizePercentEncoding(parsed.search);
     }
     // URL constructor already lowercases the hostname and normalises the port,
     // but we explicitly clear the default port for safety.
@@ -318,14 +337,10 @@ function canonicalizeUrlForSRI(url: string, ignoreQuery = false): string {
     }
     // A fully qualified hostname ("unpkg.com.") names the same host
     parsed.hostname = parsed.hostname.replace(/\.$/, '');
-    // Strip trailing slashes from the path (preserve root "/" and query/hash)
-    parsed.pathname =
-      parsed.pathname
-        .replace(/%[0-9a-f]{2}/gi, (encoded) => {
-          const char = String.fromCharCode(parseInt(encoded.slice(1), 16));
-          return /[\w.~@-]/.test(char) ? char : encoded;
-        })
-        .replace(/\/+$/, '') || '/';
+    parsed.pathname = normalizePercentEncoding(parsed.pathname, ignoreQuery);
+    if (ignoreQuery) {
+      parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+    }
     return parsed.href;
   } catch {
     // If URL parsing fails, return as-is — the fetch will fail with a
@@ -417,12 +432,13 @@ export async function generateSRIHash(
       validateResolvedGeographyUrl(url, securityConfig),
       controller.signal,
     );
-    const response = await fetchWithRedirectValidation(
+    const { response } = await fetchWithRedirectValidation(
       url,
       createSecureFetchOptions(controller.signal, securityConfig),
       securityConfig,
     );
     if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
       throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
     }
 

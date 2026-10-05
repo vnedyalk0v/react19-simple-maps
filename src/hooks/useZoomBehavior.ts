@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useState,
+} from 'react';
 import {
   zoom as d3Zoom,
   zoomTransform,
@@ -17,6 +23,22 @@ const createCoordinates = (lon: number, lat: number): Coordinates => [
   lon as Longitude,
   lat as Latitude,
 ];
+
+// D3 has no public cancellation API for wheel timers or element-local gestures.
+interface ActiveZoomGesture {
+  active: number;
+  wheel?: ReturnType<typeof setTimeout> | null;
+  moved?: boolean;
+  touch0?: unknown;
+  touch1?: unknown;
+}
+
+type ZoomElement = SVGGElement & { __zooming?: ActiveZoomGesture };
+type MouseupListener = (
+  this: Window,
+  event: MouseEvent,
+  datum: unknown,
+) => void;
 
 interface UseZoomBehaviorProps {
   mapRef: React.RefObject<SVGGElement | null>;
@@ -62,6 +84,8 @@ export function useZoomBehavior({
   const zoomRef = useRef<ZoomBehavior<SVGGElement, unknown> | undefined>(
     undefined,
   );
+  const [touchCancellation, setTouchCancellation] = useState(0);
+  const [targetElement, setTargetElement] = useState<SVGGElement | null>(null);
   const mapTouchIds = useRef(new Set<number>());
   const originalTouchEvents = useRef(new WeakMap<Event, TouchEvent>());
   const suppressTouchCallbacks = useRef(false);
@@ -105,19 +129,36 @@ export function useZoomBehavior({
     [onZoom, onMove, width, height, projection, bypassEvents],
   );
 
-  const latest = useRef({ handleZoom, onZoomStart, onZoomEnd });
+  const latest = useRef({
+    handleZoom,
+    onZoomStart,
+    onZoomEnd,
+    filterZoomEvent,
+  });
+  // Ref targets can mount or be replaced without changing any hook props.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
-    latest.current = { handleZoom, onZoomStart, onZoomEnd };
+    latest.current = { handleZoom, onZoomStart, onZoomEnd, filterZoomEvent };
+    if (targetElement !== mapRef.current) setTargetElement(mapRef.current);
   });
 
   useEffect(() => {
-    if (enablePan || !enableZoom) mapTouchIds.current.clear();
-    const currentMapElement = mapRef.current;
+    const acceptedTouchIds = mapTouchIds.current;
+    acceptedTouchIds.clear();
+    const currentMapElement = targetElement;
     if (!currentMapElement) return;
-    const mapElement = currentMapElement;
+    const mapElement = currentMapElement as ZoomElement;
 
     const svg = d3Select(mapElement);
+    const activeGestures = new Set<ActiveZoomGesture>();
+    const mouseGestures = new Map<
+      Window,
+      { gesture: ActiveZoomGesture; mouseup: MouseupListener }
+    >();
+    let disposed = false;
+    let disposalTransform = zoomTransform(mapElement);
     let pendingTouchStart: D3ZoomEvent<SVGGElement, unknown> | undefined;
+    let overlappingSelection: { root: HTMLElement; value: unknown } | undefined;
 
     function restoreSourceEvent(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
       const sourceEvent = originalTouchEvents.current.get(d3Event.sourceEvent);
@@ -125,16 +166,33 @@ export function useZoomBehavior({
     }
 
     function handleZoomEvent(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
-      if (suppressTouchCallbacks.current) return;
+      if (disposed || suppressTouchCallbacks.current) return;
       if (pendingTouchStart) {
         const startEvent = pendingTouchStart;
         pendingTouchStart = undefined;
         notifyZoomStart(startEvent);
       }
-      latest.current.handleZoom(restoreSourceEvent(d3Event));
+      if (!disposed) latest.current.handleZoom(restoreSourceEvent(d3Event));
     }
 
     function handleZoomStart(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
+      if (d3Event.sourceEvent?.type === 'mousedown' && overlappingSelection) {
+        // Restore the snapshot before a callback can synchronously dispose this map.
+        Reflect.set(
+          overlappingSelection.root,
+          '__noselect',
+          overlappingSelection.value,
+        );
+      }
+      const gesture = mapElement.__zooming;
+      if (gesture) {
+        activeGestures.add(gesture);
+        if (d3Event.sourceEvent?.type === 'mousedown') {
+          const view = (d3Event.sourceEvent as MouseEvent).view;
+          const mouseup = view && d3Select(view).on('mouseup.zoom');
+          if (view && mouseup) mouseGestures.set(view, { gesture, mouseup });
+        }
+      }
       if (suppressTouchCallbacks.current) return;
       if (!enablePan && d3Event.sourceEvent?.type === 'touchstart') {
         if ((d3Event.sourceEvent as TouchEvent).touches.length === 1) {
@@ -155,17 +213,24 @@ export function useZoomBehavior({
       const coords = getCoords(width, height, d3Event.transform);
       const inverted = projection.invert?.(coords);
       if (inverted) {
-        onZoomStart(
-          {
-            coordinates: createCoordinates(inverted[0], inverted[1]),
-            zoom: d3Event.transform.k,
-          },
-          d3Event.sourceEvent || d3Event,
-        );
+        try {
+          onZoomStart(
+            {
+              coordinates: createCoordinates(inverted[0], inverted[1]),
+              zoom: d3Event.transform.k,
+            },
+            d3Event.sourceEvent || d3Event,
+          );
+        } finally {
+          if (disposed) disposalTransform = zoomTransform(mapElement);
+        }
       }
     }
 
     function handleZoomEnd(d3Event: D3ZoomEvent<SVGGElement, unknown>) {
+      for (const gesture of activeGestures) {
+        if (gesture.active === 0) activeGestures.delete(gesture);
+      }
       if (suppressTouchCallbacks.current) return;
       if (pendingTouchStart) {
         pendingTouchStart = undefined;
@@ -187,7 +252,9 @@ export function useZoomBehavior({
     }
 
     function filterFunc(event: Event) {
-      if (!enableZoom && !enablePan) return false;
+      // D3 routes a canceled second tap through its double-click filter.
+      if (event.type === 'touchcancel' || (!enableZoom && !enablePan))
+        return false;
       const isScaling =
         event.type === 'wheel' ||
         event.type === 'dblclick' ||
@@ -196,15 +263,17 @@ export function useZoomBehavior({
       if (!enablePan && !isScaling && event.type !== 'touchstart') return false;
       const originalEvent = originalTouchEvents.current.get(event) ?? event;
       const mouseEvent = originalEvent as MouseEvent;
-      const accepted = filterZoomEvent
-        ? filterZoomEvent(originalEvent)
+      const currentFilter = latest.current.filterZoomEvent;
+      const accepted = currentFilter
+        ? currentFilter(originalEvent)
         : (!mouseEvent.ctrlKey || event.type === 'wheel') && !mouseEvent.button;
-      if (accepted && !enablePan && event.type === 'touchstart') {
+      if (disposed) return false;
+      if (accepted && event.type === 'touchstart') {
         for (const touch of Array.from(
           (originalEvent as TouchEvent).changedTouches,
         )) {
           if (mapElement.contains(touch.target as Node))
-            mapTouchIds.current.add(touch.identifier);
+            acceptedTouchIds.add(touch.identifier);
         }
       }
       return accepted;
@@ -246,7 +315,41 @@ export function useZoomBehavior({
     zoomRef.current = zoomBehavior;
     svg.call(zoomBehavior);
 
-    if (!enablePan && enableZoom) {
+    const wheel = svg.on('wheel.zoom');
+    svg.on(
+      'wheel.zoom',
+      function (event: WheelEvent, datum) {
+        try {
+          wheel?.call(this, event, datum);
+        } finally {
+          // D3 creates its wheel timer and transform after the start callback.
+          if (disposed) {
+            for (const gesture of activeGestures) {
+              if (gesture.wheel) clearTimeout(gesture.wheel);
+            }
+            svg.property('__zoom', disposalTransform);
+          }
+        }
+      },
+      { passive: false },
+    );
+
+    const mousedown = svg.on('mousedown.zoom');
+    svg.on('mousedown.zoom', function (event: MouseEvent, datum) {
+      const root = event.view?.document.documentElement;
+      // Overlapping mouse buttons must not replace D3's original selection style.
+      overlappingSelection =
+        root && Reflect.has(root, '__noselect')
+          ? { root, value: Reflect.get(root, '__noselect') }
+          : undefined;
+      try {
+        mousedown?.call(this, event, datum);
+      } finally {
+        overlappingSelection = undefined;
+      }
+    });
+
+    if (enablePan || enableZoom) {
       for (const type of [
         'touchstart',
         'touchmove',
@@ -258,10 +361,18 @@ export function useZoomBehavior({
         svg.on(
           `${type}.zoom`,
           function (event: TouchEvent, datum) {
+            if (
+              type !== 'touchstart' &&
+              !Array.from(event.changedTouches).some((touch) =>
+                acceptedTouchIds.has(touch.identifier),
+              )
+            )
+              return;
             const isScrolling =
+              !enablePan &&
               type === 'touchmove' &&
               Array.from(event.touches).filter((touch) =>
-                mapTouchIds.current.has(touch.identifier),
+                acceptedTouchIds.has(touch.identifier),
               ).length < 2;
             const proxy = new Proxy(event, {
               get(target, key) {
@@ -271,7 +382,7 @@ export function useZoomBehavior({
                   key === 'targetTouches'
                 ) {
                   return Array.from(target[key]).filter((touch) =>
-                    mapTouchIds.current.has(touch.identifier),
+                    acceptedTouchIds.has(touch.identifier),
                   );
                 }
                 if (
@@ -287,7 +398,7 @@ export function useZoomBehavior({
             originalTouchEvents.current.set(proxy, event);
             try {
               if (isScrolling) {
-                if (mapTouchIds.current.size === 0) return;
+                if (acceptedTouchIds.size === 0) return;
                 suppressTouchCallbacks.current = true;
               }
               // Keep D3's accepted map touches current without consuming page scrolling.
@@ -300,7 +411,7 @@ export function useZoomBehavior({
               if (isScrolling) suppressTouchCallbacks.current = false;
               if (type === 'touchend' || type === 'touchcancel') {
                 for (const touch of Array.from(event.changedTouches)) {
-                  mapTouchIds.current.delete(touch.identifier);
+                  acceptedTouchIds.delete(touch.identifier);
                 }
               }
             }
@@ -310,12 +421,51 @@ export function useZoomBehavior({
       }
     }
 
+    for (const type of ['touchend', 'touchcancel'] as const) {
+      const listener = svg.on(`${type}.zoom`);
+      if (!listener) continue;
+      svg.on(
+        `${type}.zoom`,
+        function (event: TouchEvent, datum) {
+          const gesture = mapElement.__zooming;
+          if (!gesture?.touch0 && !gesture?.touch1) return;
+          listener.call(this, event, datum);
+          if (type === 'touchcancel' && !gesture.touch0 && !gesture.touch1) {
+            // Reinstall the behavior to discard D3's private double-tap timer.
+            setTouchCancellation((value) => value + 1);
+          }
+        },
+        { passive: false },
+      );
+    }
+
     return () => {
-      // Mirror setup: remove all d3-zoom listeners bound under the .zoom
-      // namespace so they don't outlive this effect run / component unmount.
+      disposed = true;
+      disposalTransform = zoomTransform(mapElement);
+      zoomBehavior.on('start zoom end', null);
       svg.on('.zoom', null);
+      // An identity transform publicly interrupts pending double-click transitions.
+      zoomBehavior.transform(svg, zoomTransform(mapElement));
+      for (const gesture of activeGestures) {
+        if (gesture.wheel) clearTimeout(gesture.wheel);
+      }
+      for (const [view, { gesture, mouseup }] of mouseGestures) {
+        if (d3Select(view).on('mouseup.zoom') !== mouseup) continue;
+        // Let D3 restore dragging/selection without suppressing the next page click.
+        gesture.moved = false;
+        const event = new MouseEvent('mouseup');
+        Object.defineProperty(event, 'view', { value: view });
+        mouseup.call(view, event, d3Select(view).datum());
+      }
+      if (mapElement.__zooming && activeGestures.has(mapElement.__zooming)) {
+        delete mapElement.__zooming;
+      }
+      acceptedTouchIds.clear();
+      if (zoomRef.current === zoomBehavior) zoomRef.current = undefined;
     };
   }, [
+    targetElement,
+    touchCancellation,
     enableZoom,
     enablePan,
     width,
@@ -327,7 +477,6 @@ export function useZoomBehavior({
     minZoom,
     maxZoom,
     projection,
-    filterZoomEvent,
     mapRef,
     bypassEvents,
   ]);

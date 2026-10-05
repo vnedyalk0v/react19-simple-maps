@@ -77,9 +77,16 @@ class MinimalErrorBoundary extends Component<
   }
 
   static getDerivedStateFromError(
-    error: Error,
+    error: unknown,
   ): Pick<ErrorBoundaryState, 'hasError' | 'error'> {
-    return { hasError: true, error };
+    let normalizedError: Error;
+    try {
+      normalizedError =
+        error instanceof Error ? error : new Error(String(error));
+    } catch {
+      normalizedError = new Error('Unknown geography rendering error');
+    }
+    return { hasError: true, error: normalizedError };
   }
 
   // Clear a caught error when the reset key changes, without remounting
@@ -92,10 +99,10 @@ class MinimalErrorBoundary extends Component<
     return { hasError: false, error: null, resetKey: props.resetKey };
   }
 
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(_error: unknown, errorInfo: ErrorInfo) {
     // React 19 compliance: Use improved error reporting
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
+    if (this.props.onError && this.state.error) {
+      this.props.onError(this.state.error, errorInfo);
     }
   }
 

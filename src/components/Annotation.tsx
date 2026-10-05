@@ -16,7 +16,7 @@ function Annotation({
   const { projection } = useMapContext();
   const projectedCoords = projection(subject);
 
-  if (!projectedCoords) {
+  if (!projectedCoords || !projectedCoords.every(Number.isFinite)) {
     return null;
   }
 

@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from 'vitest';
-import { createRef } from 'react';
+import { createRef, type ReactElement } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -53,6 +53,10 @@ describe('public API types', () => {
       label: string;
     }
     expectTypeOf<LabeledLineProps['from']>().toEqualTypeOf<LineProps['from']>();
+  });
+
+  it('returns a JSX-compatible element from MapWithMetadata', () => {
+    expectTypeOf<ReturnType<typeof MapWithMetadata>>().toExtend<ReactElement>();
   });
 
   it('types presetArgs for the selected MapWithMetadata preset', () => {

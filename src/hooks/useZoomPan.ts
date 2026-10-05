@@ -56,9 +56,16 @@ export function useZoomPanBehavior(
 ): UseZoomPanReturn {
   const { width, height, projection } = useMapContext();
 
-  // Defer expensive calculations for smooth rendering with initialValue for better UX
-  const deferredCenter = useDeferredValue(center, createCoordinates(0, 0));
-  const deferredZoom = useDeferredValue(zoom, 1);
+  const deferredCenter = useDeferredValue(center);
+  const deferredZoom = useDeferredValue(zoom);
+  const projectedCenter = projection(center);
+  const initialPosition = projectedCenter?.every(Number.isFinite)
+    ? {
+        x: width / 2 - projectedCenter[0] * zoom,
+        y: height / 2 - projectedCenter[1] * zoom,
+        k: zoom,
+      }
+    : { x: 0, y: 0, k: 1 };
 
   const mapRef = useRef<SVGGElement>(null);
   const bypassEvents = useRef(false);
@@ -71,7 +78,7 @@ export function useZoomPanBehavior(
     isPending,
     startTransition,
     transformString,
-  } = useDeferredPosition();
+  } = useDeferredPosition({ initialPosition });
 
   const zoomBehaviorProps = {
     mapRef,

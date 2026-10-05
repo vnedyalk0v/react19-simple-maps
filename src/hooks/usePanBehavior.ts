@@ -39,13 +39,19 @@ export function usePanBehavior({
     width: number;
     height: number;
     projection: GeoProjection;
+    element: SVGGElement;
   } | null>(null);
 
   const programmaticMove = useCallback(
     (newCenter: Coordinates, newZoom: number) => {
       const [lon, lat] = newCenter;
       const coords = projection([lon, lat]);
-      if (!coords || !mapRef.current || !zoomRef.current) return;
+      if (
+        !coords?.every(Number.isFinite) ||
+        !mapRef.current ||
+        !zoomRef.current
+      )
+        return;
 
       const x = coords[0] * newZoom;
       const y = coords[1] * newZoom;
@@ -74,7 +80,12 @@ export function usePanBehavior({
       });
 
       lastPosition.current = { x: lon, y: lat, k: newZoom };
-      appliedViewport.current = { width, height, projection };
+      appliedViewport.current = {
+        width,
+        height,
+        projection,
+        element: mapRef.current,
+      };
     },
     [
       projection,
@@ -96,12 +107,14 @@ export function usePanBehavior({
       zoom === lastPosition.current.k &&
       width === appliedViewport.current?.width &&
       height === appliedViewport.current?.height &&
-      projection === appliedViewport.current?.projection
+      projection === appliedViewport.current?.projection &&
+      mapRef.current === appliedViewport.current?.element
     )
       return;
 
     programmaticMove(center, zoom);
   }, [
+    mapRef,
     center,
     zoom,
     width,

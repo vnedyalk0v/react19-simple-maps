@@ -212,20 +212,14 @@ function getGeographyCoordinatesInternal(
       break;
 
     case 'GeometryCollection':
-      if (
-        geometry.geometries &&
-        Array.isArray(geometry.geometries) &&
-        geometry.geometries.length > 0 &&
-        geometry.geometries[0]
-      ) {
-        // Recursively try to get coordinates from first geometry
-        return getGeographyCoordinatesInternal(
-          {
-            ...geography,
-            geometry: geometry.geometries[0],
-          },
-          depth + 1,
-        );
+      if (Array.isArray(geometry.geometries)) {
+        for (const childGeometry of geometry.geometries) {
+          const coordinates = getGeographyCoordinatesInternal(
+            { ...geography, geometry: childGeometry },
+            depth + 1,
+          );
+          if (isValidCoordinates(coordinates)) return coordinates;
+        }
       }
       break;
 

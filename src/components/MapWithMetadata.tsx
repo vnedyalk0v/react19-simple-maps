@@ -1,4 +1,4 @@
-import { ReactNode, Ref, memo, useMemo } from 'react';
+import { Ref, memo, useMemo } from 'react';
 import { ComposableMapProps } from '../types';
 import ComposableMap from './ComposableMap';
 import { MapMetadata, mapMetadataPresets } from './MapMetadata';
@@ -98,6 +98,8 @@ function MapWithMetadata({
 
     return (
       <MapMetadata
+        enableOpenGraph={enableOpenGraph}
+        enableTwitterCards={enableTwitterCards}
         title={processedMetadata.title}
         description={processedMetadata.description}
         keywords={processedMetadata.keywords}
@@ -120,7 +122,7 @@ function MapWithMetadata({
         {...(processedMetadata.jsonLd && { jsonLd: processedMetadata.jsonLd })}
       />
     );
-  }, [processedMetadata, enableSEO]);
+  }, [processedMetadata, enableSEO, enableOpenGraph, enableTwitterCards]);
 
   return (
     <>
@@ -137,7 +139,7 @@ export default memo(MapWithMetadata) as unknown as <
   P extends MetadataPresetName = 'worldMap',
 >(
   props: MapWithMetadataProps<P> & { ref?: Ref<SVGSVGElement> | undefined },
-) => ReactNode;
+) => ReturnType<typeof MapWithMetadata>;
 
 // Export the props type for external use
 export type { MapWithMetadataProps };

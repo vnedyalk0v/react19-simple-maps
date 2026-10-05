@@ -46,6 +46,25 @@ function areGeographyPropsEqual(
   return true;
 }
 
+function dispatchKeyboardClick(event: React.KeyboardEvent<SVGPathElement>) {
+  const { currentTarget, ctrlKey, shiftKey, altKey, metaKey } = event;
+  const view = currentTarget.ownerDocument.defaultView;
+  const ClickEvent = view?.MouseEvent ?? MouseEvent;
+  const click = new ClickEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    ctrlKey,
+    shiftKey,
+    altKey,
+    metaKey,
+  });
+  Object.defineProperty(click, 'view', {
+    value: view,
+  });
+  currentTarget.dispatchEvent(click);
+}
+
 function Geography({
   geography,
   onClick,
@@ -144,9 +163,7 @@ function Geography({
       if (!onClick || evt.defaultPrevented) return;
       if (evt.key === 'Enter') {
         evt.preventDefault();
-        evt.currentTarget.dispatchEvent(
-          new MouseEvent('click', { bubbles: true }),
-        );
+        dispatchKeyboardClick(evt);
       } else if (evt.key === ' ') {
         evt.preventDefault();
         spacePressed.current = true;
@@ -164,9 +181,7 @@ function Geography({
       setPressed(false);
       if (!onClick || evt.defaultPrevented) return;
       evt.preventDefault();
-      evt.currentTarget.dispatchEvent(
-        new MouseEvent('click', { bubbles: true }),
-      );
+      dispatchKeyboardClick(evt);
     },
     [onKeyUp, onClick],
   );

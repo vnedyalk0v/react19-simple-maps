@@ -1,4 +1,4 @@
-import { Ref, memo, useEffect } from 'react';
+import { Ref, memo, useEffect, useRef } from 'react';
 import { GeographiesProps, ErrorBoundaryFallback } from '../types';
 import { useMapContext } from './MapProvider';
 import useGeographies from './useGeographies';
@@ -67,8 +67,13 @@ function GeographiesContent({
   const { geographies, outline, borders, isLoading, error, refetch } =
     geographyData;
 
+  const reportedError = useRef<Error | null>(null);
   useEffect(() => {
-    if (error && onGeographyError) {
+    if (!error) {
+      reportedError.current = null;
+    } else if (onGeographyError && reportedError.current !== error) {
+      // Report each failure once, even if its handler updates parent state.
+      reportedError.current = error;
       onGeographyError(error);
     }
   }, [error, onGeographyError]);

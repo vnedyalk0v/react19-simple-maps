@@ -161,7 +161,7 @@ async function fetchGeographyData(
     );
 
     // Make secure fetch request with redirect validation
-    const response = await fetchWithRedirectValidation(
+    const { response, urls } = await fetchWithRedirectValidation(
       url,
       createSecureFetchOptions(controller.signal, securityConfig),
       securityConfig,
@@ -192,9 +192,23 @@ async function fetchGeographyData(
       securityConfig.MAX_RESPONSE_SIZE,
     );
 
-    // Handle SRI validation if required
+    // Keep the original URL's policy, including custom integrity in strict mode.
     if (sriConfig) {
       await validateSRIFromArrayBuffer(arrayBuffer, url, sriConfig);
+    }
+
+    // Redirects must retain any source-specific hashes at every hop. The
+    // original policy already checks whether a hash is required, so an alias
+    // with a pinned hash can still redirect to a target without its own hash.
+    const redirectSRIConfig = {
+      ...sriEnforcementConfig,
+      enforceForAllSources: false,
+    };
+    for (const redirectUrl of urls.slice(1)) {
+      const redirectSRI = getSRIForUrl(redirectUrl, redirectSRIConfig);
+      if (redirectSRI) {
+        await validateSRIFromArrayBuffer(arrayBuffer, redirectUrl, redirectSRI);
+      }
     }
 
     // Parse JSON from the already-read ArrayBuffer
