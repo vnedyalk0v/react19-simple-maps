@@ -11,11 +11,21 @@ interface GeographyErrorBoundaryProps {
   children: ReactNode;
   fallback?: (error: Error, retry: () => void) => ReactNode;
   onError?: (error: Error) => void;
+  /** A caught error is cleared when this value changes (compared with Object.is). */
+  resetKey?: unknown;
+}
+
+interface MinimalErrorBoundaryProps {
+  children: ReactNode;
+  fallback: (error: Error) => ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  resetKey?: unknown;
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  resetKey: unknown;
 }
 
 function DefaultErrorFallback(_error: Error, retry: () => void) {
@@ -58,30 +68,41 @@ function DefaultErrorFallback(_error: Error, retry: () => void) {
 // Minimal class component for error boundary - React 19 still requires class components for error boundaries
 // This is the smallest possible implementation to satisfy error boundary requirements
 class MinimalErrorBoundary extends Component<
-  {
-    children: ReactNode;
-    fallback: (error: Error) => ReactNode;
-    onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  },
+  MinimalErrorBoundaryProps,
   ErrorBoundaryState
 > {
-  constructor(props: {
-    children: ReactNode;
-    fallback: (error: Error) => ReactNode;
-    onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  }) {
+  constructor(props: MinimalErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, resetKey: props.resetKey };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+  static getDerivedStateFromError(
+    error: unknown,
+  ): Pick<ErrorBoundaryState, 'hasError' | 'error'> {
+    let normalizedError: Error;
+    try {
+      normalizedError =
+        error instanceof Error ? error : new Error(String(error));
+    } catch {
+      normalizedError = new Error('Unknown geography rendering error');
+    }
+    return { hasError: true, error: normalizedError };
   }
 
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  // Clear a caught error when the reset key changes, without remounting
+  // healthy children.
+  static getDerivedStateFromProps(
+    props: MinimalErrorBoundaryProps,
+    state: ErrorBoundaryState,
+  ): Partial<ErrorBoundaryState> | null {
+    if (Object.is(props.resetKey, state.resetKey)) return null;
+    return { hasError: false, error: null, resetKey: props.resetKey };
+  }
+
+  override componentDidCatch(_error: unknown, errorInfo: ErrorInfo) {
     // React 19 compliance: Use improved error reporting
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
+    if (this.props.onError && this.state.error) {
+      this.props.onError(this.state.error, errorInfo);
     }
   }
 
@@ -99,6 +120,7 @@ export function GeographyErrorBoundary({
   children,
   fallback = DefaultErrorFallback,
   onError,
+  resetKey,
 }: GeographyErrorBoundaryProps) {
   const [errorBoundaryKey, setErrorBoundaryKey] = useState(0);
 
@@ -108,7 +130,10 @@ export function GeographyErrorBoundary({
         onError(error);
       }
       // React 19 compliance: Enhanced error logging for development
-      if (process.env.NODE_ENV !== 'production') {
+      if (
+        typeof process !== 'undefined' &&
+        process.env.NODE_ENV !== 'production'
+      ) {
         // eslint-disable-next-line no-console
         console.error(
           'GeographyErrorBoundary caught an error:',
@@ -135,6 +160,7 @@ export function GeographyErrorBoundary({
       key={errorBoundaryKey}
       fallback={errorFallback}
       onError={handleError}
+      resetKey={resetKey}
     >
       {children}
     </MinimalErrorBoundary>

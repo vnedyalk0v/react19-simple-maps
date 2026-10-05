@@ -18,9 +18,23 @@ type MeshGeometry = MultiLineString | LineString;
  * @returns True if input is a string
  */
 export function isString(
-  geo: string | Topology | FeatureCollection | Feature<Geometry>[],
+  geo:
+    | string
+    | Topology
+    | FeatureCollection<Geometry | null>
+    | Feature<Geometry>[],
 ): geo is string {
   return typeof geo === 'string';
+}
+
+function removeNullCollectionGeometries(geometry: Geometry): Geometry {
+  if (geometry.type !== 'GeometryCollection') return geometry;
+  return {
+    ...geometry,
+    geometries: geometry.geometries
+      .filter((child) => child !== null)
+      .map(removeNullCollectionGeometries),
+  };
 }
 
 /**
@@ -49,9 +63,17 @@ function extractFeaturesFromTopology(
     return [];
   }
 
-  const featureCollection = feature(topology, geometryObject);
-  const features =
-    'features' in featureCollection ? featureCollection.features || [] : [];
+  // A single-geometry object yields one Feature instead of a FeatureCollection
+  const result = feature(topology, geometryObject);
+  const extracted = 'features' in result ? result.features || [] : [result];
+  // Null TopoJSON objects cannot satisfy the public Feature<Geometry> type.
+  const features = extracted
+    .filter((item) => item.geometry !== null)
+    .map((item) =>
+      item.geometry.type === 'GeometryCollection'
+        ? { ...item, geometry: removeNullCollectionGeometries(item.geometry) }
+        : item,
+    );
   return parseGeographies ? parseGeographies(features) : features;
 }
 
@@ -62,10 +84,12 @@ function extractFeaturesFromTopology(
  * @returns Array of features
  */
 function extractFeaturesFromCollection(
-  featureCollection: FeatureCollection,
+  featureCollection: FeatureCollection<Geometry | null>,
   parseGeographies?: (geographies: Feature<Geometry>[]) => Feature<Geometry>[],
 ): Feature<Geometry>[] {
-  const features = featureCollection.features || [];
+  const features = (featureCollection.features || []).filter(
+    (item): item is Feature<Geometry> => item.geometry !== null,
+  );
   return parseGeographies ? parseGeographies(features) : features;
 }
 
@@ -76,7 +100,8 @@ function extractFeaturesFromCollection(
  * @returns Array of features
  */
 export function getFeatures(
-  geographies: Topology | FeatureCollection | Feature<Geometry>[],
+  geographies:
+    Topology | FeatureCollection<Geometry | null> | Feature<Geometry>[],
   parseGeographies?: (geographies: Feature<Geometry>[]) => Feature<Geometry>[],
 ): Feature<Geometry>[] {
   // Handle array of features
@@ -148,7 +173,8 @@ function extractMeshFromTopology(topology: Topology): {
  * @returns Mesh data or null
  */
 export function getMesh(
-  geographies: Topology | FeatureCollection | Feature<Geometry>[],
+  geographies:
+    Topology | FeatureCollection<Geometry | null> | Feature<Geometry>[],
 ): { outline: MeshGeometry | null; borders: MeshGeometry | null } | null {
   // Only Topology supports mesh generation
   if (
@@ -312,8 +338,10 @@ export function prepareFeatures(
  * Creates a connector path between two coordinates
  * @param start - Starting coordinates [longitude, latitude]
  * @param end - Ending coordinates [longitude, latitude]
- * @param curve - D3 curve function for path interpolation
- * @returns SVG path string
+ * @param curve - Line generator factory such as d3-shape's `line` (not a curve
+ *   like `curveLinear`); it is called with no arguments and must return a
+ *   generator with `x()`/`y()` accessors
+ * @returns SVG path string, or an empty string if `curve` is not usable
  */
 export function createConnectorPath(
   start: [number, number],

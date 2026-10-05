@@ -10,7 +10,7 @@ function Sphere({
   className = '',
   ref,
   ...restProps
-}: SphereProps & { ref?: Ref<SVGPathElement> }) {
+}: SphereProps & { ref?: Ref<SVGPathElement> | undefined }) {
   const { path } = useMapContext();
   const spherePath = useMemo(() => path({ type: 'Sphere' }), [path]);
 

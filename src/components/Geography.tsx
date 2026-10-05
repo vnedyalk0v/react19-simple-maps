@@ -1,4 +1,4 @@
-import { useState, memo, Ref, useMemo, useCallback } from 'react';
+import { useState, memo, Ref, useMemo, useCallback, useRef } from 'react';
 import { GeographyProps, PreparedFeature, GeographyEventData } from '../types';
 import {
   getGeographyCentroid,
@@ -21,8 +21,8 @@ const GEOGRAPHY_KNOWN_PROP_KEYS = new Set([
 ]);
 
 function areGeographyPropsEqual(
-  prev: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
-  next: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
+  prev: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> | undefined }>,
+  next: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> | undefined }>,
 ): boolean {
   if (prev.geography !== next.geography) return false;
   if (prev.style !== next.style) return false;
@@ -46,6 +46,25 @@ function areGeographyPropsEqual(
   return true;
 }
 
+function dispatchKeyboardClick(event: React.KeyboardEvent<SVGPathElement>) {
+  const { currentTarget, ctrlKey, shiftKey, altKey, metaKey } = event;
+  const view = currentTarget.ownerDocument.defaultView;
+  const ClickEvent = view?.MouseEvent ?? MouseEvent;
+  const click = new ClickEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    ctrlKey,
+    shiftKey,
+    altKey,
+    metaKey,
+  });
+  Object.defineProperty(click, 'view', {
+    value: view,
+  });
+  currentTarget.dispatchEvent(click);
+}
+
 function Geography({
   geography,
   onClick,
@@ -55,14 +74,17 @@ function Geography({
   onMouseUp,
   onFocus,
   onBlur,
+  onKeyDown,
+  onKeyUp,
   style = {},
   className = '',
   ref,
   ...restProps
-}: GeographyProps & { ref?: Ref<SVGPathElement> }) {
+}: GeographyProps & { ref?: Ref<SVGPathElement> | undefined }) {
   const [isPressed, setPressed] = useState(false);
   const [isHovered, setHovered] = useState(false);
   const [isFocused, setFocused] = useState(false);
+  const spacePressed = useRef(false);
 
   // Memoize geographic data calculation for performance
   const geographyEventData = useMemo((): GeographyEventData => {
@@ -110,6 +132,7 @@ function Geography({
   const handleBlur = useCallback(
     (evt: React.FocusEvent<SVGPathElement>) => {
       setFocused(false);
+      spacePressed.current = false;
       if (isPressed) setPressed(false);
       if (onBlur) onBlur(evt, geographyEventData);
     },
@@ -130,6 +153,37 @@ function Geography({
       if (onMouseUp) onMouseUp(evt, geographyEventData);
     },
     [onMouseUp, geographyEventData],
+  );
+
+  // Keyboard activation for clickable geographies, matching native buttons:
+  // Enter activates on press, Space on release (ignoring auto-repeat).
+  const handleKeyDown = useCallback(
+    (evt: React.KeyboardEvent<SVGPathElement>) => {
+      onKeyDown?.(evt);
+      if (!onClick || evt.defaultPrevented) return;
+      if (evt.key === 'Enter') {
+        evt.preventDefault();
+        dispatchKeyboardClick(evt);
+      } else if (evt.key === ' ') {
+        evt.preventDefault();
+        spacePressed.current = true;
+        setPressed(true);
+      }
+    },
+    [onKeyDown, onClick],
+  );
+
+  const handleKeyUp = useCallback(
+    (evt: React.KeyboardEvent<SVGPathElement>) => {
+      onKeyUp?.(evt);
+      if (evt.key !== ' ' || !spacePressed.current) return;
+      spacePressed.current = false;
+      setPressed(false);
+      if (!onClick || evt.defaultPrevented) return;
+      evt.preventDefault();
+      dispatchKeyboardClick(evt);
+    },
+    [onKeyUp, onClick],
   );
 
   const currentState = useMemo(() => {
@@ -153,6 +207,7 @@ function Geography({
     <path
       ref={ref}
       tabIndex={0}
+      role={onClick ? 'button' : undefined}
       className={`rsm-geography ${className}`}
       d={svgPath}
       onClick={handleClick}
@@ -162,6 +217,8 @@ function Geography({
       onBlur={handleBlur}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
       style={currentStyle}
       {...restProps}
     />

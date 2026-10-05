@@ -1,4 +1,4 @@
-import { Ref, memo, useEffect } from 'react';
+import { Ref, memo, useEffect, useRef } from 'react';
 import { GeographiesProps, ErrorBoundaryFallback } from '../types';
 import { useMapContext } from './MapProvider';
 import useGeographies from './useGeographies';
@@ -22,8 +22,12 @@ const GEOGRAPHIES_KNOWN_PROP_KEYS = new Set([
 ]);
 
 function areGeographiesPropsEqual(
-  prev: Readonly<GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }>,
-  next: Readonly<GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }>,
+  prev: Readonly<
+    GeographiesProps<boolean> & { ref?: Ref<SVGGElement> | undefined }
+  >,
+  next: Readonly<
+    GeographiesProps<boolean> & { ref?: Ref<SVGGElement> | undefined }
+  >,
 ): boolean {
   if (prev.geography !== next.geography) return false;
   if (prev.className !== next.className) return false;
@@ -67,8 +71,13 @@ function GeographiesContent({
   const { geographies, outline, borders, isLoading, error, refetch } =
     geographyData;
 
+  const reportedError = useRef<Error | null>(null);
   useEffect(() => {
-    if (error && onGeographyError) {
+    if (!error) {
+      reportedError.current = null;
+    } else if (onGeographyError && reportedError.current !== error) {
+      // Report each failure once, even if its handler updates parent state.
+      reportedError.current = error;
       onGeographyError(error);
     }
   }, [error, onGeographyError]);
@@ -107,7 +116,7 @@ function Geographies({
   onGeographyError,
   fallback,
   ...restProps
-}: GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }) {
+}: GeographiesProps<boolean> & { ref?: Ref<SVGGElement> | undefined }) {
   const content = (
     <GeographiesContent
       geography={geography}
@@ -122,7 +131,12 @@ function Geographies({
   return (
     <g ref={ref} className={`rsm-geographies ${className}`} {...restProps}>
       {errorBoundary ? (
+        // A new URL clears a caught error. Inline objects are not used as the
+        // reset signal: a parent that recreates its data on every render
+        // would otherwise reset, re-throw and loop. Give inline data a
+        // `key` to reset it explicitly.
         <GeographyErrorBoundary
+          resetKey={typeof geography === 'string' ? geography : undefined}
           {...(onGeographyError && { onError: onGeographyError })}
           {...(fallback && { fallback })}
         >

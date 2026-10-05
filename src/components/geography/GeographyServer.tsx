@@ -27,7 +27,9 @@ type ParseGeographiesFunction = (
 
 // Cache geography fetching for Server Components with security measures
 const preloadGeography = cache(
-  async (geography: string): Promise<Topology | FeatureCollection> => {
+  async (
+    geography: string,
+  ): Promise<Topology | FeatureCollection<Geometry | null>> => {
     // Reuse the secure fetchGeographiesCache implementation
     // Import the secure function from utils
     const { fetchGeographiesCache } = await import('../../utils');
@@ -44,7 +46,7 @@ interface GeographyServerProps {
 }
 
 interface GeographyProcessorProps {
-  geographyData: Topology | FeatureCollection;
+  geographyData: Topology | FeatureCollection<Geometry | null>;
   parseGeographies?: ParseGeographiesFunction;
   children: (data: GeographyData) => ReactNode;
 }

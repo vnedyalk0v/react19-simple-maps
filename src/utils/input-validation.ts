@@ -322,23 +322,27 @@ export function validateProjectionConfig(input: unknown): ProjectionConfig {
       const rotateArray = validateArray(obj.rotate, (item) =>
         validateNumber(item, -360, 360),
       );
+      // d3 accepts [lambda, phi] and defaults gamma to 0
+      const [lambda, phi, gamma = 0] = rotateArray;
       if (
-        rotateArray.length === 3 &&
-        rotateArray[0] !== undefined &&
-        rotateArray[1] !== undefined &&
-        rotateArray[2] !== undefined
+        (rotateArray.length === 2 || rotateArray.length === 3) &&
+        lambda !== undefined &&
+        phi !== undefined
       ) {
-        config.rotate = createRotationAngles(
-          rotateArray[0],
-          rotateArray[1],
-          rotateArray[2],
-        );
+        config.rotate = createRotationAngles(lambda, phi, gamma);
       }
     }
   }
 
   if (Object.hasOwn(obj, 'scale') && obj.scale !== undefined) {
-    config.scale = validateNumber(obj.scale, 0.1, 10000);
+    const scale = validateNumber(obj.scale);
+    if (scale <= 0) {
+      throw createGeographyFetchError(
+        'VALIDATION_ERROR',
+        `Projection scale must be greater than 0, got ${scale}`,
+      );
+    }
+    config.scale = scale;
   }
 
   if (Object.hasOwn(obj, 'parallels') && obj.parallels !== undefined) {

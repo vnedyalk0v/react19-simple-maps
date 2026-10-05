@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { FeatureCollection } from 'geojson';
+import { FeatureCollection, Geometry } from 'geojson';
 import { Topology } from 'topojson-specification';
 import { useMapContext } from './MapProvider';
 import { UseGeographiesProps, GeographyData, GeographyError } from '../types';
@@ -30,11 +30,13 @@ export default function useGeographies({
   parseGeographies,
 }: UseGeographiesProps): GeographyData {
   const { path } = useMapContext();
-  const [loadedData, setLoadedData] = useState<
-    Topology | FeatureCollection | null
-  >(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<GeographyError | Error | null>(null);
+  // One result per settled request, tagged with its URL and attempt.
+  const [result, setResult] = useState<{
+    url: string;
+    attempt: number;
+    data?: Topology | FeatureCollection<Geometry | null>;
+    error?: GeographyError | Error;
+  } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
   const refetch = useCallback(() => {
@@ -42,49 +44,58 @@ export default function useGeographies({
   }, []);
 
   useEffect(() => {
+    // A new request (or inline data) supersedes any earlier result, including
+    // one for this same URL, so it can never look current again.
+    setResult(null);
+    if (!isString(geography)) return;
+
     let ignore = false;
 
-    if (isString(geography)) {
-      setIsLoading(true);
-      setError(null);
+    devTools.debugGeographyLoading(geography, 'start');
 
-      devTools.debugGeographyLoading(geography, 'start');
+    preloadGeography(geography);
 
-      preloadGeography(geography);
-
-      fetchGeographiesCache(geography)
-        .then((data) => {
-          if (!ignore) {
-            devTools.debugGeographyLoading(geography, 'success', data);
-            setLoadedData(data);
-            setIsLoading(false);
-          }
-        })
-        .catch((err) => {
-          if (!ignore) {
-            devTools.debugGeographyLoading(geography, 'error', err);
-            setError(err instanceof Error ? err : new Error(String(err)));
-            setIsLoading(false);
-          }
+    fetchGeographiesCache(geography).then(
+      (data) => {
+        if (ignore) return;
+        devTools.debugGeographyLoading(geography, 'success', data);
+        setResult({ url: geography, attempt: retryCount, data });
+      },
+      (err: unknown) => {
+        if (ignore) return;
+        devTools.debugGeographyLoading(geography, 'error', err);
+        setResult({
+          url: geography,
+          attempt: retryCount,
+          error: err instanceof Error ? err : new Error(String(err)),
         });
-    } else {
-      setLoadedData(geography);
-      setIsLoading(false);
-      setError(null);
-    }
+      },
+    );
 
     return () => {
       ignore = true;
     };
   }, [geography, retryCount]);
 
+  // Derived during render: inline data is available on the server and first
+  // client render, and a URL is loading until a result for that exact URL
+  // and attempt arrives.
+  const isUrl = isString(geography);
+  const current =
+    isUrl && result?.url === geography && result.attempt === retryCount
+      ? result
+      : null;
+  const data = isUrl ? (current?.data ?? null) : geography;
+  const loading = isUrl && !current;
+  const fetchError = current?.error ?? null;
+
   // Granular memoization for expensive operations
 
   // Memoize feature extraction with aggressive caching
   const rawFeatures = useMemo(() => {
-    if (isLoading || !loadedData) return [];
+    if (loading || !data) return [];
 
-    const cacheKey = generateFeaturesCacheKey(loadedData, parseGeographies);
+    const cacheKey = generateFeaturesCacheKey(data, parseGeographies);
     const cached = getCachedFeatures(cacheKey);
 
     if (cached) {
@@ -92,18 +103,18 @@ export default function useGeographies({
     }
 
     // Extract features
-    const features = getFeatures(loadedData, parseGeographies);
+    const features = getFeatures(data, parseGeographies);
 
     cacheFeatures(cacheKey, features);
 
     return features;
-  }, [loadedData, isLoading, parseGeographies]);
+  }, [data, loading, parseGeographies]);
 
   // Memoize mesh extraction separately
   const rawMesh = useMemo(() => {
-    if (isLoading || !loadedData) return null;
-    return getMesh(loadedData);
-  }, [loadedData, isLoading]);
+    if (loading || !data) return null;
+    return getMesh(data);
+  }, [data, loading]);
 
   // Memoize prepared features with aggressive caching (path generation is expensive)
   const preparedGeographies = useMemo(() => {
@@ -128,7 +139,7 @@ export default function useGeographies({
   const preparedMeshData = useMemo(() => {
     if (!rawMesh) return { outline: '', borders: '' };
 
-    const cacheKey = generateMeshCacheKey(loadedData, path);
+    const cacheKey = generateMeshCacheKey(data, path);
     const cached = getCachedMeshData(cacheKey);
 
     if (cached) {
@@ -148,16 +159,16 @@ export default function useGeographies({
 
     cacheMeshData(cacheKey, result);
     return result;
-  }, [rawMesh, path, loadedData]);
+  }, [rawMesh, path, data]);
 
   return useMemo(() => {
     return {
       geographies: preparedGeographies,
       outline: preparedMeshData.outline,
       borders: preparedMeshData.borders,
-      isLoading,
-      error,
+      isLoading: loading,
+      error: fetchError,
       refetch,
     };
-  }, [preparedGeographies, preparedMeshData, isLoading, error, refetch]);
+  }, [preparedGeographies, preparedMeshData, loading, fetchError, refetch]);
 }

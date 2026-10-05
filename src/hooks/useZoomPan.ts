@@ -1,4 +1,4 @@
-import { useRef, useDeferredValue } from 'react';
+import { useRef, useState, useDeferredValue } from 'react';
 import { useMapContext } from '../components/MapProvider';
 import {
   Position,
@@ -56,11 +56,32 @@ export function useZoomPanBehavior(
 ): UseZoomPanReturn {
   const { width, height, projection } = useMapContext();
 
-  // Defer expensive calculations for smooth rendering with initialValue for better UX
-  const deferredCenter = useDeferredValue(center, createCoordinates(0, 0));
-  const deferredZoom = useDeferredValue(zoom, 1);
+  const deferredCenter = useDeferredValue(center);
+  const deferredZoom = useDeferredValue(zoom);
+  const projectedCenter = projection(center);
+  const initialPosition = projectedCenter?.every(Number.isFinite)
+    ? {
+        x: width / 2 - projectedCenter[0] * zoom,
+        y: height / 2 - projectedCenter[1] * zoom,
+        k: zoom,
+      }
+    : { x: 0, y: 0, k: 1 };
 
-  const mapRef = useRef<SVGGElement>(null);
+  const [, setTargetElement] = useState<SVGGElement | null>(null);
+  const [mapRef] = useState<React.RefObject<SVGGElement | null>>(() => {
+    let current: SVGGElement | null = null;
+    return {
+      get current() {
+        return current;
+      },
+      set current(element) {
+        if (current === element) return;
+        current = element;
+        // A descendant can replace the target without rerendering this hook.
+        setTargetElement(element);
+      },
+    };
+  });
   const bypassEvents = useRef(false);
 
   // Use the focused hooks with optimistic updates
@@ -71,7 +92,7 @@ export function useZoomPanBehavior(
     isPending,
     startTransition,
     transformString,
-  } = useDeferredPosition();
+  } = useDeferredPosition({ initialPosition });
 
   const zoomBehaviorProps = {
     mapRef,
