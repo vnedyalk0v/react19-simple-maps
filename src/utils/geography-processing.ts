@@ -83,7 +83,9 @@ function extractFeaturesFromCollection(
   featureCollection: FeatureCollection,
   parseGeographies?: (geographies: Feature<Geometry>[]) => Feature<Geometry>[],
 ): Feature<Geometry>[] {
-  const features = featureCollection.features || [];
+  const features = (featureCollection.features || []).filter(
+    (item) => item.geometry !== null,
+  );
   return parseGeographies ? parseGeographies(features) : features;
 }
 

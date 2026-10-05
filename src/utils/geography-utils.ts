@@ -176,38 +176,26 @@ function getGeographyCoordinatesInternal(
       break;
 
     case 'MultiLineString':
-      if (
-        geometry.coordinates &&
-        Array.isArray(geometry.coordinates) &&
-        geometry.coordinates.length > 0 &&
-        Array.isArray(geometry.coordinates[0]) &&
-        geometry.coordinates[0].length > 0 &&
-        Array.isArray(geometry.coordinates[0][0]) &&
-        geometry.coordinates[0][0].length >= 2 &&
-        typeof geometry.coordinates[0][0][0] === 'number' &&
-        typeof geometry.coordinates[0][0][1] === 'number'
-      ) {
-        const [lon, lat] = geometry.coordinates[0][0];
-        return createCoordinates(lon, lat);
+      if (Array.isArray(geometry.coordinates)) {
+        for (const coordinates of geometry.coordinates) {
+          if (Array.isArray(coordinates) && coordinates.length === 0) continue;
+          return getGeographyCoordinatesInternal(
+            { ...geography, geometry: { type: 'LineString', coordinates } },
+            depth,
+          );
+        }
       }
       break;
 
     case 'MultiPolygon':
-      if (
-        geometry.coordinates &&
-        Array.isArray(geometry.coordinates) &&
-        geometry.coordinates.length > 0 &&
-        Array.isArray(geometry.coordinates[0]) &&
-        geometry.coordinates[0].length > 0 &&
-        Array.isArray(geometry.coordinates[0][0]) &&
-        geometry.coordinates[0][0].length > 0 &&
-        Array.isArray(geometry.coordinates[0][0][0]) &&
-        geometry.coordinates[0][0][0].length >= 2 &&
-        typeof geometry.coordinates[0][0][0][0] === 'number' &&
-        typeof geometry.coordinates[0][0][0][1] === 'number'
-      ) {
-        const [lon, lat] = geometry.coordinates[0][0][0];
-        return createCoordinates(lon, lat);
+      if (Array.isArray(geometry.coordinates)) {
+        for (const coordinates of geometry.coordinates) {
+          if (Array.isArray(coordinates) && coordinates.length === 0) continue;
+          return getGeographyCoordinatesInternal(
+            { ...geography, geometry: { type: 'Polygon', coordinates } },
+            depth,
+          );
+        }
       }
       break;
 
