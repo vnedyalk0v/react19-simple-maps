@@ -1,5 +1,88 @@
 # Changelog
 
+## 2.0.12
+
+### Patch Changes
+
+- Fix additional map interaction, metadata, coordinate extraction, and integrity-checking defects.
+  - Inline `filterZoomEvent` callbacks no longer interrupt controlled drag and wheel gestures.
+  - Overlapping accepted mouse-button drags restore the page's original text-selection behavior when they finish or unmount.
+  - Disabling Open Graph or Twitter cards removes every tag in the corresponding group.
+  - `getGeographyCoordinates` searches later GeometryCollection members when earlier members are empty or invalid.
+  - Custom SRI configuration recognizes equivalent URL keys and captures independent integrity entries, so later caller mutations cannot change an active policy or request.
+  - SHA-256 and SHA-512 integrity checks use correct base64 padding in runtimes without `btoa`.
+  - `generateSRIHash` releases unread response bodies when an HTTP request fails.
+- Fix several rendering, interaction, packaging, and geography-loading defects found during end-to-end validation.
+  - `MapWithMetadata` no longer crashes when JSON-LD is enabled (the default), forwards `ref` to the map's `<svg>`, and no longer preloads a nonexistent font file.
+  - `MapWithMetadata` accepts a new optional `presetArgs` prop, typed for the selected preset, so `countryMap`, `cityMap`, and `dataVisualization` describe the given subject (for example `preset="countryMap" presetArgs={['France']}`). Without `presetArgs`, these presets no longer emit placeholder JSON-LD and text about "Default".
+  - Inline TopoJSON or GeoJSON passed to `Geographies` now renders during server rendering and on the first client render instead of appearing only after hydration.
+  - `Geographies` no longer briefly renders the previous URL's features or re-reports a previous URL's error after `geography` changes, and a URL reports `isLoading` from its first render.
+  - With `errorBoundary`, a caught error now clears when the `geography` URL changes. `GeographyErrorBoundary` accepts a new optional `resetKey` prop for the same behavior.
+  - Geography loading no longer logs to the console unless debug mode is enabled.
+  - Controlled `ZoomableGroup` maps no longer freeze or skip `onMoveEnd` when `center` or `zoom` changes during a drag or wheel gesture, and `onMoveStart`/`onMoveEnd` always use the latest callbacks.
+  - `Annotation` draws its connector line again, using the `curve` prop.
+  - `projectionConfig.scale` accepts any positive value, so city- and region-level maps are no longer rejected above 10000. `projectionConfig.rotate` accepts the two-element `[lambda, phi]` form, and `createRotationAngles` and the `RotationAngles` type are now exported.
+  - Projection names that are not d3-geo projections (such as `geoArea`) now throw a `PROJECTION_ERROR` instead of an unrelated TypeError.
+  - `Line` no longer requires `from` and `to` when `coordinates` is provided; it accepts either `coordinates` or both `from` and `to`.
+  - `getGeographyCentroid`, `getGeographyBounds`, and `getGeographyCoordinates` return `null` instead of throwing or returning out-of-range values for empty or invalid geometries, so `Geography` no longer crashes on them.
+  - TopoJSON whose first object is a single geometry (not a GeometryCollection) now renders its feature instead of nothing.
+  - `Geography` elements with `onClick` expose `role="button"`, activate on Enter, and activate on Space when the key is released, like native buttons.
+  - `ComposableMap` no longer forwards `onGeographyError` and `fallback` to the `<svg>` element; both props are deprecated there and have no effect.
+  - The `debug` prop and `REACT_SIMPLE_MAPS_DEBUG` produce console output in the published build again, apply per map, and no longer crash when no global `process` exists.
+  - The package output is now split per module so bundlers can tree-shake unused components and utilities, and source maps include their original sources.
+  - Type definitions now resolve without extra installs: the `@types` packages used by the public types are dependencies, and the `Geographies` render prop exposes `PreparedFeature` items with `rsmKey`.
+  - `fetchGeographiesCache` now shares concurrent requests for the same URL, so preloading and rendering a URL downloads it once. Requests are not reused once settled or after the security or SRI configuration changes, so `refetch()` and tightened policies always take effect.
+  - Hostnames that merely start with private-range digits (for example `10.cdn.example.com`) are no longer rejected, while `localhost.` and `*.localhost` are now blocked in production.
+  - Known-source integrity checks also apply to equivalent URL variants (query strings, percent-encoded `@`, a trailing dot in the hostname), and custom SRI entries with `enforceIntegrity: false` are no longer enforced.
+  - `configureGeographySecurity` now rejects non-integer, non-positive, or out-of-range `TIMEOUT_MS` and `MAX_RESPONSE_SIZE` values with a `CONFIGURATION_ERROR`.
+  - The request timeout now also covers server-side hostname resolution, including on redirects and in `generateSRIHash`. Failed responses release their connection, and data validation errors keep their `VALIDATION_ERROR` type and include the requested URL.
+- Fix zoom target updates, malformed polygon loading, and SVG ref prop compatibility.
+  - Initialize zoom and pan when a descendant mounts or replaces the hook target, and cancel active gestures when it removes the target.
+  - Reject downloaded polygons with empty or single-position rings during validation so they report loading errors instead of crashing map rendering.
+  - Allow exported component props to be spread into their components with `exactOptionalPropertyTypes` enabled, including optional SVG refs.
+- Keep geography error fallbacks and retry controls working when children throw a value other than an Error. Error callbacks now consistently receive an Error, while existing Error objects retain their identity.
+- Fix geography event handling, TopoJSON parser inputs, and custom integrity URL matching.
+  - Geography keyboard clicks preserve modifier keys and the originating window, and propagate through shadow DOM boundaries.
+  - Canceled taps no longer trigger double-tap zoom, and rejected touches cannot end an active wheel gesture.
+  - Inline error callbacks can update parent state without repeatedly reporting the same failed request; subsequent failures still notify.
+  - TopoJSON conversion removes null geometries before passing features to typed parsers.
+  - Custom SRI policies keep encoded reserved characters distinct while recognizing equivalent percent escapes in paths and queries, preventing integrity checks from being skipped.
+- Fix keyboard navigation cancellation, gesture cleanup, redirect integrity checks, and TypeScript 5.0 compatibility.
+  - `Geography` keyboard activation respects `onClick` handlers that cancel hyperlink navigation.
+  - Disposing or reconfiguring a zoomable map releases active gestures without firing stale movement callbacks.
+  - Geography redirects preserve the original integrity requirement and enforce hashes configured for redirected sources.
+  - `MapWithMetadata` remains usable in JSX with TypeScript 5.0.
+- Fix map target lifecycle, touch ownership, and debug configuration handling.
+  - Initialize gestures and the requested viewport when a hook target mounts late or is replaced, and cancel gestures when it is removed.
+  - Keep outside and rejected touches from influencing map gestures.
+  - Stop pending gesture work when a move callback synchronously unmounts or reconfigures the map.
+  - Accept valid projection configurations without a constructor when debug logging is enabled.
+- Handle missing geometries and empty multipart members without losing usable geography data.
+  - Exclude GeoJSON features with null geometry before calling `parseGeographies`, while preserving the original downloaded data.
+  - Make `getGeographyCoordinates` find the first available coordinate after empty members of a MultiLineString or MultiPolygon.
+- Handle coordinates their projection cannot represent without emitting invalid SVG transforms.
+  - Hide unprojectable markers and annotations.
+  - Keep initial zoom groups at their default transform and preserve the current position when a requested center cannot be projected.
+- Reset marker interaction styles after leaving a projection and remove inaccurate fixed geographic metadata.
+  - Markers that reappear after being outside a projection start without stale focus, hover, or pressed styles.
+  - Map metadata no longer assigns every map a world location and coordinates of zero latitude and longitude.
+- Handle nested geography coordinates and accurately type nullable fetched geometries.
+  - Coordinate extraction finds the first valid coordinate beyond ten nested GeometryCollections while safely handling cycles.
+  - Raw geography fetch results correctly expose nullable GeoJSON geometries. TypeScript consumers should check for null or pass fetched data through `getFeatures`, which continues to return only features with geometry.
+- Reject malformed downloaded geography data during loading so invalid features, coordinates, and topology arcs produce a validation error instead of failing during map rendering.
+- Prevent zoom and pan callbacks from receiving non-finite coordinates when a custom projection cannot invert the current map center. Valid movement callbacks resume when the center returns to the projection's domain.
+- Fix geography validation, initial server rendering, and custom integrity policies.
+  - Public data guards reject malformed GeoJSON and TopoJSON before consumers try to render them, while handling cyclic and deeply nested collections safely.
+  - `isGeoProjection` accepts projections without an inverse and rejects functions missing projection methods.
+  - `ZoomableGroup` renders its requested center and zoom on the server and initial client render.
+  - Geography preload hints are emitted for each server render instead of only the first request.
+  - Custom SRI entries keep separate integrity policies for paths with and without a trailing slash.
+- Reject malformed GeoJSON lines and polygon rings before processing fetched geography data.
+  - Require at least two positions in nonempty lines and four positions with matching endpoints in polygon rings, while preserving supported empty geometries.
+- Reject invalid TopoJSON geometry metadata before it reaches feature parsers.
+  - Geography validation and secure fetching now reject non-object properties and identifiers other than strings or numbers, including in nested TopoJSON geometries.
+  - Optional properties, null properties, and valid identifiers remain supported.
+
 ## 2.0.11
 
 ### Patch Changes
