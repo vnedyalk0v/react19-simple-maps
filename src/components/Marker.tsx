@@ -15,7 +15,7 @@ function Marker({
   className = '',
   ref,
   ...restProps
-}: MarkerProps & { ref?: Ref<SVGGElement> }) {
+}: MarkerProps & { ref?: Ref<SVGGElement> | undefined }) {
   const { projection } = useMapContext();
   const [isPressed, setPressed] = useState(false);
   const [isHovered, setHovered] = useState(false);

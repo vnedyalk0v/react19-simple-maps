@@ -22,8 +22,12 @@ const GEOGRAPHIES_KNOWN_PROP_KEYS = new Set([
 ]);
 
 function areGeographiesPropsEqual(
-  prev: Readonly<GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }>,
-  next: Readonly<GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }>,
+  prev: Readonly<
+    GeographiesProps<boolean> & { ref?: Ref<SVGGElement> | undefined }
+  >,
+  next: Readonly<
+    GeographiesProps<boolean> & { ref?: Ref<SVGGElement> | undefined }
+  >,
 ): boolean {
   if (prev.geography !== next.geography) return false;
   if (prev.className !== next.className) return false;
@@ -112,7 +116,7 @@ function Geographies({
   onGeographyError,
   fallback,
   ...restProps
-}: GeographiesProps<boolean> & { ref?: Ref<SVGGElement> }) {
+}: GeographiesProps<boolean> & { ref?: Ref<SVGGElement> | undefined }) {
   const content = (
     <GeographiesContent
       geography={geography}

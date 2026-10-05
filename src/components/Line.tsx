@@ -21,7 +21,7 @@ function Line({
   className = '',
   ref,
   ...restProps
-}: LineComponentProps & { ref?: Ref<SVGPathElement> }) {
+}: LineComponentProps & { ref?: Ref<SVGPathElement> | undefined }) {
   const { path } = useMapContext();
 
   const lineData = {

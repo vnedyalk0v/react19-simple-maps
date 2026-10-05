@@ -12,7 +12,7 @@ function Annotation({
   className = '',
   ref,
   ...restProps
-}: AnnotationProps & { ref?: Ref<SVGGElement> }) {
+}: AnnotationProps & { ref?: Ref<SVGGElement> | undefined }) {
   const { projection } = useMapContext();
   const projectedCoords = projection(subject);
 

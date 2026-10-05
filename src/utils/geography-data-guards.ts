@@ -105,6 +105,15 @@ function isLeafGeometry(
   }
 
   if (topologyArcs === undefined) {
+    if (value.type === 'Polygon' || value.type === 'MultiPolygon') {
+      // D3 drops the closing coordinate, so a ring needs a position left.
+      return isNestedArray(
+        value.coordinates,
+        depth - 1,
+        (ring) =>
+          Array.isArray(ring) && ring.length > 1 && isArrayOf(ring, isPosition),
+      );
+    }
     return isNestedArray(value.coordinates, depth, isPosition);
   }
   return isNestedArray(

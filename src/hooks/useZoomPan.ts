@@ -1,4 +1,4 @@
-import { useRef, useDeferredValue } from 'react';
+import { useRef, useState, useDeferredValue } from 'react';
 import { useMapContext } from '../components/MapProvider';
 import {
   Position,
@@ -67,7 +67,21 @@ export function useZoomPanBehavior(
       }
     : { x: 0, y: 0, k: 1 };
 
-  const mapRef = useRef<SVGGElement>(null);
+  const [, setTargetElement] = useState<SVGGElement | null>(null);
+  const [mapRef] = useState<React.RefObject<SVGGElement | null>>(() => {
+    let current: SVGGElement | null = null;
+    return {
+      get current() {
+        return current;
+      },
+      set current(element) {
+        if (current === element) return;
+        current = element;
+        // A descendant can replace the target without rerendering this hook.
+        setTargetElement(element);
+      },
+    };
+  });
   const bypassEvents = useRef(false);
 
   // Use the focused hooks with optimistic updates

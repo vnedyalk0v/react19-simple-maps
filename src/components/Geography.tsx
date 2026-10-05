@@ -21,8 +21,8 @@ const GEOGRAPHY_KNOWN_PROP_KEYS = new Set([
 ]);
 
 function areGeographyPropsEqual(
-  prev: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
-  next: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> }>,
+  prev: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> | undefined }>,
+  next: Readonly<GeographyProps & { ref?: Ref<SVGPathElement> | undefined }>,
 ): boolean {
   if (prev.geography !== next.geography) return false;
   if (prev.style !== next.style) return false;
@@ -80,7 +80,7 @@ function Geography({
   className = '',
   ref,
   ...restProps
-}: GeographyProps & { ref?: Ref<SVGPathElement> }) {
+}: GeographyProps & { ref?: Ref<SVGPathElement> | undefined }) {
   const [isPressed, setPressed] = useState(false);
   const [isHovered, setHovered] = useState(false);
   const [isFocused, setFocused] = useState(false);
