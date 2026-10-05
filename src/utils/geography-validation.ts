@@ -1,5 +1,6 @@
 import { createGeographyFetchError } from './error-utils';
 import { validateURL } from './input-validation';
+import { isValidFetchedGeographyData } from './geography-data-guards';
 
 // Security configuration for geography fetching
 export interface GeographySecurityConfig {
@@ -627,6 +628,13 @@ export function validateGeographyData(data: unknown): void {
     throw createGeographyFetchError(
       'VALIDATION_ERROR',
       'Invalid feature collection data: expected a features array',
+    );
+  }
+
+  if (!isValidFetchedGeographyData(data)) {
+    throw createGeographyFetchError(
+      'VALIDATION_ERROR',
+      `Invalid geography data: malformed ${obj.type} geometry or coordinates`,
     );
   }
 }

@@ -116,7 +116,7 @@ export function useZoomBehavior({
       if (!onMove) return;
       const coords = getCoords(width, height, transform);
       const inverted = projection.invert?.(coords);
-      if (inverted) {
+      if (inverted?.every(Number.isFinite)) {
         onMove(
           {
             coordinates: createCoordinates(inverted[0], inverted[1]),
@@ -212,7 +212,7 @@ export function useZoomBehavior({
       if (!onZoomStart || bypassEvents.current) return;
       const coords = getCoords(width, height, d3Event.transform);
       const inverted = projection.invert?.(coords);
-      if (inverted) {
+      if (inverted?.every(Number.isFinite)) {
         try {
           onZoomStart(
             {
@@ -240,7 +240,7 @@ export function useZoomBehavior({
       d3Event = restoreSourceEvent(d3Event);
       const coords = getCoords(width, height, d3Event.transform);
       const inverted = projection.invert?.(coords);
-      if (inverted) {
+      if (inverted?.every(Number.isFinite)) {
         const [x, y] = inverted;
         const onZoomEnd = latest.current.onZoomEnd;
         if (!onZoomEnd) return;
