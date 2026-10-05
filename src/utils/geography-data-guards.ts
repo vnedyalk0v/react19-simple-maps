@@ -38,9 +38,14 @@ function isNestedArray(
     : isArrayOf(value, (item) => isNestedArray(item, depth - 1, predicate));
 }
 
-function hasValidProperties(value: Record<string, unknown>): boolean {
+function hasValidProperties(
+  value: Record<string, unknown>,
+  allowMissingProperties = false,
+): boolean {
   return (
-    (value.properties === null || isRecord(value.properties)) &&
+    ((allowMissingProperties && value.properties === undefined) ||
+      value.properties === null ||
+      isRecord(value.properties)) &&
     (value.id === undefined ||
       typeof value.id === 'string' ||
       typeof value.id === 'number')
@@ -64,6 +69,9 @@ function isGeometry(
       continue;
     }
     if (ancestors.has(geometry)) return false;
+    if (topologyArcs !== undefined && !hasValidProperties(geometry, true)) {
+      return false;
+    }
     if (geometry.type === 'GeometryCollection') {
       if (!Array.isArray(geometry.geometries)) return false;
       ancestors.add(geometry);
