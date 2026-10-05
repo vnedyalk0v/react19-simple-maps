@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
-import { FeatureCollection } from 'geojson';
+import { FeatureCollection, Geometry } from 'geojson';
 import { Topology } from 'topojson-specification';
 import { useMapContext } from './MapProvider';
 import { UseGeographiesProps, GeographyData, GeographyError } from '../types';
@@ -34,7 +34,7 @@ export default function useGeographies({
   const [result, setResult] = useState<{
     url: string;
     attempt: number;
-    data?: Topology | FeatureCollection;
+    data?: Topology | FeatureCollection<Geometry | null>;
     error?: GeographyError | Error;
   } | null>(null);
   const [retryCount, setRetryCount] = useState(0);

@@ -98,16 +98,9 @@ export function getGeographyBounds(
  * @param geography - GeoJSON feature
  * @returns First available coordinate or null
  */
-const MAX_GEOMETRY_COLLECTION_DEPTH = 10;
-
 function getGeographyCoordinatesInternal(
   geography: Feature<Geometry>,
-  depth: number,
 ): Coordinates | null {
-  if (depth > MAX_GEOMETRY_COLLECTION_DEPTH) {
-    return null;
-  }
-
   if (!geography?.geometry) {
     return null;
   }
@@ -179,10 +172,10 @@ function getGeographyCoordinatesInternal(
       if (Array.isArray(geometry.coordinates)) {
         for (const coordinates of geometry.coordinates) {
           if (Array.isArray(coordinates) && coordinates.length === 0) continue;
-          return getGeographyCoordinatesInternal(
-            { ...geography, geometry: { type: 'LineString', coordinates } },
-            depth,
-          );
+          return getGeographyCoordinatesInternal({
+            ...geography,
+            geometry: { type: 'LineString', coordinates },
+          });
         }
       }
       break;
@@ -191,22 +184,10 @@ function getGeographyCoordinatesInternal(
       if (Array.isArray(geometry.coordinates)) {
         for (const coordinates of geometry.coordinates) {
           if (Array.isArray(coordinates) && coordinates.length === 0) continue;
-          return getGeographyCoordinatesInternal(
-            { ...geography, geometry: { type: 'Polygon', coordinates } },
-            depth,
-          );
-        }
-      }
-      break;
-
-    case 'GeometryCollection':
-      if (Array.isArray(geometry.geometries)) {
-        for (const childGeometry of geometry.geometries) {
-          const coordinates = getGeographyCoordinatesInternal(
-            { ...geography, geometry: childGeometry },
-            depth + 1,
-          );
-          if (isValidCoordinates(coordinates)) return coordinates;
+          return getGeographyCoordinatesInternal({
+            ...geography,
+            geometry: { type: 'Polygon', coordinates },
+          });
         }
       }
       break;
@@ -221,8 +202,32 @@ function getGeographyCoordinatesInternal(
 export function getGeographyCoordinates(
   geography: Feature<Geometry>,
 ): Coordinates | null {
-  const coordinates = getGeographyCoordinatesInternal(geography, 0);
-  return isValidCoordinates(coordinates) ? coordinates : null;
+  if (!geography?.geometry) return null;
+
+  const stack: Geometry[] = [geography.geometry];
+  const visited = new Set<Geometry>();
+  while (stack.length > 0) {
+    const geometry = stack.pop();
+    if (!geometry) continue;
+
+    if (geometry.type === 'GeometryCollection') {
+      if (visited.has(geometry) || !Array.isArray(geometry.geometries))
+        continue;
+      visited.add(geometry);
+      for (let index = geometry.geometries.length - 1; index >= 0; index -= 1) {
+        const child = geometry.geometries[index];
+        if (child) stack.push(child);
+      }
+    } else {
+      const coordinates = getGeographyCoordinatesInternal({
+        ...geography,
+        geometry,
+      });
+      if (isValidCoordinates(coordinates)) return coordinates;
+    }
+  }
+
+  return null;
 }
 
 /**

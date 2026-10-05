@@ -18,7 +18,11 @@ type MeshGeometry = MultiLineString | LineString;
  * @returns True if input is a string
  */
 export function isString(
-  geo: string | Topology | FeatureCollection | Feature<Geometry>[],
+  geo:
+    | string
+    | Topology
+    | FeatureCollection<Geometry | null>
+    | Feature<Geometry>[],
 ): geo is string {
   return typeof geo === 'string';
 }
@@ -80,11 +84,11 @@ function extractFeaturesFromTopology(
  * @returns Array of features
  */
 function extractFeaturesFromCollection(
-  featureCollection: FeatureCollection,
+  featureCollection: FeatureCollection<Geometry | null>,
   parseGeographies?: (geographies: Feature<Geometry>[]) => Feature<Geometry>[],
 ): Feature<Geometry>[] {
   const features = (featureCollection.features || []).filter(
-    (item) => item.geometry !== null,
+    (item): item is Feature<Geometry> => item.geometry !== null,
   );
   return parseGeographies ? parseGeographies(features) : features;
 }
@@ -96,7 +100,8 @@ function extractFeaturesFromCollection(
  * @returns Array of features
  */
 export function getFeatures(
-  geographies: Topology | FeatureCollection | Feature<Geometry>[],
+  geographies:
+    Topology | FeatureCollection<Geometry | null> | Feature<Geometry>[],
   parseGeographies?: (geographies: Feature<Geometry>[]) => Feature<Geometry>[],
 ): Feature<Geometry>[] {
   // Handle array of features
@@ -168,7 +173,8 @@ function extractMeshFromTopology(topology: Topology): {
  * @returns Mesh data or null
  */
 export function getMesh(
-  geographies: Topology | FeatureCollection | Feature<Geometry>[],
+  geographies:
+    Topology | FeatureCollection<Geometry | null> | Feature<Geometry>[],
 ): { outline: MeshGeometry | null; borders: MeshGeometry | null } | null {
   // Only Topology supports mesh generation
   if (

@@ -277,6 +277,8 @@ The `./utils` subpath includes helpers for safer geography fetching. When you us
 
 Prefer `fetchGeographiesCache` for direct utility-based loading. `fetchGeographies` remains available for compatibility but is deprecated.
 
+Fetched GeoJSON preserves features whose `geometry` is `null`. Both fetch helpers declare this nullable output; check `feature.geometry !== null` before accessing its fields. `getFeatures(data)` omits those unlocated features and passes non-null geometries to `parseGeographies`. Inline GeoJSON component props and public data guards continue to require non-null geometries. See the [raw-data example](./examples/basic-map/README.md#raw-fetched-geojson) for both forms.
+
 Configuration set through `configureGeographySecurity`, `configureSRI`, or `enableStrictSRI` from `./utils` also applies to map components imported from the main package. Geography request timeouts cover redirects and reading the response body.
 
 `generateSRIHash` validates redirect targets against the same URL and resolved-hostname policy as geography loading, omits credentials, and enforces the configured timeout and response size limit. Browsers cannot inspect manual cross-origin redirects; use the final resource URL directly when a source redirects.

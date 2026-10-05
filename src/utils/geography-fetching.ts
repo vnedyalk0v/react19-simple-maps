@@ -1,4 +1,4 @@
-import { FeatureCollection } from 'geojson';
+import { FeatureCollection, Geometry } from 'geojson';
 import { Topology } from 'topojson-specification';
 import { GeographyError } from '../types';
 import {
@@ -80,12 +80,12 @@ function handleFetchError(
 async function parseGeographyFromArrayBuffer(
   arrayBuffer: ArrayBuffer,
   url: string,
-): Promise<Topology | FeatureCollection> {
+): Promise<Topology | FeatureCollection<Geometry | null>> {
   try {
     const text = new TextDecoder().decode(arrayBuffer);
     const data = JSON.parse(text);
     validateGeographyData(data);
-    return data as Topology | FeatureCollection;
+    return data as Topology | FeatureCollection<Geometry | null>;
   } catch (jsonError) {
     if (jsonError instanceof SyntaxError) {
       throw createGeographyFetchError(
@@ -111,7 +111,7 @@ async function parseGeographyFromArrayBuffer(
  */
 export async function fetchGeographies(
   url: string,
-): Promise<Topology | FeatureCollection | undefined> {
+): Promise<Topology | FeatureCollection<Geometry | null> | undefined> {
   if (
     typeof process !== 'undefined' &&
     process?.env?.NODE_ENV !== 'production'
@@ -142,7 +142,7 @@ async function fetchGeographyData(
   url: string,
   securityConfig: GeographySecurityConfig,
   sriEnforcementConfig: SRIEnforcementConfig,
-): Promise<Topology | FeatureCollection> {
+): Promise<Topology | FeatureCollection<Geometry | null>> {
   // Validate URL before making request
   validateGeographyUrl(url, securityConfig);
 
@@ -221,7 +221,7 @@ async function fetchGeographyData(
 }
 
 interface InFlightGeographyRequest {
-  promise: Promise<Topology | FeatureCollection>;
+  promise: Promise<Topology | FeatureCollection<Geometry | null>>;
   securityConfig: GeographySecurityConfig;
   sriConfig: SRIEnforcementConfig;
 }
@@ -236,7 +236,7 @@ const inFlightRequests = new Map<string, InFlightGeographyRequest>();
  */
 export function fetchGeographiesCache(
   url: string,
-): Promise<Topology | FeatureCollection> {
+): Promise<Topology | FeatureCollection<Geometry | null>> {
   const securityConfig = getGeographySecurityConfig();
   const sriConfig = getSRIConfig();
   const inFlight = inFlightRequests.get(url);

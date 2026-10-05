@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useOptimistic, ReactNode, useEffect } from 'react';
-import { FeatureCollection } from 'geojson';
+import { FeatureCollection, Geometry } from 'geojson';
 import { Topology } from 'topojson-specification';
 import {
   loadGeographyAction,
@@ -10,10 +10,10 @@ import {
 
 interface GeographyLoaderProps {
   url: string;
-  onLoad?: (data: Topology | FeatureCollection) => void;
+  onLoad?: (data: Topology | FeatureCollection<Geometry | null>) => void;
   onError?: (error: string) => void;
   children?: (props: {
-    data: Topology | FeatureCollection | null;
+    data: Topology | FeatureCollection<Geometry | null> | null;
     isLoading: boolean;
     error: string | null;
     reload: () => void;
@@ -23,7 +23,7 @@ interface GeographyLoaderProps {
 }
 
 interface GeographyState {
-  data: Topology | FeatureCollection | null;
+  data: Topology | FeatureCollection<Geometry | null> | null;
   error: string | null;
 }
 

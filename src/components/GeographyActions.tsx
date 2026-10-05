@@ -1,7 +1,7 @@
 'use server';
 
 import { cache } from 'react';
-import { FeatureCollection } from 'geojson';
+import { FeatureCollection, Geometry } from 'geojson';
 import { Topology } from 'topojson-specification';
 import { fetchGeographiesCache } from '../utils/geography-fetching';
 import { validateGeographyUrl } from '../utils/geography-validation';
@@ -13,12 +13,12 @@ import { validateGeographyUrl } from '../utils/geography-validation';
  */
 export async function loadGeographyAction(
   _previousState: {
-    data: Topology | FeatureCollection | null;
+    data: Topology | FeatureCollection<Geometry | null> | null;
     error: string | null;
   },
   formData: FormData,
 ): Promise<{
-  data: Topology | FeatureCollection | null;
+  data: Topology | FeatureCollection<Geometry | null> | null;
   error: string | null;
 }> {
   const url = formData.get('url') as string;
